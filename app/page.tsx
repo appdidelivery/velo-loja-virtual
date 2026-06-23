@@ -1,9 +1,14 @@
-import AdminDashboard from "@/components/AdminDashboard";
+import CustomerCatalog from '../components/CustomerCatalog';
 
-export default function Home() {
+export const metadata = {
+  title: 'Catálogo Digital | Velo Varejo',
+  description: 'Faça seu pedido diretamente pelo nosso site de forma rápida e segura.',
+};
+
+export default function HomePage() {
   return (
-    <main className="min-h-screen bg-neutral-900 text-white">
-      <AdminDashboard />
+    <main>
+      <CustomerCatalog />
     </main>
   );
 }
