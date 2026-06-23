@@ -111,7 +111,7 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
 
       let importedCount = 0;
 
-      // Loop por cada item do XML para salvar no Firebase
+      // Loop por cada item do teste XML para salvar no Firebase
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         
