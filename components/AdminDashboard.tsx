@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Product, Order, ChatSession, TenantSettings, OrderStatus, PaymentStatus } from '../types';
 import { INITIAL_ORDERS, INITIAL_CHATS, INITIAL_SETTINGS } from '../data/mokedData';
 import VeloSupportWidget from './VeloSupportWidget';
+import AdminChat from './AdminChat';
 import { useProducts } from '../hooks/useProducts';
 import { useOrders } from '../hooks/useOrders';
 import { doc, setDoc } from 'firebase/firestore';
