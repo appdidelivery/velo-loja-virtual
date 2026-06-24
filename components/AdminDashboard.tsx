@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { 
   ShoppingBag, Settings, MessageSquare, Plus, Edit2, Trash2, 
-  Search, CheckCircle2, DollarSign, Eye, User, Sparkles,
+  Search, CheckCircle2, DollarSign, Eye, EyeOff, User, Sparkles,
   Layers, AlertCircle, Send, HelpCircle, FileCheck, Percent,
   TrendingUp, X, CreditCard, Sun, Moon, ExternalLink, ChevronDown, List
 } from 'lucide-react';
@@ -58,7 +58,49 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'categ
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   // Category Dialog/Form state
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [categoryForm, setCategoryForm] = useState({ name: '', order: 1 });
+  const [editingCategory, setEditingCategory] = useState<{name: string, order: number, isActive: boolean} | null>(null);
+  const [categoryForm, setCategoryForm] = useState({ name: '', order: 1, isActive: true });
+
+  // Puxa as categorias ativas dinamicamente de todos os produtos
+  // No Velo Delivery real isso vem de uma tabela "Categories", mas aqui vamos 
+  // agregar os nomes lendo os produtos (O que facilita para importar XML)
+  const uniqueCategories = Array.from(new Set(products.map(p => p.category))).filter(Boolean).map(catName => {
+      // Como não temos tabela de categorias separada ainda, vamos mockar os dados 
+      // para exibir o olho e a ordem na tela baseados nos produtos dessa categoria
+      const catProducts = products.filter(p => p.category === catName);
+      const isActive = catProducts.some(p => p.isActive); // Se 1 produto for ativo, a categoria é ativa
+      return { name: catName, order: 1, isActive: isActive, count: catProducts.length };
+  }).sort((a, b) => a.name.localeCompare(b.name));
+
+  // Função para salvar (ou "criar" o produto fantasma que sustenta a categoria)
+  const saveCategory = async (e: React.FormEvent) => {
+      e.preventDefault();
+      
+      if (editingCategory) {
+          // Atualiza todos os produtos dessa categoria para o nome/status novo
+          const prodsToUpdate = products.filter(p => p.category === editingCategory.name);
+          for (const p of prodsToUpdate) {
+              await updateProduct(p.id, { 
+                  category: categoryForm.name, 
+                  isActive: categoryForm.isActive 
+              });
+          }
+      } else {
+          // Cria o produto "fantasma" que sustenta a categoria nova
+          await addProduct({
+              name: `_CAT_${categoryForm.name}`,
+              description: 'Categoria base',
+              price: 0,
+              imageUrl: '',
+              category: categoryForm.name,
+              stock: 0,
+              sku: `CAT-${Date.now()}`,
+              isActive: categoryForm.isActive, 
+              tenantId: settings.tenantId
+          });
+      }
+      setIsCategoryModalOpen(false);
+  };
   const [productForm, setProductForm] = useState({
     name: '',
     description: '',
@@ -1401,7 +1443,63 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
           )}
         </main>
       </div>
+{/* --- ADD/EDIT CATEGORY MODAL --- */}
+      <AnimatePresence>
+        {isCategoryModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/60 z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl relative flex flex-col">
+              <button onClick={() => setIsCategoryModalOpen(false)} className="absolute top-6 right-6 p-2 bg-gray-50 rounded-full hover:bg-red-50 hover:text-red-500 text-gray-400 transition-colors"><X size={18}/></button>
+              
+              <h2 className="text-2xl font-black italic mb-6 uppercase text-slate-900 leading-none">
+                {editingCategory ? 'Editar' : 'Nova'} Categoria
+              </h2>
+              
+              <form onSubmit={saveCategory} className="space-y-5">
+                  <div>
+                      <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1 block mb-1">Nome da Categoria</label>
+                      <input 
+                          type="text" 
+                          required 
+                          value={categoryForm.name} 
+                          onChange={e => setCategoryForm({ ...categoryForm, name: e.target.value })} 
+                          placeholder="Ex: Hambúrgueres"
+                          className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm border border-gray-200 shadow-sm" 
+                      />
+                  </div>
 
+                  <div>
+                      <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1 block mb-1">Ordem na Tela (Vitrine)</label>
+                      <input 
+                          type="number" 
+                          required 
+                          value={categoryForm.order} 
+                          onChange={e => setCategoryForm({ ...categoryForm, order: Number(e.target.value) })} 
+                          className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm border border-gray-200 shadow-sm" 
+                      />
+                  </div>
+
+                  <label className={`flex items-center justify-between p-4 rounded-2xl border-2 mb-4 cursor-pointer transition-all shadow-sm ${categoryForm.isActive ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200 opacity-70'}`}>
+                      <div className="flex flex-col">
+                          <span className={`font-black uppercase text-xs tracking-widest ${categoryForm.isActive ? 'text-green-700' : 'text-slate-500'}`}>
+                              {categoryForm.isActive ? '✅ Categoria Ativa' : '🚫 Categoria Oculta'}
+                          </span>
+                      </div>
+                      <input 
+                          type="checkbox" 
+                          checked={categoryForm.isActive} 
+                          onChange={(e) => setCategoryForm({ ...categoryForm, isActive: e.target.checked })}
+                          className="w-6 h-6 accent-green-600 cursor-pointer"
+                      />
+                  </label>
+
+                  <button type="submit" className="w-full bg-[#111827] text-white py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-xl hover:bg-black transition-all active:scale-95">
+                    Salvar Categoria
+                  </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
       {/* --- ADD/EDIT PRODUCT DIALOG MODAL --- */}
       <AnimatePresence>
         {isProductModalOpen && (
