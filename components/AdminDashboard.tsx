@@ -13,16 +13,25 @@ import { Product, Order, ChatSession, TenantSettings, OrderStatus, PaymentStatus
 import { INITIAL_ORDERS, INITIAL_CHATS, INITIAL_SETTINGS } from '../data/mokedData';
 import VeloSupportWidget from './VeloSupportWidget';
 import { useProducts } from '../hooks/useProducts';
+import { useOrders } from '../hooks/useOrders';
 
 export default function AdminDashboard() {
   // Theme state
   const [isDarkMode, setIsDarkMode] = useState(false);
 
+  // Multi-tenant auth details simulation (Movi para cima para podermos usar o tenantId)
+  const [authRole, setAuthRole] = useState({
+    email: 'contato@mamedes.com.br',
+    role: 'merchant_owner',
+    businessType: 'whatsapp_catalog', 
+    tenantId: 'tenant_mamedes123' // ID REAL DA LOJA
+  });
+
   // Conexão em Tempo Real com o Firebase (Magia acontecendo!)
-  const { products, addProduct, updateProduct, deleteProduct } = useProducts('tenant_abc123');
+  const { products, addProduct, updateProduct, deleteProduct } = useProducts(authRole.tenantId);
+  const { orders, updateStatus: updateOrderStatus } = useOrders(authRole.tenantId); // PEDIDOS REAIS!
   
   // Original States
-  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
   const [chats, setChats] = useState<ChatSession[]>(INITIAL_CHATS);
   const [settings, setSettings] = useState<TenantSettings>(INITIAL_SETTINGS);
 
@@ -32,13 +41,7 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
   // Controles do novo Menu estilo Loja Integrada
   const [isSettingsExpanded, setIsSettingsExpanded] = useState(false);
   const [settingsSubPanel, setSettingsSubPanel] = useState('gerais');
-    // Multi-tenant auth details simulation
-  const [authRole, setAuthRole] = useState({
-    email: 'contato@mamedes.com.br',
-    role: 'merchant_owner',
-    businessType: 'whatsapp_catalog', // Pode ser 'ecommerce' ou 'whatsapp_catalog'
-    tenantId: 'tenant_mamedes123'
-  });
+    
 
   // Estados para o Importador de XML
   const [isXmlModalOpen, setIsXmlModalOpen] = useState(false);
@@ -374,20 +377,6 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
     }
   };
 
-  // Pedidos and checkout simulation
-  const updateOrderStatus = (orderId: string, status: OrderStatus) => {
-    setOrders(orders.map(o => {
-      if (o.id === orderId) {
-        return {
-          ...o,
-          status,
-          paymentStatus: status === 'paid' ? 'approved' as PaymentStatus : o.paymentStatus
-        };
-      }
-      return o;
-    }));
-  };
-
   // Meta API - Sending message & simulating webhook automatic followups
   const handleSendMessage = () => {
     if (!currentMessageText.trim() || !activeChat) return;
@@ -505,8 +494,6 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
       tenantId: settings.tenantId,
       notes: `Gerado via PDV no Chat (Modo Garçom) com desconto de ${posDiscount}%`
     };
-
-    setOrders([newOrder, ...orders]);
 
     // Format Checkout / POS summary to write into Chat
     const itemsDescription = posCart.map(item => `• ${item.quantity}x ${item.product.name} - R$ ${item.product.price.toFixed(2)}`).join('\n');

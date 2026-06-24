@@ -12,6 +12,7 @@ import {
 import { Product, TenantSettings } from '../types';
 import { INITIAL_SETTINGS } from '../data/mokedData';
 import { useProducts } from '../hooks/useProducts';
+import { useOrders } from '../hooks/useOrders'; // Importamos o novo hook
 
 // --- CONFIGURAÇÕES DE CONFIANÇA (E-E-A-T) PARA SEO/AEO ---
 const STORE_TRUST_DATA = {
@@ -30,11 +31,13 @@ const THEME = {
   dark: '#2a2a2a', // Rodapé
 };
 
-export default function CustomerCatalog() {
+// Agora a vitrine recebe o tenantId para saber de qual loja puxar os produtos
+export default function CustomerCatalog({ tenantId = 'tenant_mamedes123' }: { tenantId?: string }) {
   const settings: TenantSettings = INITIAL_SETTINGS;
 
-  // Magia do Firebase acontecendo na Vitrine
-  const { products, loading } = useProducts('tenant_abc123');
+  // Magia do Firebase: Puxa os produtos E os pedidos exclusivos desta loja
+  const { products, loading } = useProducts(tenantId);
+  const { addOrder } = useOrders(tenantId);
   
   // Só mostra na vitrine os produtos que o lojista marcou como "Ativo"
   const activeProducts = useMemo(() => products.filter(p => p.isActive), [products]);
@@ -208,9 +211,31 @@ export default function CustomerCatalog() {
 
     const encodedMessage = encodeURIComponent(message);
     
-    // Troca o número fixo das settings pelo número dinâmico do estado
+    // 1. SALVA NO BANCO DE DADOS ANTES DE ABRIR O WHATSAPP
+    addOrder({
+      customerName: customerName,
+      customerPhone: '', // Poderíamos pedir o celular no form também depois
+      items: cart.map(item => ({
+        productId: item.product.id,
+        name: item.product.name,
+        price: item.product.price,
+        quantity: item.quantity
+      })),
+      total: cartTotalValue,
+      status: 'pending',
+      paymentStatus: 'pending',
+      createdAt: new Date().toISOString(),
+      tenantId: tenantId,
+      notes: `CNPJ: ${customerCnpj} | Pagamento: ${paymentMethod} | CEP: ${cep}`
+    });
+
+    // 2. ABRE O WHATSAPP
     const rawPhone = storeWhatsapp.replace(/\D/g, '');
     window.open(`https://wa.me/${rawPhone}?text=${encodedMessage}`, '_blank');
+    
+    // 3. LIMPA O CARRINHO
+    setCart([]);
+    setIsCartOpen(false);
   };
 
   // --- SCHEMA MARKUP (JSON-LD) PARA MUVERA / GOOGLE AEO ---
