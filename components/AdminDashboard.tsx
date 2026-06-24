@@ -5,7 +5,8 @@ import {
   ShoppingBag, Settings, MessageSquare, Plus, Edit2, Trash2, 
   Search, CheckCircle2, DollarSign, Eye, EyeOff, User, Sparkles,
   Layers, AlertCircle, Send, HelpCircle, FileCheck, Percent,
-  TrendingUp, X, CreditCard, Sun, Moon, ExternalLink, ChevronDown, List
+  TrendingUp, X, CreditCard, Sun, Moon, ExternalLink, ChevronDown, List,
+  Megaphone, ChevronLeft, ChevronRight, Filter
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 

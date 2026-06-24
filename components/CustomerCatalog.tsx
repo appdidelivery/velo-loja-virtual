@@ -77,11 +77,16 @@ export default function CustomerCatalog({ tenantId = 'tenant_mamedes123' }: { te
   const [storeSlogan, setStoreSlogan] = useState('Catálogo Exclusivo');
   const [storeWhatsapp, setStoreWhatsapp] = useState(settings.whatsappNumber);
   
-  // Estado da Busca no Webview
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  // Evitar Hydration Mismatch e buscar personalização em Tempo Real
+  const [visibleCount, setVisibleCount] = useState(25);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  useEffect(() => {
+    setVisibleCount(25);
+  }, [selectedCategory, searchQuery]);
+
   useEffect(() => {
     setMounted(true);
     
@@ -121,7 +126,18 @@ export default function CustomerCatalog({ tenantId = 'tenant_mamedes123' }: { te
     return filtered;
   }, [activeProducts, selectedCategory, searchQuery]);
 
-  // Busca Automática de CEP
+  const paginatedProducts = useMemo(() => {
+    return filteredActiveProducts.slice(0, visibleCount);
+  }, [filteredActiveProducts, visibleCount]);
+
+  const handleLoadMore = () => {
+    setIsLoadingMore(true);
+    setTimeout(() => {
+      setVisibleCount(prev => prev + 25);
+      setIsLoadingMore(false);
+    }, 600);
+  };
+
   const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawCep = e.target.value.replace(/\D/g, '');
     setCep(rawCep);
@@ -360,34 +376,49 @@ export default function CustomerCatalog({ tenantId = 'tenant_mamedes123' }: { te
                 <div className="flex flex-col items-center justify-center py-20">
                   <div className="w-8 h-8 border-4 border-[#357b64] border-t-transparent rounded-full animate-spin"></div>
                 </div>
-              ) : filteredActiveProducts.length === 0 ? (
+              ) : paginatedProducts.length === 0 ? (
                 <div className="text-center py-10">
                   <p className="text-sm font-bold text-gray-500">Nenhum produto localizado.</p>
                   <button onClick={() => {setSelectedCategory('Todos'); setSearchQuery('');}} className="mt-3 text-[10px] font-bold text-white px-4 py-2 rounded-full" style={{ backgroundColor: themeColor }}>Limpar filtros</button>
                 </div>
               ) : (
-                filteredActiveProducts.map(product => (
-                  <div key={product.id} className="bg-white p-3 rounded-[1.5rem] shadow-sm border border-gray-100 flex gap-4 items-center relative overflow-hidden group">
-                    {product.stock <= 10 && <div className="absolute top-0 left-0 bg-red-500 text-white text-[8px] font-black uppercase px-2 py-1 rounded-br-lg z-10">Últimos</div>}
-                    <div className="w-20 h-20 bg-gray-50 rounded-xl p-1.5 shrink-0 border border-gray-100 relative">
-                      <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform" />
-                    </div>
-                    <div className="flex-1 min-w-0 py-1">
-                      <h3 className="text-xs font-bold text-gray-800 leading-tight mb-1 line-clamp-2 pr-2">{product.name}</h3>
-                      <p className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">{product.category}</p>
-                      <div className="flex items-center justify-between mt-auto">
-                        <span style={{ color: themeColor }} className="text-sm font-black">R$ {product.price.toFixed(2)}</span>
-                        <button 
-                          onClick={() => handleAddToCart(product)} 
-                          style={{ backgroundColor: themeColor }}
-                          className="w-8 h-8 text-white rounded-full flex items-center justify-center shadow-sm hover:scale-105 transition-transform"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
+                <>
+                  {paginatedProducts.map(product => (
+                    <div key={product.id} className="bg-white p-3 rounded-[1.5rem] shadow-sm border border-gray-100 flex gap-4 items-center relative overflow-hidden group">
+                      {product.stock <= 10 && <div className="absolute top-0 left-0 bg-red-500 text-white text-[8px] font-black uppercase px-2 py-1 rounded-br-lg z-10">Últimos</div>}
+                      <div className="w-20 h-20 bg-gray-50 rounded-xl p-1.5 shrink-0 border border-gray-100 relative">
+                        <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform" />
+                      </div>
+                      <div className="flex-1 min-w-0 py-1">
+                        <h3 className="text-xs font-bold text-gray-800 leading-tight mb-1 line-clamp-2 pr-2">{product.name}</h3>
+                        <p className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">{product.category}</p>
+                        <div className="flex items-center justify-between mt-auto">
+                          <span style={{ color: themeColor }} className="text-sm font-black">R$ {product.price.toFixed(2)}</span>
+                          <button 
+                            onClick={() => handleAddToCart(product)} 
+                            style={{ backgroundColor: themeColor }}
+                            className="w-8 h-8 text-white rounded-full flex items-center justify-center shadow-sm hover:scale-105 transition-transform"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+                  
+                  {filteredActiveProducts.length > visibleCount && (
+                    <div className="py-6 flex justify-center">
+                      <button 
+                        onClick={handleLoadMore}
+                        disabled={isLoadingMore}
+                        style={{ color: themeColor, borderColor: themeColor }}
+                        className="px-6 py-2.5 border-2 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                      >
+                        {isLoadingMore ? 'Carregando...' : 'Ver mais produtos'}
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </main>
 
@@ -469,28 +500,42 @@ export default function CustomerCatalog({ tenantId = 'tenant_mamedes123' }: { te
               <h2 className="text-2xl sm:text-3xl font-bold text-[#357b64] text-center mb-8">Últimos Lançamentos</h2>
               {loading ? (
                  <div className="flex justify-center py-20"><div className="w-12 h-12 border-4 border-[#357b64] border-t-transparent rounded-full animate-spin"></div></div>
-              ) : activeProducts.length === 0 ? (
+              ) : paginatedProducts.length === 0 ? (
                  <div className="text-center py-20 text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-300">Nenhum produto cadastrado.</div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                  {activeProducts.map((product) => {
-                  const pixPrice = product.price * 0.97;
-                  return (
-                    <article key={product.id} className="bg-white flex flex-col h-full rounded border border-transparent hover:border-gray-200 hover:shadow-xl transition-all duration-300 relative group">
-                      <button className="absolute top-3 right-3 z-10 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-400"><Star className="w-4 h-4" /></button>
-                      <div className="w-full aspect-square relative p-4 overflow-hidden"><img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" /></div>
-                      <div className="p-4 flex flex-col flex-1 text-center border-t border-gray-50 mt-2">
-                        <h3 className="text-sm font-medium text-gray-800 line-clamp-2 min-h-[40px] mb-2">{product.name}</h3>
-                        <div className="mt-auto">
-                          <div className="flex items-end justify-center gap-2 mb-2"><span className="text-xs text-gray-400 line-through font-medium">R$ {(product.price * 1.1).toFixed(2)}</span><span className="text-xl font-extrabold text-[#357b64]">R$ {product.price.toFixed(2)}</span></div>
-                          <div className="bg-[#f2fcf8] border border-[#c4e4d8] rounded py-2 px-1 flex flex-col items-center justify-center mb-4"><span className="text-sm font-bold text-[#357b64] flex items-center gap-1">R$ {pixPrice.toFixed(2)} <span className="text-[10px] font-normal text-gray-600">no pix</span></span></div>
-                          <button onClick={() => handleAddToCart(product)} className="w-full bg-[#357b64] hover:bg-[#2c6b56] text-white font-bold text-sm py-3 rounded mb-2">Comprar</button>
-                          <button onClick={() => { handleAddToCart(product); setIsCartOpen(true); }} className="w-full bg-white border border-[#357b64] text-[#357b64] hover:bg-gray-50 font-bold text-xs py-2 rounded flex items-center justify-center gap-1.5">Orçamento Fácil <Phone className="w-3.5 h-3.5" /></button>
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                    {paginatedProducts.map((product) => {
+                    const pixPrice = product.price * 0.97;
+                    return (
+                      <article key={product.id} className="bg-white flex flex-col h-full rounded border border-transparent hover:border-gray-200 hover:shadow-xl transition-all duration-300 relative group">
+                        <button className="absolute top-3 right-3 z-10 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-400"><Star className="w-4 h-4" /></button>
+                        <div className="w-full aspect-square relative p-4 overflow-hidden"><img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" /></div>
+                        <div className="p-4 flex flex-col flex-1 text-center border-t border-gray-50 mt-2">
+                          <h3 className="text-sm font-medium text-gray-800 line-clamp-2 min-h-[40px] mb-2">{product.name}</h3>
+                          <div className="mt-auto">
+                            <div className="flex items-end justify-center gap-2 mb-2"><span className="text-xs text-gray-400 line-through font-medium">R$ {(product.price * 1.1).toFixed(2)}</span><span className="text-xl font-extrabold text-[#357b64]">R$ {product.price.toFixed(2)}</span></div>
+                            <div className="bg-[#f2fcf8] border border-[#c4e4d8] rounded py-2 px-1 flex flex-col items-center justify-center mb-4"><span className="text-sm font-bold text-[#357b64] flex items-center gap-1">R$ {pixPrice.toFixed(2)} <span className="text-[10px] font-normal text-gray-600">no pix</span></span></div>
+                            <button onClick={() => handleAddToCart(product)} className="w-full bg-[#357b64] hover:bg-[#2c6b56] text-white font-bold text-sm py-3 rounded mb-2">Comprar</button>
+                            <button onClick={() => { handleAddToCart(product); setIsCartOpen(true); }} className="w-full bg-white border border-[#357b64] text-[#357b64] hover:bg-gray-50 font-bold text-xs py-2 rounded flex items-center justify-center gap-1.5">Orçamento Fácil <Phone className="w-3.5 h-3.5" /></button>
+                          </div>
                         </div>
-                      </div>
-                    </article>
-                  );})}
-                </div>
+                      </article>
+                    );})}
+                  </div>
+
+                  {filteredActiveProducts.length > visibleCount && (
+                    <div className="py-10 flex justify-center">
+                      <button 
+                        onClick={handleLoadMore}
+                        disabled={isLoadingMore}
+                        className="px-8 py-3 bg-white border-2 border-[#357b64] text-[#357b64] rounded text-sm font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                      >
+                        {isLoadingMore ? 'Carregando...' : 'Carregar mais produtos'}
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </section>
           </main>
