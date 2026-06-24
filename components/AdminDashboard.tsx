@@ -313,21 +313,24 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
     setIsImporting(true);
 
     try {
-      console.log("1. Buscando XML via Proxy Corsproxy.io...");
-      // Trocamos para um proxy mais permissivo que retorna o XML puro direto
-      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(xmlUrl)}`;
+      console.log("1. Solicitando XML via Backend Velo...");
       
-      const response = await fetch(proxyUrl);
+      // Chama a nossa API segura (passa direto por qualquer CORS/Adblock)
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const apiUrl = isLocal ? '/api/import-xml' : 'https://app.velodelivery.com.br/api/import-xml'; // ⚠️ Mude para o domínio base do seu app depois
+      
+      const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ xmlUrl: xmlUrl })
+      });
       
       if (!response.ok) {
-        throw new Error(`O servidor recusou a conexão (Status: ${response.status}).`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Erro de conexão (Status: ${response.status}).`);
       }
       
       const xmlText = await response.text();
-
-      if (!xmlText || (!xmlText.includes("<?xml") && !xmlText.includes("<rss") && !xmlText.includes("<feed"))) {
-        throw new Error("O link não retornou um formato XML válido.");
-      }
 
       console.log("2. Convertendo texto para DOM XML...");
       const parser = new DOMParser();
@@ -352,8 +355,6 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
         return val || "";
       };
 
-      // Removida a trava de 50. Agora importa TODOS os itens do XML de uma vez.
-      // Dica: A tela pode parecer congelada por alguns segundos dependendo do tamanho do XML. Apenas aguarde.
       const importLimit = items.length;
       console.log(`3. Importando todos os ${importLimit} produtos...`);
 
@@ -389,7 +390,7 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
           weight: 0,
           seoTitle: title.substring(0, 60),
           seoDescription: description.substring(0, 160),
-          tenantId: settings.tenantId
+          tenantId: authRole.tenantId
         });
 
         importedCount++;
@@ -399,13 +400,7 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
       setIsXmlModalOpen(false);
     } catch (error: any) {
       console.error(error);
-      
-      // Tratamento específico se for erro de bloqueio do navegador
-      if (error.message.includes("Failed to fetch") || error.name === "TypeError") {
-        alert("⚠️ ERRO DE REDE BLOQUEADA\n\nSeu navegador ou AdBlock (Extensão de bloquear anúncios) impediu o painel de baixar o arquivo XML.\n\nDICA: Desative o AdBlock/Escudos de Privacidade para o localhost e tente novamente.");
-      } else {
-        alert(`⚠️ Erro ao importar: ${error.message}`);
-      }
+      alert(`⚠️ Erro ao importar: ${error.message}`);
     } finally {
       setIsImporting(false);
     }
@@ -894,6 +889,79 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
           </div>
         )}
       </AnimatePresence>
+      {/* TELA DE CATEGORIAS */}
+          {activePanel === 'categories' && (
+            <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-8 space-y-6 max-w-6xl mx-auto shadow-sm animate-in fade-in slide-in-from-bottom-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-gray-50 pb-6">
+                <div>
+                  <h2 className="text-2xl font-black italic uppercase text-[#111827]">Categorias</h2>
+                  <p className="text-sm font-bold text-slate-400 mt-1">Organize as vitrines do seu cardápio.</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    setEditingCategory(null);
+                    setCategoryForm({name: '', order: 1, isActive: true}); 
+                    setIsCategoryModalOpen(true);
+                  }} 
+                  className="px-6 py-3 bg-[#ff7b00] hover:bg-[#e66a00] transition-all text-white font-black uppercase tracking-wider rounded-full text-[11px] flex items-center gap-2 shadow-lg shadow-orange-500/30"
+                >
+                  <Plus className="w-4 h-4" /> Nova Categoria
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {uniqueCategories.length === 0 ? (
+                  <div className="col-span-full p-12 text-center border-2 border-dashed border-gray-200 rounded-3xl bg-gray-50">
+                    <List className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                    <p className="font-bold text-gray-500">Nenhuma categoria criada.</p>
+                    <p className="text-xs font-medium text-gray-400 mt-1">Ao cadastrar um produto, sua categoria aparecerá aqui automaticamente.</p>
+                  </div>
+                ) : (
+                  uniqueCategories.map((cat, index) => (
+                    <div key={index} className="flex items-center justify-between p-6 bg-white rounded-3xl border-2 border-gray-100 hover:border-[#0055ff] hover:shadow-lg transition-all group">
+                      <div>
+                        <h3 className={`font-black uppercase tracking-widest text-sm leading-tight ${cat.isActive ? 'text-slate-800' : 'text-slate-400 line-through'}`}>
+                          {cat.name}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">{cat.count} produtos</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={async () => {
+                            if(window.confirm(`Deseja ${cat.isActive ? 'ocultar' : 'ativar'} a categoria e todos os produtos dentro dela?`)) {
+                               const prodsToUpdate = products.filter(p => p.category === cat.name);
+                               for (const p of prodsToUpdate) {
+                                   await updateProduct(p.id, { isActive: !cat.isActive });
+                               }
+                            }
+                          }}
+                          className={`p-2.5 rounded-xl transition-all shadow-sm ${cat.isActive ? 'bg-green-50 text-green-600 border border-green-100 hover:bg-green-100' : 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100'}`}
+                          title={cat.isActive ? 'Visível (Clique para Ocultar)' : 'Oculta (Clique para Ativar)'}
+                        >
+                          {cat.isActive ? <Eye size={18} /> : <EyeOff size={18} />}
+                        </button>
+                        
+                        <button 
+                          onClick={() => {
+                            setEditingCategory(cat);
+                            setCategoryForm({ name: cat.name, order: cat.order, isActive: cat.isActive });
+                            setIsCategoryModalOpen(true);
+                          }}
+                          className="p-2.5 bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 rounded-xl transition-all shadow-sm"
+                          title="Editar"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
           {activePanel === 'products' && (
             <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-8 space-y-6 max-w-6xl mx-auto shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-gray-50 pb-6">
