@@ -68,4 +68,6 @@ export interface TenantSettings {
   whatsappNumber: string;
   currency: string;
   paymentGateway: 'stripe' | 'mercadopago' | 'whatsapp_only';
+  storeMode?: string;
+  maintenanceMode?: boolean;
 }

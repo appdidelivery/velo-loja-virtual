@@ -77,11 +77,13 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
     ...settings, 
     primaryColor: '#357b64', 
     logoUrl: '',
-    slogan: 'Catálogo Exclusivo', // Slogan padrão
-    whatsappNumber: '5511999999999', // WhatsApp Padrão
+    slogan: 'Catálogo Exclusivo', 
+    whatsappNumber: '5511999999999', 
     mpAccessToken: '',
     metaPhoneId: '',
-    metaApiToken: ''
+    metaApiToken: '',
+    storeMode: 'orcamento', // <-- ADICIONADO AQUI
+    maintenanceMode: false // <-- ADICIONADO AQUI
   });
   const [settingsSuccess, setSettingsSuccess] = useState(false);
   const [openVisualAccordion, setOpenVisualAccordion] = useState<string | null>('cores');
@@ -97,6 +99,8 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
     const savedMpToken = localStorage.getItem('velo_mp_token');
     const savedMetaPhoneId = localStorage.getItem('velo_meta_phone_id');
     const savedMetaToken = localStorage.getItem('velo_meta_token');
+    const savedMode = localStorage.getItem('velo_store_mode');
+    const savedMaintenance = localStorage.getItem('velo_store_maintenance') === 'true';
 
     setSettingsForm(prev => ({
       ...prev,
@@ -107,7 +111,9 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
       whatsappNumber: savedWhatsapp || prev.whatsappNumber,
       mpAccessToken: savedMpToken || '',
       metaPhoneId: savedMetaPhoneId || '',
-      metaApiToken: savedMetaToken || ''
+      metaApiToken: savedMetaToken || '',
+      storeMode: savedMode || 'orcamento', // Lendo o modo de orçamento/ecommerce
+      maintenanceMode: savedMaintenance // Lendo se a loja está em manutenção
     }));
   }, []);
 
@@ -163,12 +169,12 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
     localStorage.setItem('velo_store_logo', settingsForm.logoUrl);
     localStorage.setItem('velo_store_name', settingsForm.businessName);
     localStorage.setItem('velo_store_slogan', settingsForm.slogan);
-    localStorage.setItem('velo_store_whatsapp', settingsForm.whatsappNumber); // Salva o WhatsApp
-    localStorage.setItem('velo_mp_token', settingsForm.mpAccessToken);
-    localStorage.setItem('velo_meta_phone_id', settingsForm.metaPhoneId);
-    localStorage.setItem('velo_meta_token', settingsForm.metaApiToken);
-
-    // Dispara um alerta invisível para a aba da loja atualizar a cor em tempo real
+    localStorage.setItem('velo_store_whatsapp', settingsForm.whatsappNumber);
+    
+    // Salva as Configurações Gerais
+    localStorage.setItem('velo_store_mode', settingsForm.storeMode || 'orcamento');
+    localStorage.setItem('velo_store_maintenance', settingsForm.maintenanceMode ? 'true' : 'false');
+    
     window.dispatchEvent(new Event('storage'));
     
     setSettingsSuccess(true);
@@ -662,7 +668,9 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
 
           <div className="p-5 border-t border-gray-100 bg-gray-50/50">
             <div className="flex items-center justify-center mb-4">
-               <button className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-[#111827] hover:text-[#ff7b00] transition-colors"><ExternalLink className="w-4 h-4"/> VER LOJA ONLINE</button>
+               <a href={`/${authRole.tenantId}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-[#111827] hover:text-[#0055ff] transition-colors">
+                 <ExternalLink className="w-4 h-4"/> VER LOJA ONLINE
+               </a>
             </div>
             <div className="flex items-center justify-between bg-white p-3 rounded-2xl border-2 border-gray-100 shadow-sm cursor-pointer hover:border-[#ff7b00] transition-colors">
                <div className="flex items-center gap-3 overflow-hidden">
@@ -882,10 +890,14 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
                     <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div className="space-y-2">
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Usarei minha loja como:</label>
-                        <select className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-[#ff7b00] transition-colors">
-                          <option>Loja virtual</option>
-                          <option>Catálogo (Sem preço)</option>
-                          <option>Orçamento</option>
+                        <select 
+                          value={settingsForm.storeMode || 'orcamento'}
+                          onChange={(e) => setSettingsForm({...settingsForm, storeMode: e.target.value})}
+                          className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-[#0055ff] transition-colors cursor-pointer"
+                        >
+                          <option value="ecommerce">Loja virtual Completa</option>
+                          <option value="catalogo">Catálogo (Sem preço)</option>
+                          <option value="orcamento">Orçamento (B2B Atacado)</option>
                         </select>
                       </div>
                       <div className="space-y-2">
@@ -901,10 +913,15 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">Loja em manutenção? <HelpCircle className="w-3.5 h-3.5 text-gray-400" /></label>
                         <div className="flex items-center gap-3">
                           <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" className="sr-only peer" />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ff7b00]"></div>
+                            <input 
+                              type="checkbox" 
+                              checked={settingsForm.maintenanceMode || false}
+                              onChange={(e) => setSettingsForm({...settingsForm, maintenanceMode: e.target.checked})}
+                              className="sr-only peer" 
+                            />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0055ff]"></div>
                           </label>
-                          <span className="text-sm text-slate-600 font-black uppercase">Não</span>
+                          <span className="text-sm text-slate-600 font-black uppercase">{settingsForm.maintenanceMode ? 'SIM (Fechada)' : 'Não (Aberta)'}</span>
                         </div>
                       </div>
                     </div>
@@ -958,15 +975,15 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
                     <div className="lg:col-span-2 bg-white border-2 border-gray-100 rounded-[2rem] p-8 shadow-sm">
                       <h3 className="text-slate-800 font-black uppercase tracking-wider text-sm mb-6">Estrutura do Webview</h3>
                       
-                      {/* Representação visual do celular (Wireframe) */}
-                      <div className="max-w-xs mx-auto border-4 border-slate-800 rounded-[3rem] p-4 bg-gray-50 h-[500px] flex flex-col gap-3 relative shadow-xl">
-                        <div className="w-32 h-4 bg-slate-800 rounded-full mx-auto mb-2 absolute top-0 left-1/2 -translate-x-1/2 rounded-t-none"></div>
-                        <div className="w-full bg-[#ff7b00] rounded-xl h-16 shrink-0 flex items-center justify-center text-white text-[10px] font-bold">Menu Superior</div>
-                        <div className="w-full bg-gray-200 rounded-xl h-32 shrink-0 flex items-center justify-center text-slate-500 text-[10px] font-bold">Banners</div>
-                        <div className="grid grid-cols-2 gap-2 flex-1">
-                          <div className="bg-white border-2 border-gray-100 rounded-xl flex items-center justify-center text-slate-400 text-[9px] font-bold">Produto</div>
-                          <div className="bg-white border-2 border-gray-100 rounded-xl flex items-center justify-center text-slate-400 text-[9px] font-bold">Produto</div>
-                        </div>
+                      {/* Pré-visualização Real do Site (Iframe) */}
+                      <div className="max-w-[340px] mx-auto border-[10px] border-slate-900 rounded-[3rem] h-[650px] overflow-hidden relative shadow-2xl bg-white">
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-900 rounded-b-3xl z-50"></div>
+                        {/* O Iframe aponta para a rota da loja para mostrar a versão real mobile */}
+                        <iframe 
+                          src={`/${authRole.tenantId}`} 
+                          title="Preview da Loja" 
+                          className="w-full h-full border-none custom-scrollbar"
+                        />
                       </div>
                     </div>
 
@@ -1296,7 +1313,43 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
       </div>
 
       {/* --- ADD/EDIT PRODUCT DIALOG MODAL --- */}
-      {/* ... (O Modal de Novo Produto já está correto lá em cima) ... */}
+      <AnimatePresence>
+        {isProductModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+              <div className="p-6 border-b-2 border-gray-50 flex justify-between items-center bg-gray-50">
+                <h3 className="text-xl font-black uppercase text-slate-800">{editingProduct ? 'Editar Produto' : 'Novo Produto'}</h3>
+                <button onClick={() => setIsProductModalOpen(false)} className="w-8 h-8 bg-white text-gray-500 hover:text-red-500 rounded-full flex items-center justify-center shadow-sm"><X className="w-4 h-4" /></button>
+              </div>
+              <form onSubmit={saveProduct} className="p-6 space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Nome do Produto</label>
+                  <input type="text" required value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-100" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Preço (R$)</label>
+                    <input type="number" step="0.01" required value={productForm.price} onChange={e => setProductForm({...productForm, price: Number(e.target.value)})} className="w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 ring-[#0055ff] font-black text-blue-600 border border-gray-100" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Estoque</label>
+                    <input type="number" required value={productForm.stock} onChange={e => setProductForm({...productForm, stock: Number(e.target.value)})} className="w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-slate-700 border border-gray-100" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Categoria</label>
+                  <input type="text" required value={productForm.category} onChange={e => setProductForm({...productForm, category: e.target.value})} className="w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-100" placeholder="Ex: Bebidas" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">URL da Imagem</label>
+                  <input type="url" value={productForm.imageUrl} onChange={e => setProductForm({...productForm, imageUrl: e.target.value})} className="w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-100" placeholder="https://..." />
+                </div>
+                <button type="submit" className="w-full mt-4 bg-[#111827] text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg hover:bg-black transition-all">Salvar Produto</button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* --- MODAL IMPORTAÇÃO XML (MAMEDES) --- */}
       {isXmlModalOpen && (
