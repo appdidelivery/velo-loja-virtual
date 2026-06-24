@@ -76,6 +76,7 @@ export default function CustomerCatalog({ tenantId = 'tenant_mamedes123' }: { te
   const [storeName, setStoreName] = useState(settings.businessName);
   const [storeSlogan, setStoreSlogan] = useState('Catálogo Exclusivo');
   const [storeWhatsapp, setStoreWhatsapp] = useState(settings.whatsappNumber);
+  const [productLayout, setProductLayout] = useState<'list' | 'grid'>('list');
   
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -99,13 +100,15 @@ export default function CustomerCatalog({ tenantId = 'tenant_mamedes123' }: { te
       const savedLogo = localStorage.getItem('velo_store_logo');
       const savedName = localStorage.getItem('velo_store_name');
       const savedSlogan = localStorage.getItem('velo_store_slogan');
-      const savedWhatsapp = localStorage.getItem('velo_store_whatsapp'); // Lê o WhatsApp novo
+      const savedWhatsapp = localStorage.getItem('velo_store_whatsapp');
+      const savedLayout = localStorage.getItem('velo_store_layout');
       
       if (savedColor) setThemeColor(savedColor);
       if (savedLogo) setStoreLogo(savedLogo);
       if (savedName) setStoreName(savedName);
       if (savedSlogan) setStoreSlogan(savedSlogan);
       if (savedWhatsapp) setStoreWhatsapp(savedWhatsapp);
+      if (savedLayout) setProductLayout(savedLayout as 'list' | 'grid');
     };
 
     // 1. Carrega assim que a página abre

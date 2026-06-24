@@ -128,19 +128,22 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'categ
     seoDescription: ''
   });
 
- // Settings Edit states
   const [settingsForm, setSettingsForm] = useState({ 
     ...settings, 
-    primaryColor: '#357b64', 
+    primaryColor: '#357b64',
     logoUrl: '',
     slogan: 'Catálogo Exclusivo', 
     whatsappNumber: '5511999999999', 
     mpAccessToken: '',
     metaPhoneId: '',
     metaApiToken: '',
-    storeMode: 'orcamento', // <-- ADICIONADO AQUI
-    maintenanceMode: false // <-- ADICIONADO AQUI
+    storeMode: 'orcamento', 
+    maintenanceMode: false,
+    enableAbandonedCart: false,
+    abandonedCartDiscount: 5,
+    productLayout: 'list'
   });
+  
   const [settingsSuccess, setSettingsSuccess] = useState(false);
   const [openVisualAccordion, setOpenVisualAccordion] = useState<string | null>('cores');
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -155,8 +158,9 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'categ
     const savedMpToken = localStorage.getItem('velo_mp_token');
     const savedMetaPhoneId = localStorage.getItem('velo_meta_phone_id');
     const savedMetaToken = localStorage.getItem('velo_meta_token');
-    const savedMode = localStorage.getItem('velo_store_mode');
+   const savedMode = localStorage.getItem('velo_store_mode');
     const savedMaintenance = localStorage.getItem('velo_store_maintenance') === 'true';
+    const savedLayout = localStorage.getItem('velo_store_layout') || 'list';
 
     setSettingsForm(prev => ({
       ...prev,
@@ -168,10 +172,12 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'categ
       mpAccessToken: savedMpToken || '',
       metaPhoneId: savedMetaPhoneId || '',
       metaApiToken: savedMetaToken || '',
-      storeMode: savedMode || 'orcamento', // Lendo o modo de orçamento/ecommerce
-      maintenanceMode: savedMaintenance // Lendo se a loja está em manutenção
+      storeMode: savedMode || 'orcamento',
+      maintenanceMode: savedMaintenance,
+      productLayout: savedLayout
     }));
   }, []);
+
 const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
 
   // Upload da Foto do Produto para o Cloudinary
@@ -269,6 +275,7 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
     // Salva as Configurações Gerais
     localStorage.setItem('velo_store_mode', settingsForm.storeMode || 'orcamento');
     localStorage.setItem('velo_store_maintenance', settingsForm.maintenanceMode ? 'true' : 'false');
+    localStorage.setItem('velo_store_layout', settingsForm.productLayout || 'list');
     
     window.dispatchEvent(new Event('storage'));
     
@@ -1355,6 +1362,26 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
                               </div>
                             </div>
 
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Acordeon Layout Vitrine */}
+                      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden transition-all">
+                        <button onClick={() => setOpenVisualAccordion(openVisualAccordion === 'layout' ? null : 'layout')} className="w-full p-4 flex items-center justify-between text-xs font-bold text-slate-700 hover:text-[#0055ff] transition-colors outline-none">
+                          Layout dos Produtos <ChevronDown className={`w-4 h-4 transition-transform ${openVisualAccordion === 'layout' ? 'rotate-180 text-[#0055ff]' : ''}`} />
+                        </button>
+                        {openVisualAccordion === 'layout' && (
+                          <div className="p-4 pt-0 border-t border-gray-100 bg-gray-50/50 space-y-3">
+                            <label className="text-[10px] font-black uppercase text-slate-500">Exibição no Celular</label>
+                            <select 
+                              value={settingsForm.productLayout || 'list'}
+                              onChange={(e) => setSettingsForm({...settingsForm, productLayout: e.target.value})}
+                              className="w-full bg-white border border-gray-200 text-xs font-bold text-slate-700 p-2.5 rounded-lg outline-none focus:border-[#0055ff]"
+                            >
+                              <option value="list">Em Lista (1 por linha, imagem à esquerda)</option>
+                              <option value="grid">Em Grade (2 por linha, lado a lado)</option>
+                            </select>
                           </div>
                         )}
                       </div>
