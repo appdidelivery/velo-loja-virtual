@@ -1,32 +1,47 @@
 import CustomerCatalog from '@/components/CustomerCatalog';
 import { Metadata } from 'next';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/services/firebase';
 
 export async function generateMetadata({ params }: { params: { loja?: string } }): Promise<Metadata> {
-  // TRAVA DE SEGURANÇA: Se acessar a URL sem nome de loja, usa 'mamedes' para não quebrar o servidor
+  // TRAVA DE SEGURANÇA BÁSICA
   const tenantId = params?.loja || 'mamedes'; 
   const formattedStoreName = tenantId.replace(/-/g, ' ').toUpperCase();
   
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://app.mamedes.com.br';
   const domainUrl = `${baseUrl}/${tenantId}`;
   
-  // PREPARAÇÃO PARA O BANCO DE DADOS:
-  // Se for a Mamedes, injeta a logo oficial. Se for outra loja, usa a logo padrão do Velo.
-  // Cole o link do Cloudinary da Mamedes no lugar do "COLE_O_LINK_AQUI"
-  const imageUrl = tenantId === 'mamedes' 
-    ? 'COLE_O_LINK_AQUI_DA_LOGO_DA_MAMEDES.png' 
-    : `${baseUrl}/velo loja virtual logo.png`;
+  // Variáveis padrão de fallback (Caso a loja não tenha configurado nada ainda)
+  let imageUrl = `${baseUrl}/velo loja virtual logo.png`;
+  let siteTitle = `${formattedStoreName} | Catálogo Online`;
+  let siteDescription = 'Faça seu orçamento ou pedido online de forma rápida, segura e prática.';
+
+  // INTERCEPTAÇÃO NO FIREBASE: Busca as configurações reais da loja em milissegundos
+  try {
+    const tenantRef = doc(db, 'tenants', tenantId);
+    const tenantSnap = await getDoc(tenantRef);
+    
+    if (tenantSnap.exists()) {
+      const data = tenantSnap.data();
+      if (data.logoUrl) imageUrl = data.logoUrl;
+      if (data.businessName) siteTitle = `${data.businessName} | Catálogo Online`;
+      if (data.slogan) siteDescription = data.slogan;
+    }
+  } catch (error) {
+    console.error(`Erro ao buscar metadados para ${tenantId}:`, error);
+  }
 
   return {
-    title: `${formattedStoreName} | Catálogo Online`,
-    description: 'Faça seu orçamento ou pedido online de forma rápida, segura e prática.',
+    title: siteTitle,
+    description: siteDescription,
     metadataBase: new URL(baseUrl),
     icons: {
-      icon: imageUrl, // Isso injeta a logo como Favicon na aba do navegador
-      apple: imageUrl, // Para ícones de atalho no iPhone
+      icon: imageUrl,
+      apple: imageUrl,
     },
     openGraph: {
-      title: `${formattedStoreName} | Catálogo de Produtos`,
-      description: 'Acesse nosso catálogo e faça seu pedido direto pelo WhatsApp.',
+      title: siteTitle,
+      description: siteDescription,
       url: domainUrl,
       siteName: formattedStoreName,
       images: [
@@ -34,7 +49,7 @@ export async function generateMetadata({ params }: { params: { loja?: string } }
           url: imageUrl, 
           width: 800,
           height: 600,
-          alt: `Logo ${formattedStoreName}`,
+          alt: `Logo da loja ${formattedStoreName}`,
         },
       ],
       locale: 'pt_BR',
@@ -42,8 +57,8 @@ export async function generateMetadata({ params }: { params: { loja?: string } }
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${formattedStoreName} | Loja Virtual`,
-      description: 'Acesse nosso catálogo online.',
+      title: siteTitle,
+      description: siteDescription,
       images: [imageUrl],
     },
   };
