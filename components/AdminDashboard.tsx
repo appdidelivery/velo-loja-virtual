@@ -26,7 +26,7 @@ export default function AdminDashboard() {
     email: 'contato@mamedes.com.br',
     role: 'merchant_owner',
     businessType: 'whatsapp_catalog', 
-    tenantId: 'tenant_mamedes123' // ID REAL DA LOJA
+    tenantId: 'mamedes' // ID REAL DA LOJA
   });
 
   // Conexão em Tempo Real com o Firebase (Magia acontecendo!)
