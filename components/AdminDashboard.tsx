@@ -68,9 +68,63 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
     seoDescription: ''
   });
 
-  // Settings Edit states
-  const [settingsForm, setSettingsForm] = useState({ ...settings });
+ // Settings Edit states
+  const [settingsForm, setSettingsForm] = useState({ 
+    ...settings, 
+    primaryColor: '#357b64', 
+    logoUrl: '' 
+  });
   const [settingsSuccess, setSettingsSuccess] = useState(false);
+  const [openVisualAccordion, setOpenVisualAccordion] = useState<string | null>('cores');
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+
+  // Upload Direto para o Cloudinary
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingLogo(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // IMPORTANTE: Troque 'demo' e 'docs_upload_example_us' pelas chaves reais do Velo Delivery depois!
+    formData.append('upload_preset', 'docs_upload_example_us'); 
+    
+    try {
+      // Usando uma conta de demonstração pública do Cloudinary para o teste funcionar agora
+      const res = await fetch(`https://api.cloudinary.com/v1_1/demo/image/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.secure_url) {
+        setSettingsForm({ ...settingsForm, logoUrl: data.secure_url });
+      } else {
+        alert("Erro no upload. Verifique as credenciais do Cloudinary no código.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao enviar a imagem.");
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  // Salvar Configurações
+  const saveSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSettings(settingsForm);
+    
+    // Salva no navegador para a Vitrine ler as customizações
+    localStorage.setItem('velo_theme_color', settingsForm.primaryColor);
+    localStorage.setItem('velo_store_logo', settingsForm.logoUrl);
+    
+    // Dispara um alerta invisível para a aba da loja atualizar a cor em tempo real
+    window.dispatchEvent(new Event('storage'));
+    
+    setSettingsSuccess(true);
+    setTimeout(() => setSettingsSuccess(false), 3000);
+  };
 
   // Chat/Meta interaction support
   const [selectedChatId, setSelectedChatId] = useState<string>(chats[0]?.id || '');
@@ -99,44 +153,75 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
     setIsImporting(true);
 
     try {
-      // Como o XML está em outro domínio (CORS), usamos uma API pública gratuita para contornar isso temporariamente
-      const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(xmlUrl)}`);
-      const data = await response.json();
-      const xmlText = data.contents;
+      console.log("1. Buscando XML via Proxy Corsproxy.io...");
+      // Trocamos para um proxy mais permissivo que retorna o XML puro direto
+      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(xmlUrl)}`;
+      
+      const response = await fetch(proxyUrl);
+      
+      if (!response.ok) {
+        throw new Error(`O servidor recusou a conexão (Status: ${response.status}).`);
+      }
+      
+      const xmlText = await response.text();
 
-      // Usando o DOMParser nativo do navegador para ler o XML
+      if (!xmlText || (!xmlText.includes("<?xml") && !xmlText.includes("<rss") && !xmlText.includes("<feed"))) {
+        throw new Error("O link não retornou um formato XML válido.");
+      }
+
+      console.log("2. Convertendo texto para DOM XML...");
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-      const items = xmlDoc.getElementsByTagName("item");
+      
+      // Procura por <item> (Padrão RSS/Merchant) ou <entry> (Padrão Atom)
+      let items = xmlDoc.getElementsByTagName("item");
+      if (items.length === 0) {
+        items = xmlDoc.getElementsByTagName("entry");
+      }
+
+      if (items.length === 0) {
+        throw new Error("Nenhum produto encontrado. Verifique se o XML tem a tag <item>.");
+      }
 
       let importedCount = 0;
 
-      // Loop por cada item do teste XML para salvar no Firebase
-      for (let i = 0; i < items.length; i++) {
+      // Extrator inteligente: Lê a tag com ou sem o prefixo 'g:'
+      const getTag = (el: any, tag: string, prefix = "g") => {
+        let val = el.getElementsByTagName(`${prefix}:${tag}`)[0]?.textContent;
+        if (!val) val = el.getElementsByTagName(tag)[0]?.textContent;
+        return val || "";
+      };
+
+      // Removida a trava de 50. Agora importa TODOS os itens do XML de uma vez.
+      // Dica: A tela pode parecer congelada por alguns segundos dependendo do tamanho do XML. Apenas aguarde.
+      const importLimit = items.length;
+      console.log(`3. Importando todos os ${importLimit} produtos...`);
+
+      for (let i = 0; i < importLimit; i++) {
         const item = items[i];
         
-        // Mapeamento das tags padrão do Google Merchant
-        const title = item.getElementsByTagName("title")[0]?.textContent || "Produto sem nome";
-        const description = item.getElementsByTagName("description")[0]?.textContent || "";
-        const link = item.getElementsByTagName("link")[0]?.textContent || "";
-        const imageLink = item.getElementsByTagName("g:image_link")[0]?.textContent || "";
+        const title = getTag(item, "title", "") || "Produto Importado";
+        const description = getTag(item, "description", "");
+        const imageLink = getTag(item, "image_link");
         
-        // Tratamento de preço (Tirando a palavra BRL e convertendo pra número)
-        const priceRaw = item.getElementsByTagName("g:price")[0]?.textContent || "0";
-        const priceNumber = Number(priceRaw.replace(/[^\d.-]/g, ''));
+        // Tratamento robusto de preço BR
+        const priceRaw = getTag(item, "price") || "0";
+        const cleanPriceString = priceRaw.replace(/[^\d.,]/g, '').replace(',', '.');
+        const priceNumber = Number(cleanPriceString) || 0;
         
-        const category = item.getElementsByTagName("g:product_type")[0]?.textContent || "Geral";
-        const ean = item.getElementsByTagName("g:gtin")[0]?.textContent || "";
-        const sku = item.getElementsByTagName("g:id")[0]?.textContent || `SKU-${Date.now()}-${i}`;
+        const rawCategory = getTag(item, "product_type") || "Geral";
+        const category = rawCategory.split('>').pop()?.trim() || rawCategory;
+        
+        const ean = getTag(item, "gtin");
+        const sku = getTag(item, "id") || `SKU-XML-${Date.now().toString().slice(-4)}${i}`;
 
-        // Salvar no Firebase via nosso Hook
         await addProduct({
-          name: title,
-          description: description,
+          name: title.substring(0, 100),
+          description: description.substring(0, 400),
           price: priceNumber,
           imageUrl: imageLink || "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600",
           category: category,
-          stock: 99, // Estoque padrão ao importar
+          stock: 99,
           sku: sku,
           isActive: true,
           ean: ean,
@@ -150,11 +235,17 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
         importedCount++;
       }
 
-      alert(`Sucesso! ${importedCount} produtos foram importados para sua loja.`);
+      alert(`✅ Sincronização concluída!\n\n${importedCount} produtos foram cadastrados com sucesso.`);
       setIsXmlModalOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Erro ao importar o XML. Verifique se o link é válido e público.");
+      
+      // Tratamento específico se for erro de bloqueio do navegador
+      if (error.message.includes("Failed to fetch") || error.name === "TypeError") {
+        alert("⚠️ ERRO DE REDE BLOQUEADA\n\nSeu navegador ou AdBlock (Extensão de bloquear anúncios) impediu o painel de baixar o arquivo XML.\n\nDICA: Desative o AdBlock/Escudos de Privacidade para o localhost e tente novamente.");
+      } else {
+        alert(`⚠️ Erro ao importar: ${error.message}`);
+      }
     } finally {
       setIsImporting(false);
     }
@@ -406,13 +497,6 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
     setPosCart([]);
     setPosDiscount(0);
     setIsPosDrawerOpen(false);
-  };
-
-  const saveSettings = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSettings(settingsForm);
-    setSettingsSuccess(true);
-    setTimeout(() => setSettingsSuccess(false), 3000);
   };
 
   // Filtered Products
@@ -827,9 +911,99 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
                     </div>
 
                     <div className="bg-gray-50 border-2 border-gray-100 rounded-[2rem] p-6 space-y-3">
-                      <button className="w-full bg-white border border-gray-200 p-4 rounded-xl flex items-center justify-between text-xs font-bold text-slate-700 hover:border-[#0055ff] transition-colors">Cores Predominantes <ChevronDown className="w-4 h-4" /></button>
-                      <button className="w-full bg-white border border-gray-200 p-4 rounded-xl flex items-center justify-between text-xs font-bold text-slate-700 hover:border-[#0055ff] transition-colors">Botões e Tarjas <ChevronDown className="w-4 h-4" /></button>
-                      <button className="w-full bg-white border border-gray-200 p-4 rounded-xl flex items-center justify-between text-xs font-bold text-slate-700 hover:border-[#0055ff] transition-colors">Fontes <ChevronDown className="w-4 h-4" /></button>
+                      
+                      {/* Upload de Logo (Via Cloudinary) */}
+                      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden p-4 space-y-3">
+                        <label className="text-[10px] font-black uppercase text-slate-500">Logomarca da Loja (PNG/JPG)</label>
+                        
+                        <div className="flex items-center gap-4">
+                          <label className="flex-1 cursor-pointer bg-gray-50 border-2 border-dashed border-gray-200 hover:border-[#0055ff] hover:bg-blue-50 transition-colors p-4 rounded-xl flex flex-col items-center justify-center gap-2 text-center">
+                            {isUploadingLogo ? (
+                              <div className="w-5 h-5 border-2 border-[#0055ff] border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                              <>
+                                <Plus className="w-6 h-6 text-slate-400" />
+                                <span className="text-[10px] font-bold text-slate-600">Clique para enviar imagem</span>
+                              </>
+                            )}
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              onChange={handleLogoUpload} 
+                              disabled={isUploadingLogo}
+                              className="hidden" 
+                            />
+                          </label>
+
+                          {settingsForm.logoUrl && (
+                            <div className="w-20 h-20 bg-gray-100 rounded-xl p-2 border border-gray-200 flex items-center justify-center shrink-0 relative group">
+                              <img src={settingsForm.logoUrl} alt="Logo Preview" className="max-w-full max-h-full object-contain" />
+                              <button 
+                                onClick={() => setSettingsForm({...settingsForm, logoUrl: ''})}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-[9px] text-slate-400 font-medium">Sua imagem será enviada diretamente para a nuvem.</p>
+                      </div>
+
+                      {/* Acordeon Cores Funcional */}
+                      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden transition-all">
+                        <button onClick={() => setOpenVisualAccordion(openVisualAccordion === 'cores' ? null : 'cores')} className="w-full p-4 flex items-center justify-between text-xs font-bold text-slate-700 hover:text-[#0055ff] transition-colors outline-none">
+                          Cor Predominante <ChevronDown className={`w-4 h-4 transition-transform ${openVisualAccordion === 'cores' ? 'rotate-180 text-[#0055ff]' : ''}`} />
+                        </button>
+                        {openVisualAccordion === 'cores' && (
+                          <div className="p-4 pt-0 border-t border-gray-100 bg-gray-50/50 grid grid-cols-4 gap-3">
+                            {/* Paleta de Cores Padrão */}
+                            {['#357b64', '#0055ff', '#ff7b00', '#111827', '#e11d48', '#8b5cf6', '#0ea5e9', '#f59e0b'].map(color => (
+                              <button 
+                                key={color}
+                                onClick={() => setSettingsForm({...settingsForm, primaryColor: color})}
+                                style={{ backgroundColor: color }}
+                                className={`w-10 h-10 rounded-full border-4 shadow-sm hover:scale-110 transition-transform mx-auto ${settingsForm.primaryColor === color ? 'border-gray-900 scale-110' : 'border-white'}`}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Acordeon Botões */}
+                      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden transition-all">
+                        <button onClick={() => setOpenVisualAccordion(openVisualAccordion === 'botoes' ? null : 'botoes')} className="w-full p-4 flex items-center justify-between text-xs font-bold text-slate-700 hover:text-[#0055ff] transition-colors outline-none">
+                          Botões e Tarjas <ChevronDown className={`w-4 h-4 transition-transform ${openVisualAccordion === 'botoes' ? 'rotate-180 text-[#0055ff]' : ''}`} />
+                        </button>
+                        {openVisualAccordion === 'botoes' && (
+                          <div className="p-4 pt-0 border-t border-gray-100 bg-gray-50/50 space-y-3">
+                            <label className="text-[10px] font-black uppercase text-slate-500">Estilo das bordas</label>
+                            <select className="w-full bg-white border border-gray-200 text-xs font-bold text-slate-700 p-2.5 rounded-lg outline-none focus:border-[#0055ff]">
+                              <option>Arredondado (Moderno)</option>
+                              <option>Quadrado (Clássico)</option>
+                              <option>Pílula (Suave)</option>
+                            </select>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Acordeon Fontes */}
+                      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden transition-all">
+                        <button onClick={() => setOpenVisualAccordion(openVisualAccordion === 'fontes' ? null : 'fontes')} className="w-full p-4 flex items-center justify-between text-xs font-bold text-slate-700 hover:text-[#0055ff] transition-colors outline-none">
+                          Fontes <ChevronDown className={`w-4 h-4 transition-transform ${openVisualAccordion === 'fontes' ? 'rotate-180 text-[#0055ff]' : ''}`} />
+                        </button>
+                        {openVisualAccordion === 'fontes' && (
+                          <div className="p-4 pt-0 border-t border-gray-100 bg-gray-50/50 space-y-3">
+                            <label className="text-[10px] font-black uppercase text-slate-500">Tipografia Global</label>
+                            <select className="w-full bg-white border border-gray-200 text-xs font-bold text-slate-700 p-2.5 rounded-lg outline-none focus:border-[#0055ff]">
+                              <option>Inter (Recomendado)</option>
+                              <option>Roboto</option>
+                              <option>Montserrat</option>
+                            </select>
+                          </div>
+                        )}
+                      </div>
+
                     </div>
                   </div>
                 </div>
