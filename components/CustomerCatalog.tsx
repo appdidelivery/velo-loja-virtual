@@ -82,6 +82,9 @@ export default function CustomerCatalog({ tenantId = 'tenant_mamedes123' }: { te
 
   const [visibleCount, setVisibleCount] = useState(25);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  
+  // Estado para controlar qual produto está aberto no Modal
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     setVisibleCount(25);
@@ -384,7 +387,7 @@ export default function CustomerCatalog({ tenantId = 'tenant_mamedes123' }: { te
               ) : (
                 <>
                   {paginatedProducts.map(product => (
-                    <div key={product.id} className="bg-white p-3 rounded-[1.5rem] shadow-sm border border-gray-100 flex gap-4 items-center relative overflow-hidden group">
+                    <div key={product.id} onClick={() => setSelectedProduct(product)} className="bg-white p-3 rounded-[1.5rem] shadow-sm border border-gray-100 flex gap-4 items-center relative overflow-hidden group cursor-pointer hover:border-gray-300 transition-colors">
                       {product.stock <= 10 && <div className="absolute top-0 left-0 bg-red-500 text-white text-[8px] font-black uppercase px-2 py-1 rounded-br-lg z-10">Últimos</div>}
                       <div className="w-20 h-20 bg-gray-50 rounded-xl p-1.5 shrink-0 border border-gray-100 relative">
                         <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform" />
@@ -395,7 +398,7 @@ export default function CustomerCatalog({ tenantId = 'tenant_mamedes123' }: { te
                         <div className="flex items-center justify-between mt-auto">
                           <span style={{ color: themeColor }} className="text-sm font-black">R$ {product.price.toFixed(2)}</span>
                           <button 
-                            onClick={() => handleAddToCart(product)} 
+                            onClick={(e) => { e.stopPropagation(); handleAddToCart(product); }} 
                             style={{ backgroundColor: themeColor }}
                             className="w-8 h-8 text-white rounded-full flex items-center justify-center shadow-sm hover:scale-105 transition-transform"
                           >
@@ -508,16 +511,22 @@ export default function CustomerCatalog({ tenantId = 'tenant_mamedes123' }: { te
                     {paginatedProducts.map((product) => {
                     const pixPrice = product.price * 0.97;
                     return (
-                      <article key={product.id} className="bg-white flex flex-col h-full rounded border border-transparent hover:border-gray-200 hover:shadow-xl transition-all duration-300 relative group">
+                     <article key={product.id} className="bg-white flex flex-col h-full rounded border border-transparent hover:border-gray-200 hover:shadow-xl transition-all duration-300 relative group">
                         <button className="absolute top-3 right-3 z-10 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-400"><Star className="w-4 h-4" /></button>
-                        <div className="w-full aspect-square relative p-4 overflow-hidden"><img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" /></div>
-                        <div className="p-4 flex flex-col flex-1 text-center border-t border-gray-50 mt-2">
-                          <h3 className="text-sm font-medium text-gray-800 line-clamp-2 min-h-[40px] mb-2">{product.name}</h3>
+                        
+                        <div onClick={() => setSelectedProduct(product)} className="cursor-pointer">
+                          <div className="w-full aspect-square relative p-4 overflow-hidden"><img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" /></div>
+                          <div className="px-4 pt-2 pb-1 text-center border-t border-gray-50 mt-2">
+                            <h3 className="text-sm font-medium text-gray-800 line-clamp-2 min-h-[40px]">{product.name}</h3>
+                          </div>
+                        </div>
+
+                        <div className="p-4 flex flex-col flex-1 text-center">
                           <div className="mt-auto">
                             <div className="flex items-end justify-center gap-2 mb-2"><span className="text-xs text-gray-400 line-through font-medium">R$ {(product.price * 1.1).toFixed(2)}</span><span className="text-xl font-extrabold text-[#357b64]">R$ {product.price.toFixed(2)}</span></div>
                             <div className="bg-[#f2fcf8] border border-[#c4e4d8] rounded py-2 px-1 flex flex-col items-center justify-center mb-4"><span className="text-sm font-bold text-[#357b64] flex items-center gap-1">R$ {pixPrice.toFixed(2)} <span className="text-[10px] font-normal text-gray-600">no pix</span></span></div>
-                            <button onClick={() => handleAddToCart(product)} className="w-full bg-[#357b64] hover:bg-[#2c6b56] text-white font-bold text-sm py-3 rounded mb-2">Comprar</button>
-                            <button onClick={() => { handleAddToCart(product); setIsCartOpen(true); }} className="w-full bg-white border border-[#357b64] text-[#357b64] hover:bg-gray-50 font-bold text-xs py-2 rounded flex items-center justify-center gap-1.5">Orçamento Fácil <Phone className="w-3.5 h-3.5" /></button>
+                            <button onClick={(e) => { e.stopPropagation(); handleAddToCart(product); }} className="w-full bg-[#357b64] hover:bg-[#2c6b56] text-white font-bold text-sm py-3 rounded mb-2">Comprar</button>
+                            <button onClick={(e) => { e.stopPropagation(); handleAddToCart(product); setIsCartOpen(true); }} className="w-full bg-white border border-[#357b64] text-[#357b64] hover:bg-gray-50 font-bold text-xs py-2 rounded flex items-center justify-center gap-1.5">Orçamento Fácil <Phone className="w-3.5 h-3.5" /></button>
                           </div>
                         </div>
                       </article>
@@ -548,6 +557,78 @@ export default function CustomerCatalog({ tenantId = 'tenant_mamedes123' }: { te
           </footer>
         </div>
       )}
+
+      {/* =========================================
+          MODAL DE DETALHES DO PRODUTO
+          ========================================= */}
+      <AnimatePresence>
+        {selectedProduct && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            onClick={() => setSelectedProduct(null)}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4 sm:p-6"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 20 }} 
+              animate={{ scale: 1, opacity: 1, y: 0 }} 
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              onClick={(e) => e.stopPropagation()} 
+              className="bg-white w-full max-w-lg max-h-[90vh] rounded-[2rem] shadow-2xl flex flex-col overflow-hidden relative"
+            >
+              <button 
+                onClick={() => setSelectedProduct(null)} 
+                className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/80 backdrop-blur shadow-sm text-gray-500 hover:text-gray-900 rounded-full flex items-center justify-center transition-colors border border-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="w-full h-64 sm:h-80 bg-gray-50 flex items-center justify-center p-8 shrink-0 relative">
+                <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="w-full h-full object-contain mix-blend-multiply" />
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 sm:p-8 custom-scrollbar bg-white">
+                <div className="mb-2">
+                  <span style={{ color: themeColor, backgroundColor: `${themeColor}15` }} className="px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full">
+                    {selectedProduct.category}
+                  </span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black text-gray-900 leading-tight mb-2">
+                  {selectedProduct.name}
+                </h2>
+                <p className="text-xs font-mono text-gray-400 mb-6 font-bold">SKU: {selectedProduct.sku}</p>
+
+                <div className="prose prose-sm text-gray-600 mb-8 max-w-none">
+                  <p className="whitespace-pre-wrap leading-relaxed font-medium">
+                    {selectedProduct.description || 'Nenhuma descrição fornecida para este produto.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 sm:p-8 bg-gray-50 border-t border-gray-100 shrink-0 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Preço Unitário</p>
+                  <p style={{ color: themeColor }} className="text-2xl sm:text-3xl font-black tracking-tight">
+                    R$ {selectedProduct.price.toFixed(2)}
+                  </p>
+                </div>
+                
+                <button 
+                  onClick={() => {
+                    handleAddToCart(selectedProduct);
+                    setSelectedProduct(null);
+                  }}
+                  style={{ backgroundColor: themeColor }}
+                  className="px-6 py-4 rounded-xl text-white font-black uppercase tracking-wider text-xs sm:text-sm shadow-lg flex items-center gap-2 hover:opacity-90 transition-opacity flex-1 justify-center max-w-[200px]"
+                >
+                  <Plus className="w-5 h-5" /> Adicionar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* =========================================
           DRAWER COMPARTILHADO (Carrinho Fixo / Universal)
