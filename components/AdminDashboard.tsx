@@ -116,7 +116,46 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
       maintenanceMode: savedMaintenance // Lendo se a loja está em manutenção
     }));
   }, []);
+const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
 
+  // Upload da Foto do Produto para o Cloudinary
+  const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingProductImage(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    
+    if (!uploadPreset || !cloudName) {
+      alert("Chaves do Cloudinary não encontradas no arquivo .env.local.");
+      setIsUploadingProductImage(false);
+      return;
+    }
+
+    formData.append('upload_preset', uploadPreset); 
+    
+    try {
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      
+      if (data.secure_url) {
+        setProductForm({ ...productForm, imageUrl: data.secure_url });
+      } else {
+        alert("Erro ao fazer o upload da imagem do produto.");
+      }
+    } catch (error) {
+      alert("Falha de conexão com a nuvem de imagens.");
+    } finally {
+      setIsUploadingProductImage(false);
+    }
+  };
   // Upload Direto para o Cloudinary usando variáveis de ambiente (.env)
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1315,36 +1354,95 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
       {/* --- ADD/EDIT PRODUCT DIALOG MODAL --- */}
       <AnimatePresence>
         {isProductModalOpen && (
-          <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
-              <div className="p-6 border-b-2 border-gray-50 flex justify-between items-center bg-gray-50">
-                <h3 className="text-xl font-black uppercase text-slate-800">{editingProduct ? 'Editar Produto' : 'Novo Produto'}</h3>
-                <button onClick={() => setIsProductModalOpen(false)} className="w-8 h-8 bg-white text-gray-500 hover:text-red-500 rounded-full flex items-center justify-center shadow-sm"><X className="w-4 h-4" /></button>
+          <div className="fixed inset-0 bg-slate-900/60 z-[150] flex items-center justify-center p-4 backdrop-blur-sm">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white rounded-[2.5rem] w-full max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="p-6 border-b-2 border-gray-50 flex justify-between items-center bg-white sticky top-0 z-10">
+                <h3 className="text-2xl font-black italic uppercase text-slate-800">{editingProduct ? 'Editar' : 'Novo'} Produto</h3>
+                <button onClick={() => setIsProductModalOpen(false)} className="w-10 h-10 bg-gray-100 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-full flex items-center justify-center transition-colors"><X className="w-5 h-5" /></button>
               </div>
-              <form onSubmit={saveProduct} className="p-6 space-y-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Nome do Produto</label>
-                  <input type="text" required value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-100" />
+              
+              <form onSubmit={saveProduct} className="p-6 space-y-5 overflow-y-auto custom-scrollbar bg-gray-50/30">
+                
+                {/* UPLOAD DE IMAGEM */}
+                <div className="flex flex-col items-center gap-4 mb-2">
+                  <div className="relative w-32 h-32 rounded-3xl border-4 border-white shadow-lg bg-gray-100 flex items-center justify-center overflow-hidden group">
+                    {productForm.imageUrl ? (
+                      <img src={productForm.imageUrl} alt="Produto" className="w-full h-full object-cover" />
+                    ) : (
+                      <ShoppingBag className="w-10 h-10 text-gray-300" />
+                    )}
+                    
+                    {/* Overlay Escuro com Loading ou Botão de Envio */}
+                    <label className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                      {isUploadingProductImage ? (
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <span className="text-white text-[10px] font-black uppercase tracking-widest text-center px-2">Trocar<br/>Imagem</span>
+                      )}
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleProductImageUpload} 
+                        disabled={isUploadingProductImage}
+                        className="hidden" 
+                      />
+                    </label>
+                  </div>
+                  <p className="text-[10px] font-bold text-slate-400">Clique na caixa acima para subir a foto.</p>
                 </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Nome do Produto</label>
+                  <input type="text" required value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 shadow-sm" placeholder="Ex: Cerveja Heineken 330ml" />
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Descrição</label>
+                  <textarea rows={2} value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-medium text-sm text-slate-600 border border-gray-200 shadow-sm resize-none" placeholder="Detalhes do produto..."></textarea>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Preço (R$)</label>
-                    <input type="number" step="0.01" required value={productForm.price} onChange={e => setProductForm({...productForm, price: Number(e.target.value)})} className="w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 ring-[#0055ff] font-black text-blue-600 border border-gray-100" />
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Preço (R$)</label>
+                    <input type="number" step="0.01" required value={productForm.price || ''} onChange={e => setProductForm({...productForm, price: Number(e.target.value)})} className="w-full p-4 bg-blue-50 rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-black text-xl text-blue-600 border border-blue-100" />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Estoque</label>
-                    <input type="number" required value={productForm.stock} onChange={e => setProductForm({...productForm, stock: Number(e.target.value)})} className="w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-slate-700 border border-gray-100" />
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Estoque Inicial</label>
+                    <input type="number" required value={productForm.stock} onChange={e => setProductForm({...productForm, stock: Number(e.target.value)})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-slate-700 border border-gray-200 shadow-sm" />
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Categoria</label>
-                  <input type="text" required value={productForm.category} onChange={e => setProductForm({...productForm, category: e.target.value})} className="w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-100" placeholder="Ex: Bebidas" />
+
+                <div className="space-y-1 pb-4 border-b border-gray-100">
+                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Categoria na Loja</label>
+                  
+                  {/* Select Dinâmico (Lê as categorias únicas existentes na lista de produtos) */}
+                  {(() => {
+                    const uniqueCategories = Array.from(new Set(products.map(p => p.category))).filter(Boolean);
+                    
+                    return (
+                      <div className="relative">
+                        <input 
+                          type="text" 
+                          list="categoriesList"
+                          required 
+                          value={productForm.category} 
+                          onChange={e => setProductForm({...productForm, category: e.target.value})} 
+                          className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 shadow-sm" 
+                          placeholder="Escolha ou digite uma nova..." 
+                        />
+                        <datalist id="categoriesList">
+                          {uniqueCategories.map(cat => (
+                            <option key={cat} value={cat} />
+                          ))}
+                        </datalist>
+                      </div>
+                    );
+                  })()}
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">URL da Imagem</label>
-                  <input type="url" value={productForm.imageUrl} onChange={e => setProductForm({...productForm, imageUrl: e.target.value})} className="w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-100" placeholder="https://..." />
-                </div>
-                <button type="submit" className="w-full mt-4 bg-[#111827] text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg hover:bg-black transition-all">Salvar Produto</button>
+
+                <button type="submit" disabled={isUploadingProductImage} className="w-full bg-[#111827] text-white py-5 rounded-[2rem] font-black uppercase tracking-widest shadow-xl hover:bg-black transition-all active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed">
+                  Salvar Produto
+                </button>
               </form>
             </motion.div>
           </div>
