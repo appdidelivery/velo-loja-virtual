@@ -6,7 +6,7 @@ import {
   Search, CheckCircle2, DollarSign, Eye, EyeOff, User, Sparkles,
   Layers, AlertCircle, Send, HelpCircle, FileCheck, Percent,
   TrendingUp, X, CreditCard, Sun, Moon, ExternalLink, ChevronDown, List,
-  Megaphone, ChevronLeft, ChevronRight, Filter
+  Megaphone, ChevronLeft, ChevronRight, Filter,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -53,6 +53,16 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'categ
   // Search and Filter states
   const [productSearch, setProductSearch] = useState('');
   const [orderFilter, setOrderFilter] = useState<'all' | 'pending' | 'paid' | 'delivered'>('all');
+
+  // Product Pagination & Filters
+  const [productCategoryFilter, setProductCategoryFilter] = useState('all');
+  const [productStatusFilter, setProductStatusFilter] = useState('all');
+  const [productItemsPerPage, setProductItemsPerPage] = useState(25);
+  const [productCurrentPage, setProductCurrentPage] = useState(1);
+
+  React.useEffect(() => {
+    setProductCurrentPage(1);
+  }, [productSearch, productCategoryFilter, productStatusFilter, productItemsPerPage]);
 
   // Product Dialog/Form state
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -639,11 +649,18 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
     setIsPosDrawerOpen(false);
   };
 
-  // Filtered Products
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-    p.sku.toLowerCase().includes(productSearch.toLowerCase()) ||
-    p.category.toLowerCase().includes(productSearch.toLowerCase())
+  // Filtered & Paginated Products
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(productSearch.toLowerCase()) || p.sku.toLowerCase().includes(productSearch.toLowerCase());
+    const matchesCategory = productCategoryFilter === 'all' || p.category === productCategoryFilter;
+    const matchesStatus = productStatusFilter === 'all' || (productStatusFilter === 'active' && p.isActive) || (productStatusFilter === 'inactive' && !p.isActive);
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
+
+  const totalProductPages = Math.ceil(filteredProducts.length / productItemsPerPage);
+  const paginatedProducts = filteredProducts.slice(
+    (productCurrentPage - 1) * productItemsPerPage, 
+    productCurrentPage * productItemsPerPage
   );
 
   // Filtered Orders
@@ -965,19 +982,59 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
           )}
           {activePanel === 'products' && (
             <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-8 space-y-6 max-w-6xl mx-auto shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-gray-50 pb-6">
+              <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b-2 border-gray-50 pb-6">
                 <h2 className="text-2xl font-black italic uppercase text-[#111827]">Produtos</h2>
-                <div className="flex items-center gap-3">
+                
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-full border border-gray-200">
+                    <Filter className="w-4 h-4 text-gray-400 ml-2" />
+                    <select 
+                      value={productCategoryFilter} 
+                      onChange={(e) => setProductCategoryFilter(e.target.value)}
+                      className="bg-transparent text-xs font-bold text-slate-700 py-1.5 px-2 outline-none cursor-pointer border-r border-gray-200"
+                    >
+                      <option value="all">Todas as Categorias</option>
+                      {Array.from(new Set(products.map(p => p.category))).filter(Boolean).map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+
+                    <select 
+                      value={productStatusFilter} 
+                      onChange={(e) => setProductStatusFilter(e.target.value)}
+                      className="bg-transparent text-xs font-bold text-slate-700 py-1.5 px-2 outline-none cursor-pointer border-r border-gray-200"
+                    >
+                      <option value="all">Todos Status</option>
+                      <option value="active">Ativos</option>
+                      <option value="inactive">Inativos</option>
+                    </select>
+
+                    <select 
+                      value={productItemsPerPage} 
+                      onChange={(e) => setProductItemsPerPage(Number(e.target.value))}
+                      className="bg-transparent text-xs font-bold text-slate-700 py-1.5 px-2 outline-none cursor-pointer"
+                    >
+                      <option value={25}>25 por tela</option>
+                      <option value={50}>50 por tela</option>
+                      <option value={100}>100 por tela</option>
+                    </select>
+                  </div>
+
                   <div className="relative">
                     <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input type="text" placeholder="Buscar por SKU ou Nome..." value={productSearch} onChange={(e) => setProductSearch(e.target.value)} className="bg-gray-50 text-sm text-slate-800 pl-10 pr-4 py-3 rounded-full border-2 border-gray-100 focus:border-[#ff7b00] outline-none w-[180px] sm:w-[280px] transition-all font-medium" />
+                    <input type="text" placeholder="Buscar por SKU ou Nome..." value={productSearch} onChange={(e) => setProductSearch(e.target.value)} className="bg-gray-50 text-sm text-slate-800 pl-10 pr-4 py-2.5 rounded-full border-2 border-gray-100 focus:border-[#ff7b00] outline-none w-[180px] sm:w-[220px] transition-all font-medium" />
                   </div>
-                  <button onClick={() => setIsXmlModalOpen(true)} className="px-6 py-3 bg-white border-2 border-gray-200 hover:border-[#111827] text-[#111827] transition-all font-black uppercase tracking-wider rounded-full text-[11px] flex items-center gap-2">
-                    <Layers className="w-4 h-4" /> Importar XML
-                  </button>
-                  <button onClick={openNewProductModal} className="px-6 py-3 bg-[#ff7b00] hover:bg-[#e66a00] transition-all text-white font-black uppercase tracking-wider rounded-full text-[11px] flex items-center gap-2 shadow-lg shadow-orange-500/30">
-                    <Plus className="w-4 h-4" />Novo Produto
-                  </button>
+                  
+                  <div className="h-8 w-px bg-gray-200 mx-1 hidden lg:block"></div>
+                  
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setIsXmlModalOpen(true)} className="px-5 py-2.5 bg-white border-2 border-gray-200 hover:border-[#111827] text-[#111827] transition-all font-black uppercase tracking-wider rounded-full text-[10px] flex items-center gap-2">
+                      <Layers className="w-3.5 h-3.5" /> Importar XML
+                    </button>
+                    <button onClick={openNewProductModal} className="px-5 py-2.5 bg-[#ff7b00] hover:bg-[#e66a00] transition-all text-white font-black uppercase tracking-wider rounded-full text-[10px] flex items-center gap-2 shadow-lg shadow-orange-500/30">
+                      <Plus className="w-3.5 h-3.5" /> Novo Produto
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -987,10 +1044,10 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
                     <tr><th className="px-6 py-4">Produto</th><th className="px-6 py-4">SKU</th><th className="px-6 py-4">Preço</th><th className="px-6 py-4">Estoque</th><th className="px-6 py-4">Status</th><th className="px-6 py-4 text-right">Ações</th></tr>
                   </thead>
                   <tbody className="divide-y-2 divide-gray-50">
-                    {filteredProducts.length === 0 ? (
+                    {paginatedProducts.length === 0 ? (
                       <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400 font-bold">Nenhum produto localizado.</td></tr>
                     ) : (
-                      filteredProducts.map(p => (
+                      paginatedProducts.map(p => (
                         <tr key={p.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4 flex items-center gap-4">
                             <img src={p.imageUrl} alt={p.name} className="w-12 h-12 object-cover rounded-xl border border-gray-200 shrink-0 shadow-sm" />
@@ -1012,6 +1069,33 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
                   </tbody>
                 </table>
               </div>
+
+              {totalProductPages > 1 && (
+                <div className="flex items-center justify-between border-t-2 border-gray-50 pt-4 px-2">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Mostrando {(productCurrentPage - 1) * productItemsPerPage + 1} até {Math.min(productCurrentPage * productItemsPerPage, filteredProducts.length)} de {filteredProducts.length}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => setProductCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={productCurrentPage === 1}
+                      className="p-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-600 hover:border-[#0055ff] hover:text-[#0055ff] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <span className="text-xs font-black text-slate-800 px-2">
+                      {productCurrentPage} de {totalProductPages}
+                    </span>
+                    <button 
+                      onClick={() => setProductCurrentPage(prev => Math.min(prev + 1, totalProductPages))}
+                      disabled={productCurrentPage === totalProductPages}
+                      className="p-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-600 hover:border-[#0055ff] hover:text-[#0055ff] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
