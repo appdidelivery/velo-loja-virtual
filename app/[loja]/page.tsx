@@ -8,12 +8,22 @@ export async function generateMetadata({ params }: { params: { loja?: string } }
   
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://app.mamedes.com.br';
   const domainUrl = `${baseUrl}/${tenantId}`;
-  const imageUrl = `${baseUrl}/velo loja virtual logo.png`;
+  
+  // PREPARAÇÃO PARA O BANCO DE DADOS:
+  // Se for a Mamedes, injeta a logo oficial. Se for outra loja, usa a logo padrão do Velo.
+  // Cole o link do Cloudinary da Mamedes no lugar do "COLE_O_LINK_AQUI"
+  const imageUrl = tenantId === 'mamedes' 
+    ? 'COLE_O_LINK_AQUI_DA_LOGO_DA_MAMEDES.png' 
+    : `${baseUrl}/velo loja virtual logo.png`;
 
   return {
     title: `${formattedStoreName} | Catálogo Online`,
     description: 'Faça seu orçamento ou pedido online de forma rápida, segura e prática.',
     metadataBase: new URL(baseUrl),
+    icons: {
+      icon: imageUrl, // Isso injeta a logo como Favicon na aba do navegador
+      apple: imageUrl, // Para ícones de atalho no iPhone
+    },
     openGraph: {
       title: `${formattedStoreName} | Catálogo de Produtos`,
       description: 'Acesse nosso catálogo e faça seu pedido direto pelo WhatsApp.',
