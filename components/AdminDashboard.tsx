@@ -5,7 +5,7 @@ import {
   ShoppingBag, Settings, MessageSquare, Plus, Edit2, Trash2, 
   Search, CheckCircle2, DollarSign, Eye, User, Sparkles,
   Layers, AlertCircle, Send, HelpCircle, FileCheck, Percent,
-  TrendingUp, X, CreditCard, Sun, Moon, ExternalLink, ChevronDown
+  TrendingUp, X, CreditCard, Sun, Moon, ExternalLink, ChevronDown, List
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -37,7 +37,7 @@ export default function AdminDashboard() {
   const [settings, setSettings] = useState<TenantSettings>(INITIAL_SETTINGS);
 
   // Navigation tabs
-const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'orders' | 'chats' | 'settings'>('dashboard');
+const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'categories' | 'orders' | 'chats' | 'settings'>('dashboard');
   
   // Controles do novo Menu estilo Loja Integrada
   const [isSettingsExpanded, setIsSettingsExpanded] = useState(false);
@@ -56,6 +56,9 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
   // Product Dialog/Form state
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  // Category Dialog/Form state
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [categoryForm, setCategoryForm] = useState({ name: '', order: 1 });
   const [productForm, setProductForm] = useState({
     name: '',
     description: '',
@@ -674,6 +677,10 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
               <ShoppingBag className="w-5 h-5" /> PRODUTOS
             </button>
 
+            <button onClick={() => setActivePanel('categories')} className={`w-full flex items-center gap-3 px-5 py-3.5 rounded-full text-sm font-black uppercase tracking-wider transition-all ${activePanel === 'categories' ? 'bg-[#111827] text-white shadow-lg shadow-black/20' : 'text-slate-500 hover:bg-gray-100 hover:text-slate-900'}`}>
+              <List className="w-5 h-5" /> CATEGORIAS
+            </button>
+
             {/* Oculta PEDIDOS se for Catálogo Simples */}
             {authRole.businessType === 'ecommerce' && (
               <button onClick={() => setActivePanel('orders')} className={`w-full flex items-center gap-3 px-5 py-3.5 rounded-full text-sm font-black uppercase tracking-wider transition-all ${activePanel === 'orders' ? 'bg-[#111827] text-white shadow-lg shadow-black/20' : 'text-slate-500 hover:bg-gray-100 hover:text-slate-900'}`}>
@@ -800,7 +807,51 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
               </div>
             </div>
           )}
-
+{/* --- ADD CATEGORY DIALOG MODAL --- */}
+      <AnimatePresence>
+        {isCategoryModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/60 z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl relative">
+              <button onClick={() => setIsCategoryModalOpen(false)} className="absolute top-6 right-6 p-2 bg-gray-50 rounded-full hover:bg-red-50 hover:text-red-500 text-gray-400 transition-colors"><X size={18}/></button>
+              
+              <h2 className="text-2xl font-black italic mb-6 uppercase text-slate-900">Nova Categoria</h2>
+              <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  // No sistema real, a gente criaria um banco separado para Categorias.
+                  // Mas como o seu front-end é inteligente e deduz as categorias lendo a lista de produtos,
+                  // Se ele cria uma categoria vazia, a gente "finge" salvando um produto fantasma
+                  // que ficará inativo apenas para a aba de Categoria registrar a existência dela.
+                  await addProduct({
+                      name: `_CAT_BASE_${categoryForm.name}`,
+                      description: 'Produto oculto para sustentar a categoria.',
+                      price: 0,
+                      imageUrl: '',
+                      category: categoryForm.name,
+                      stock: 0,
+                      sku: `CAT-${Date.now()}`,
+                      isActive: false, // Cliente não vê
+                      tenantId: settings.tenantId
+                  });
+                  setIsCategoryModalOpen(false);
+                  alert("Categoria adicionada!");
+              }} className="space-y-4">
+                  <div>
+                      <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1 block mb-1">Nome da Categoria</label>
+                      <input 
+                          type="text" 
+                          required 
+                          value={categoryForm.name} 
+                          onChange={e => setCategoryForm({ ...categoryForm, name: e.target.value })} 
+                          placeholder="Ex: Hambúrgueres"
+                          className="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm border border-gray-200" 
+                      />
+                  </div>
+                  <button type="submit" className="w-full bg-[#111827] text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl hover:bg-black transition-all active:scale-95">Salvar Categoria</button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
           {activePanel === 'products' && (
             <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-8 space-y-6 max-w-6xl mx-auto shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-gray-50 pb-6">
