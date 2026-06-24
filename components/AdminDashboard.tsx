@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Product, Order, ChatSession, TenantSettings, OrderStatus, PaymentStatus } from '../types';
 import { INITIAL_ORDERS, INITIAL_CHATS, INITIAL_SETTINGS } from '../data/mokedData';
 import VeloSupportWidget from './VeloSupportWidget';
+import AdminChat from './AdminChat';
 import { useProducts } from '../hooks/useProducts';
 import { useOrders } from '../hooks/useOrders';
 
@@ -77,7 +78,10 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
     primaryColor: '#357b64', 
     logoUrl: '',
     slogan: 'Catálogo Exclusivo', // Slogan padrão
-    whatsappNumber: '5511999999999' // WhatsApp Padrão
+    whatsappNumber: '5511999999999', // WhatsApp Padrão
+    mpAccessToken: '',
+    metaPhoneId: '',
+    metaApiToken: ''
   });
   const [settingsSuccess, setSettingsSuccess] = useState(false);
   const [openVisualAccordion, setOpenVisualAccordion] = useState<string | null>('cores');
@@ -90,6 +94,9 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
     const savedName = localStorage.getItem('velo_store_name');
     const savedSlogan = localStorage.getItem('velo_store_slogan');
     const savedWhatsapp = localStorage.getItem('velo_store_whatsapp');
+    const savedMpToken = localStorage.getItem('velo_mp_token');
+    const savedMetaPhoneId = localStorage.getItem('velo_meta_phone_id');
+    const savedMetaToken = localStorage.getItem('velo_meta_token');
 
     setSettingsForm(prev => ({
       ...prev,
@@ -97,7 +104,10 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
       logoUrl: savedLogo || prev.logoUrl,
       businessName: savedName || prev.businessName,
       slogan: savedSlogan || prev.slogan,
-      whatsappNumber: savedWhatsapp || prev.whatsappNumber
+      whatsappNumber: savedWhatsapp || prev.whatsappNumber,
+      mpAccessToken: savedMpToken || '',
+      metaPhoneId: savedMetaPhoneId || '',
+      metaApiToken: savedMetaToken || ''
     }));
   }, []);
 
@@ -154,7 +164,10 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
     localStorage.setItem('velo_store_name', settingsForm.businessName);
     localStorage.setItem('velo_store_slogan', settingsForm.slogan);
     localStorage.setItem('velo_store_whatsapp', settingsForm.whatsappNumber); // Salva o WhatsApp
-    
+    localStorage.setItem('velo_mp_token', settingsForm.mpAccessToken);
+    localStorage.setItem('velo_meta_phone_id', settingsForm.metaPhoneId);
+    localStorage.setItem('velo_meta_token', settingsForm.metaApiToken);
+
     // Dispara um alerta invisível para a aba da loja atualizar a cor em tempo real
     window.dispatchEvent(new Event('storage'));
     
@@ -639,6 +652,7 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
                       <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('gerais'); }} className={`block w-full text-left text-xs py-2.5 font-bold rounded-full px-4 transition-colors ${settingsSubPanel === 'gerais' && activePanel === 'settings' ? 'bg-orange-50 text-[#ff7b00]' : 'text-slate-500 hover:text-slate-900 hover:bg-gray-50'}`}>Gerais</button>
                       <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('dados'); }} className={`block w-full text-left text-xs py-2.5 font-bold rounded-full px-4 transition-colors ${settingsSubPanel === 'dados' && activePanel === 'settings' ? 'bg-orange-50 text-[#ff7b00]' : 'text-slate-500 hover:text-slate-900 hover:bg-gray-50'}`}>Dados da Loja</button>
                       <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('equipe'); }} className={`block w-full text-left text-xs py-2.5 font-bold rounded-full px-4 transition-colors ${settingsSubPanel === 'equipe' && activePanel === 'settings' ? 'bg-orange-50 text-[#ff7b00]' : 'text-slate-500 hover:text-slate-900 hover:bg-gray-50'}`}>Acesso e Equipe</button>
+                      <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('integracoes'); }} className={`block w-full text-left text-xs py-2.5 font-bold rounded-full px-4 transition-colors ${settingsSubPanel === 'integracoes' && activePanel === 'settings' ? 'bg-orange-50 text-[#ff7b00]' : 'text-slate-500 hover:text-slate-900 hover:bg-gray-50'}`}>Integrações e APIs</button>
                     </div>
                   </motion.div>
                 )}
@@ -832,10 +846,14 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
           )}
 
           {activePanel === 'chats' && (
-            <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-12 text-center shadow-sm max-w-3xl mx-auto mt-10">
-              <div className="w-20 h-20 bg-gray-100 text-[#111827] rounded-full flex items-center justify-center mx-auto mb-6"><MessageSquare className="w-10 h-10" /></div>
-              <h2 className="text-2xl font-black uppercase text-slate-800 mb-2">Atendimento WhatsApp</h2>
-              <p className="text-slate-500 font-medium leading-relaxed">A integração com a API Oficial da Meta está configurada na arquitetura, mas os chats em tempo real serão conectados na próxima fase.</p>
+            <div className="space-y-6 max-w-6xl mx-auto">
+              <div className="flex justify-between items-end">
+                <div>
+                  <h2 className="text-3xl font-black italic uppercase text-[#111827]">Atendimento (WhatsApp)</h2>
+                  <p className="text-slate-500 font-bold mt-1 text-sm">Responda seus clientes conectando sua conta da Meta.</p>
+                </div>
+              </div>
+              <AdminChat />
             </div>
           )}
 
@@ -1197,7 +1215,81 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
                   </div>
                 </div>
               )}
+{/* TELA DE INTEGRAÇÕES */}
+              {settingsSubPanel === 'integracoes' && (
+                <div className="space-y-6">
+                  {/* Mercado Pago (OAuth Inteligente) */}
+                  <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-8 shadow-sm">
+                    <h3 className="text-slate-800 font-black uppercase tracking-wider text-sm mb-2 flex items-center gap-2">
+                      <CreditCard className="text-blue-500" size={20}/> Mercado Pago (Transparente)
+                    </h3>
+                    
+                    {/* Valida se o Token já foi salvo pela API */}
+                    {settings?.integrations?.mercadopago?.accessToken ? (
+                        <div className="bg-green-50 border border-green-200 p-6 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-4 mt-6">
+                            <div>
+                                <p className="text-green-800 font-black flex items-center gap-2 uppercase tracking-widest text-sm">✅ Conta Conectada</p>
+                                <p className="text-green-600 font-bold text-xs mt-1">Sua loja já pode receber Pix e Cartão nativamente.</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-slate-50 border border-slate-200 p-8 rounded-3xl text-center flex flex-col items-center justify-center gap-4 mt-6">
+                            <p className="text-slate-500 font-bold text-sm">Autorize o sistema a processar pagamentos de Cartão e PIX caindo direto na sua conta do Mercado Pago.</p>
+                            <button 
+                                onClick={() => {
+                                    // ⚠️ MUDE AQUI PARA O SEU APP ID REAL DO MERCADO PAGO ⚠️
+                                    const MP_CLIENT_ID = "3333618086500697"; 
+                                    
+                                    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                                    const redirectUri = isLocal 
+                                        ? 'http://localhost:3000/api/mp-callback' 
+                                        : 'https://app.velodelivery.com.br/api/mp-callback'; 
 
+                                    // Manda o ID da Loja (tenantId) escondido no 'state'
+                                    const authUrl = `https://auth.mercadopago.com.br/authorization?client_id=${MP_CLIENT_ID}&response_type=code&platform_id=mp&state=${authRole.tenantId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+
+                                    window.location.href = authUrl;
+                                }} 
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-200 transition-all active:scale-95 flex items-center gap-2"
+                            >
+                                <CreditCard size={20}/> 🤝 Integrar Mercado Pago
+                            </button>
+                        </div>
+                    )}
+                  </div>
+
+                  {/* WhatsApp Meta */}
+                  <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-8 shadow-sm">
+                    <h3 className="text-slate-800 font-black uppercase tracking-wider text-sm mb-2 flex items-center gap-2">
+                      <MessageSquare className="text-green-500" size={20}/> WhatsApp Oficial (Meta API)
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium mb-6">Conecte o número da sua loja para responder clientes direto do painel.</p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">ID do Número de Telefone</label>
+                        <input 
+                          type="text" 
+                          value={settingsForm.metaPhoneId}
+                          onChange={(e) => setSettingsForm({...settingsForm, metaPhoneId: e.target.value})}
+                          placeholder="Apenas números..."
+                          className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-green-500 transition-colors mt-1"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Token de Acesso Permanente</label>
+                        <input 
+                          type="text" 
+                          value={settingsForm.metaApiToken}
+                          onChange={(e) => setSettingsForm({...settingsForm, metaApiToken: e.target.value})}
+                          placeholder="EAAB..."
+                          className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-green-500 transition-colors mt-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </main>

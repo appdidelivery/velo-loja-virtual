@@ -63,6 +63,8 @@ export interface ChatSession {
 export interface TenantSettings {
   tenantId: string;
   businessName: string;
+  integrations?: any;
+  customDomain?: string;
   whatsappNumber: string;
   currency: string;
   paymentGateway: 'stripe' | 'mercadopago' | 'whatsapp_only';

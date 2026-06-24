@@ -67,7 +67,7 @@ export const INITIAL_CHATS: ChatSession[] = [
 
 export const INITIAL_SETTINGS: TenantSettings = {
   tenantId: 'tenant_abc123',
-  businessName: 'Minimal Vibe Store',
+  businessName: 'Velo Loja Virtual',
   whatsappNumber: '+5511999998888',
   currency: 'BRL',
   paymentGateway: 'stripe'
