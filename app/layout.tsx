@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Velo Loja Virtual | Plataforma',
+  title: 'Mamedes Papéis | Plataforma',
   description: 'A melhor plataforma de vendas e catálogos para o seu negócio.',
+  metadataBase: new URL('https://app.mamedes.com.br'),
   icons: {
     icon: '/velo loja virtual logo.png',
   }

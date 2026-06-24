@@ -5,9 +5,9 @@ export async function generateMetadata({ params }: { params: { loja: string } })
   const tenantId = params.loja; 
   const formattedStoreName = tenantId.replace(/-/g, ' ').toUpperCase();
   
-  // Use VERCEL_URL se estiver na Vercel, senão localhost para testes locais
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://app.velodelivery.com.br';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://app.mamedes.com.br';
   const domainUrl = `${baseUrl}/${tenantId}`;
+  const imageUrl = `${baseUrl}/velo loja virtual logo.png`;
 
   return {
     title: `${formattedStoreName} | Catálogo Online`,
@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: { params: { loja: string } })
       siteName: formattedStoreName,
       images: [
         {
-          url: '/velo loja virtual logo.png', 
+          url: imageUrl, 
           width: 800,
           height: 600,
           alt: `Logo ${formattedStoreName}`,
@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: { params: { loja: string } })
       card: 'summary_large_image',
       title: `${formattedStoreName} | Loja Virtual`,
       description: 'Acesse nosso catálogo online.',
-      images: ['/velo loja virtual logo.png'],
+      images: [imageUrl],
     },
   };
 }
