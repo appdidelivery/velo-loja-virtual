@@ -72,6 +72,7 @@ export default function CustomerCatalog() {
   const [storeLogo, setStoreLogo] = useState('');
   const [storeName, setStoreName] = useState(settings.businessName);
   const [storeSlogan, setStoreSlogan] = useState('Catálogo Exclusivo');
+  const [storeWhatsapp, setStoreWhatsapp] = useState(settings.whatsappNumber);
   
   // Estado da Busca no Webview
   const [searchQuery, setSearchQuery] = useState('');
@@ -87,11 +88,13 @@ export default function CustomerCatalog() {
       const savedLogo = localStorage.getItem('velo_store_logo');
       const savedName = localStorage.getItem('velo_store_name');
       const savedSlogan = localStorage.getItem('velo_store_slogan');
+      const savedWhatsapp = localStorage.getItem('velo_store_whatsapp'); // Lê o WhatsApp novo
       
       if (savedColor) setThemeColor(savedColor);
       if (savedLogo) setStoreLogo(savedLogo);
       if (savedName) setStoreName(savedName);
       if (savedSlogan) setStoreSlogan(savedSlogan);
+      if (savedWhatsapp) setStoreWhatsapp(savedWhatsapp);
     };
 
     // 1. Carrega assim que a página abre
@@ -204,7 +207,9 @@ export default function CustomerCatalog() {
     message += `Aguardo o retorno para darmos andamento à negociação e inclusão do valor do frete.`;
 
     const encodedMessage = encodeURIComponent(message);
-    const rawPhone = settings.whatsappNumber.replace(/\D/g, '');
+    
+    // Troca o número fixo das settings pelo número dinâmico do estado
+    const rawPhone = storeWhatsapp.replace(/\D/g, '');
     window.open(`https://wa.me/${rawPhone}?text=${encodedMessage}`, '_blank');
   };
 

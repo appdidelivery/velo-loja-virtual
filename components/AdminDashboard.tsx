@@ -73,7 +73,8 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
     ...settings, 
     primaryColor: '#357b64', 
     logoUrl: '',
-    slogan: 'Catálogo Exclusivo' // Slogan padrão
+    slogan: 'Catálogo Exclusivo', // Slogan padrão
+    whatsappNumber: '5511999999999' // WhatsApp Padrão
   });
   const [settingsSuccess, setSettingsSuccess] = useState(false);
   const [openVisualAccordion, setOpenVisualAccordion] = useState<string | null>('cores');
@@ -85,13 +86,15 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
     const savedLogo = localStorage.getItem('velo_store_logo');
     const savedName = localStorage.getItem('velo_store_name');
     const savedSlogan = localStorage.getItem('velo_store_slogan');
+    const savedWhatsapp = localStorage.getItem('velo_store_whatsapp');
 
     setSettingsForm(prev => ({
       ...prev,
       primaryColor: savedColor || prev.primaryColor,
       logoUrl: savedLogo || prev.logoUrl,
       businessName: savedName || prev.businessName,
-      slogan: savedSlogan || prev.slogan
+      slogan: savedSlogan || prev.slogan,
+      whatsappNumber: savedWhatsapp || prev.whatsappNumber
     }));
   }, []);
 
@@ -147,6 +150,7 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
     localStorage.setItem('velo_store_logo', settingsForm.logoUrl);
     localStorage.setItem('velo_store_name', settingsForm.businessName);
     localStorage.setItem('velo_store_slogan', settingsForm.slogan);
+    localStorage.setItem('velo_store_whatsapp', settingsForm.whatsappNumber); // Salva o WhatsApp
     
     // Dispara um alerta invisível para a aba da loja atualizar a cor em tempo real
     window.dispatchEvent(new Event('storage'));
@@ -1111,6 +1115,22 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
                         onChange={(e) => setSettingsForm({...settingsForm, slogan: e.target.value})}
                         className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-[#0055ff] transition-colors"
                         placeholder="Ex: Embalagens para seu negócio"
+                      />
+                    </div>
+                    
+                    {/* Novo Campo: Número do WhatsApp */}
+                    <div className="space-y-2 md:col-span-2 pt-4 border-t border-gray-100">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                        WhatsApp de Vendas <MessageSquare className="w-3.5 h-3.5 text-[#25D366]" />
+                      </label>
+                      <p className="text-[10px] text-slate-400 font-medium -mt-1">Digite o número com DDD (Apenas números). Ex: 5511999999999</p>
+                      <input 
+                        type="text" 
+                        value={settingsForm.whatsappNumber}
+                        onChange={(e) => setSettingsForm({...settingsForm, whatsappNumber: e.target.value.replace(/\D/g, '')})}
+                        className="w-full max-w-md bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-[#25D366] transition-colors"
+                        placeholder="5511999999999"
+                        maxLength={13}
                       />
                     </div>
                   </div>
