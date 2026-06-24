@@ -956,16 +956,43 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
                           Cor Predominante <ChevronDown className={`w-4 h-4 transition-transform ${openVisualAccordion === 'cores' ? 'rotate-180 text-[#0055ff]' : ''}`} />
                         </button>
                         {openVisualAccordion === 'cores' && (
-                          <div className="p-4 pt-0 border-t border-gray-100 bg-gray-50/50 grid grid-cols-4 gap-3">
+                          <div className="p-4 pt-0 border-t border-gray-100 bg-gray-50/50">
+                            
                             {/* Paleta de Cores Padrão */}
-                            {['#357b64', '#0055ff', '#ff7b00', '#111827', '#e11d48', '#8b5cf6', '#0ea5e9', '#f59e0b'].map(color => (
-                              <button 
-                                key={color}
-                                onClick={() => setSettingsForm({...settingsForm, primaryColor: color})}
-                                style={{ backgroundColor: color }}
-                                className={`w-10 h-10 rounded-full border-4 shadow-sm hover:scale-110 transition-transform mx-auto ${settingsForm.primaryColor === color ? 'border-gray-900 scale-110' : 'border-white'}`}
-                              />
-                            ))}
+                            <div className="grid grid-cols-4 gap-3 mb-4">
+                              {['#357b64', '#0055ff', '#ff7b00', '#111827', '#e11d48', '#8b5cf6', '#0ea5e9', '#f59e0b'].map(color => (
+                                <button 
+                                  key={color}
+                                  onClick={() => setSettingsForm({...settingsForm, primaryColor: color})}
+                                  style={{ backgroundColor: color }}
+                                  className={`w-10 h-10 rounded-full border-4 shadow-sm hover:scale-110 transition-transform mx-auto ${settingsForm.primaryColor === color ? 'border-gray-900 scale-110' : 'border-white'}`}
+                                />
+                              ))}
+                            </div>
+
+                            {/* Seletor de Cor Customizada (Cor Livre) */}
+                            <div className="pt-4 border-t border-gray-200">
+                              <label className="text-[10px] font-black uppercase text-slate-500 block mb-2">Ou escolha a cor da sua marca</label>
+                              <div className="flex items-center gap-3">
+                                <div className="relative w-10 h-10 shrink-0 rounded-full overflow-hidden border-2 border-gray-200 shadow-sm hover:border-[#0055ff] transition-colors cursor-pointer">
+                                  {/* Input nativo HTML tipo "color" escondido, clicável via CSS */}
+                                  <input 
+                                    type="color" 
+                                    value={settingsForm.primaryColor}
+                                    onChange={(e) => setSettingsForm({...settingsForm, primaryColor: e.target.value})}
+                                    className="absolute -top-2 -left-2 w-16 h-16 cursor-pointer"
+                                  />
+                                </div>
+                                <input 
+                                  type="text" 
+                                  value={settingsForm.primaryColor}
+                                  onChange={(e) => setSettingsForm({...settingsForm, primaryColor: e.target.value})}
+                                  placeholder="#HEX"
+                                  className="w-full bg-white border border-gray-200 text-xs font-bold text-slate-700 p-2.5 rounded-lg outline-none focus:border-[#0055ff] uppercase"
+                                />
+                              </div>
+                            </div>
+
                           </div>
                         )}
                       </div>
