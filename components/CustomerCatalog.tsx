@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShoppingCart, Search, Menu, User, HeadphonesIcon, 
   ChevronDown, Star, ShieldCheck, MapPin, Phone, 
-  Mail, X, Plus, Minus, Trash2, CheckCircle2, LayoutGrid
+  Mail, X, Plus, Minus, Trash2, CheckCircle2, LayoutGrid, ClipboardList
 } from 'lucide-react';
 
 // IMPORTAÇÕES CORRIGIDAS (Usando caminhos relativos em vez de @/)
@@ -70,6 +70,12 @@ export default function CustomerCatalog() {
   // Estados Customizáveis de Visual
   const [themeColor, setThemeColor] = useState('#357b64'); // Cor padrão Velo Verde
   const [storeLogo, setStoreLogo] = useState('');
+  const [storeName, setStoreName] = useState(settings.businessName);
+  const [storeSlogan, setStoreSlogan] = useState('Catálogo Exclusivo');
+  
+  // Estado da Busca no Webview
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Evitar Hydration Mismatch e buscar personalização em Tempo Real
   useEffect(() => {
@@ -79,8 +85,13 @@ export default function CustomerCatalog() {
     const loadTheme = () => {
       const savedColor = localStorage.getItem('velo_theme_color');
       const savedLogo = localStorage.getItem('velo_store_logo');
+      const savedName = localStorage.getItem('velo_store_name');
+      const savedSlogan = localStorage.getItem('velo_store_slogan');
+      
       if (savedColor) setThemeColor(savedColor);
       if (savedLogo) setStoreLogo(savedLogo);
+      if (savedName) setStoreName(savedName);
+      if (savedSlogan) setStoreSlogan(savedSlogan);
     };
 
     // 1. Carrega assim que a página abre
@@ -92,11 +103,17 @@ export default function CustomerCatalog() {
     return () => window.removeEventListener('storage', loadTheme);
   }, []);
 
-  // Produtos filtrados pela categoria selecionada
+  // Produtos filtrados pela categoria selecionada E PELA BUSCA
   const filteredActiveProducts = useMemo(() => {
-    if (selectedCategory === 'Todos') return activeProducts;
-    return activeProducts.filter(p => p.category === selectedCategory);
-  }, [activeProducts, selectedCategory]);
+    let filtered = activeProducts;
+    if (selectedCategory !== 'Todos') {
+      filtered = filtered.filter(p => p.category === selectedCategory);
+    }
+    if (searchQuery.trim() !== '') {
+      filtered = filtered.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    }
+    return filtered;
+  }, [activeProducts, selectedCategory, searchQuery]);
 
   // Busca Automática de CEP
   const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -241,31 +258,55 @@ export default function CustomerCatalog() {
           <div className="w-full max-w-md bg-white h-full flex flex-col relative shadow-2xl overflow-hidden">
             
             {/* Header App-like com Cor Dinâmica */}
-            <header style={{ backgroundColor: themeColor }} className="text-white px-5 py-4 flex items-center justify-between shrink-0 z-10 rounded-b-[2rem] shadow-sm transition-colors duration-500">
-              <div className="flex items-center gap-3 overflow-hidden">
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center font-black text-xl shadow-inner border-2 border-white/30 shrink-0 overflow-hidden">
-                  {storeLogo ? (
-                    <img src={storeLogo} alt="Logo" className="w-full h-full object-contain p-1" />
-                  ) : (
-                    <span style={{ color: themeColor }}>{settings.businessName.charAt(0)}</span>
-                  )}
+            <header style={{ backgroundColor: themeColor }} className="text-white px-5 py-4 flex flex-col shrink-0 z-10 rounded-b-[2rem] shadow-sm transition-colors duration-500">
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center font-black text-xl shadow-inner border-2 border-white/30 shrink-0 overflow-hidden">
+                    {storeLogo ? (
+                      <img src={storeLogo} alt="Logo" className="w-full h-full object-contain p-1" />
+                    ) : (
+                      <span style={{ color: themeColor }}>{storeName.charAt(0)}</span>
+                    )}
+                  </div>
+                  <div className="overflow-hidden">
+                    <h1 className="text-sm font-black leading-tight uppercase tracking-wider truncate">{storeName}</h1>
+                    <p className="text-[10px] font-medium opacity-80 mt-0.5">{storeSlogan}</p>
+                  </div>
                 </div>
-                <div className="overflow-hidden">
-                  <h1 className="text-sm font-black leading-tight uppercase tracking-wider truncate">{settings.businessName}</h1>
-                  <p className="text-[10px] font-medium opacity-80 mt-0.5">Catálogo Exclusivo</p>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button onClick={() => setIsSearchOpen(!isSearchOpen)} className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors">
+                    <Search className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <button onClick={() => setLayoutMode('complete')} className="text-[9px] font-bold uppercase tracking-wider bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-full transition-colors">
-                  Ver PC
-                </button>
-              </div>
+
+              {/* Barra de Busca Expansível */}
+              <AnimatePresence>
+                {isSearchOpen && (
+                  <motion.div initial={{ height: 0, opacity: 0, marginTop: 0 }} animate={{ height: 'auto', opacity: 1, marginTop: 16 }} exit={{ height: 0, opacity: 0, marginTop: 0 }} className="overflow-hidden">
+                    <div className="relative">
+                      <input 
+                        type="text" 
+                        placeholder="Buscar produto..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full bg-white/20 text-white placeholder:text-white/60 border border-white/30 text-xs px-4 py-2.5 rounded-full outline-none focus:bg-white focus:text-gray-900 focus:placeholder:text-gray-400 transition-all"
+                      />
+                      {searchQuery && (
+                        <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white">
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </header>
 
             {/* Categorias Horizontais em Pílulas */}
             <div className="px-4 py-3 bg-white shrink-0 flex items-center gap-2 overflow-x-auto custom-scrollbar border-b border-gray-50">
               <button 
-                onClick={() => setSelectedCategory('Todos')}
+                onClick={() => {setSelectedCategory('Todos'); setSearchQuery('');}}
                 style={selectedCategory === 'Todos' ? { backgroundColor: themeColor, color: '#fff' } : {}}
                 className={`px-5 py-2 text-[11px] font-bold rounded-full whitespace-nowrap transition-colors ${selectedCategory === 'Todos' ? 'shadow-md' : 'bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200'}`}
               >
@@ -274,8 +315,9 @@ export default function CustomerCatalog() {
               {categories.map(cat => (
                 <button 
                   key={cat} 
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-5 py-2 text-[11px] font-bold rounded-full whitespace-nowrap transition-colors ${selectedCategory === cat ? 'bg-[#357b64] text-white shadow-md' : 'bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200'}`}
+                  onClick={() => {setSelectedCategory(cat); setSearchQuery('');}}
+                  style={selectedCategory === cat ? { backgroundColor: themeColor, color: '#fff' } : {}}
+                  className={`px-5 py-2 text-[11px] font-bold rounded-full whitespace-nowrap transition-colors ${selectedCategory === cat ? 'shadow-md' : 'bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200'}`}
                 >
                   {cat}
                 </button>
@@ -290,8 +332,8 @@ export default function CustomerCatalog() {
                 </div>
               ) : filteredActiveProducts.length === 0 ? (
                 <div className="text-center py-10">
-                  <p className="text-sm font-bold text-gray-500">Nenhum produto nesta categoria.</p>
-                  <button onClick={() => setSelectedCategory('Todos')} className="mt-3 text-[#357b64] text-xs font-bold underline">Limpar filtro</button>
+                  <p className="text-sm font-bold text-gray-500">Nenhum produto localizado.</p>
+                  <button onClick={() => {setSelectedCategory('Todos'); setSearchQuery('');}} className="mt-3 text-[10px] font-bold text-white px-4 py-2 rounded-full" style={{ backgroundColor: themeColor }}>Limpar filtros</button>
                 </div>
               ) : (
                 filteredActiveProducts.map(product => (
@@ -319,17 +361,18 @@ export default function CustomerCatalog() {
               )}
             </main>
 
-            {/* Bottom Navigation Navbar (Agora Fixo e Colorido) */}
+            {/* Bottom Navigation Navbar (Substituído Buscar por Pedidos) */}
             <nav className="shrink-0 w-full bg-white border-t border-gray-100 flex justify-around items-center px-6 py-3 pb-6 z-20 rounded-t-3xl shadow-[0_-10px_30px_rgba(0,0,0,0.08)]">
               <button style={{ color: themeColor }} className="flex flex-col items-center gap-1">
                 <LayoutGrid className="w-5 h-5" />
                 <span className="text-[9px] font-bold">Início</span>
               </button>
-              <button className="flex flex-col items-center gap-1 text-gray-400 transition-colors">
-                <Search className="w-5 h-5" />
-                <span className="text-[9px] font-bold">Buscar</span>
+              {/* Novo Botão: Pedidos */}
+              <button onClick={() => alert('Em breve: Acompanhamento de Pedidos!')} className="flex flex-col items-center gap-1 text-gray-400 transition-colors hover:text-gray-800">
+                <ClipboardList className="w-5 h-5" />
+                <span className="text-[9px] font-bold">Pedidos</span>
               </button>
-              <button onClick={() => setIsCartOpen(true)} className="flex flex-col items-center gap-1 text-gray-400 transition-colors relative">
+              <button onClick={() => setIsCartOpen(true)} className="flex flex-col items-center gap-1 text-gray-400 transition-colors relative hover:text-gray-800">
                 <ShoppingCart className="w-5 h-5" />
                 <span className="text-[9px] font-bold">Orçamento</span>
                 {cartTotalItems > 0 && (
@@ -478,8 +521,18 @@ export default function CustomerCatalog() {
                 )}
                 <div className="flex justify-between text-sm text-gray-600 mb-1"><span>Subtotal ({cartTotalItems} itens)</span><span className="font-medium">R$ {cartTotalValue.toFixed(2)}</span></div>
                 <div className="flex justify-between text-lg font-black text-gray-900 mb-4 border-t border-gray-100 pt-2"><span>Total s/ Frete</span><span className="text-[#357b64]">R$ {cartTotalValue.toFixed(2)}</span></div>
-                <button onClick={handleWhatsAppCheckout} disabled={cart.length === 0 || !customerName.trim() || !customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim()} className="w-full py-3.5 bg-[#25D366] hover:bg-[#1DA851] disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-extrabold rounded-lg text-xs flex items-center justify-center gap-2 transition-all shadow-md uppercase tracking-wider">
-                  <Phone className="w-4 h-4 fill-current" /> Solicitar Orçamento
+                <button 
+                  onClick={handleWhatsAppCheckout}
+                  disabled={cart.length === 0 || !customerName.trim() || !customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim()}
+                  style={cart.length > 0 && customerName.trim() && customerCnpj.trim() && cep.length === 8 && addressNumber.trim() ? { backgroundColor: themeColor } : {}}
+                  className={`w-full py-3.5 font-extrabold rounded-lg text-xs flex items-center justify-center gap-2 transition-all uppercase tracking-wider ${
+                    cart.length === 0 || !customerName.trim() || !customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim()
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'text-white shadow-lg hover:opacity-90'
+                  }`}
+                >
+                  <Phone className="w-4 h-4 fill-current" />
+                  Solicitar Orçamento
                 </button>
               </div>
 

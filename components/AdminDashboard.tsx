@@ -72,7 +72,8 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
   const [settingsForm, setSettingsForm] = useState({ 
     ...settings, 
     primaryColor: '#357b64', 
-    logoUrl: '' 
+    logoUrl: '',
+    slogan: 'Catálogo Exclusivo' // Slogan padrão
   });
   const [settingsSuccess, setSettingsSuccess] = useState(false);
   const [openVisualAccordion, setOpenVisualAccordion] = useState<string | null>('cores');
@@ -118,6 +119,8 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
     // Salva no navegador para a Vitrine ler as customizações
     localStorage.setItem('velo_theme_color', settingsForm.primaryColor);
     localStorage.setItem('velo_store_logo', settingsForm.logoUrl);
+    localStorage.setItem('velo_store_name', settingsForm.businessName);
+    localStorage.setItem('velo_store_slogan', settingsForm.slogan);
     
     // Dispara um alerta invisível para a aba da loja atualizar a cor em tempo real
     window.dispatchEvent(new Event('storage'));
@@ -125,6 +128,27 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
     setSettingsSuccess(true);
     setTimeout(() => setSettingsSuccess(false), 3000);
   };
+
+  // Estados de Gerenciamento de Equipe (MOCKADO para design inicial)
+  const [teamMembers, setTeamMembers] = useState([
+    { id: '1', email: 'contato@mamedes.com.br', role: 'Administrador (Dono)', status: 'Ativo' }
+  ]);
+  const [newTeamEmail, setNewTeamEmail] = useState('');
+  const [newTeamRole, setNewTeamRole] = useState('Vendedor / Atendente');
+
+  const handleAddTeamMember = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTeamEmail.trim()) return;
+    setTeamMembers([...teamMembers, { 
+      id: Date.now().toString(), 
+      email: newTeamEmail, 
+      role: newTeamRole, 
+      status: 'Aguardando Login' 
+    }]);
+    setNewTeamEmail('');
+  };
+
+  // Filtered Products
 
   // Chat/Meta interaction support
   const [selectedChatId, setSelectedChatId] = useState<string>(chats[0]?.id || '');
@@ -597,6 +621,7 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
                       <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('visual'); }} className={`block w-full text-left text-xs py-2.5 font-bold rounded-full px-4 transition-colors ${settingsSubPanel === 'visual' && activePanel === 'settings' ? 'bg-orange-50 text-[#ff7b00]' : 'text-slate-500 hover:text-slate-900 hover:bg-gray-50'}`}>Visual da loja</button>
                       <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('gerais'); }} className={`block w-full text-left text-xs py-2.5 font-bold rounded-full px-4 transition-colors ${settingsSubPanel === 'gerais' && activePanel === 'settings' ? 'bg-orange-50 text-[#ff7b00]' : 'text-slate-500 hover:text-slate-900 hover:bg-gray-50'}`}>Gerais</button>
                       <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('dados'); }} className={`block w-full text-left text-xs py-2.5 font-bold rounded-full px-4 transition-colors ${settingsSubPanel === 'dados' && activePanel === 'settings' ? 'bg-orange-50 text-[#ff7b00]' : 'text-slate-500 hover:text-slate-900 hover:bg-gray-50'}`}>Dados da Loja</button>
+                      <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('equipe'); }} className={`block w-full text-left text-xs py-2.5 font-bold rounded-full px-4 transition-colors ${settingsSubPanel === 'equipe' && activePanel === 'settings' ? 'bg-orange-50 text-[#ff7b00]' : 'text-slate-500 hover:text-slate-900 hover:bg-gray-50'}`}>Acesso e Equipe</button>
                     </div>
                   </motion.div>
                 )}
@@ -1036,14 +1061,110 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
                 </div>
               )}
 
-              {/* Telas provisórias para os outros menus */}
-              {settingsSubPanel !== 'gerais' && settingsSubPanel !== 'visual' && (
-                <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-12 text-center shadow-sm">
-                  <Settings className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <h3 className="text-xl font-black uppercase text-slate-800">Módulo em Desenvolvimento</h3>
-                  <p className="text-sm text-slate-500 mt-2 font-medium">As configurações de {settingsSubPanel} estarão disponíveis na próxima atualização do SaaS Velo.</p>
+              {/* TELA DE DADOS DA LOJA (CABEÇALHO) */}
+              {settingsSubPanel === 'dados' && (
+                <div className="bg-white border-2 border-gray-100 rounded-[2rem] overflow-hidden shadow-sm">
+                  <div className="bg-gray-50 px-8 py-5 border-b-2 border-gray-100">
+                    <h3 className="text-slate-800 font-black uppercase tracking-wider text-sm">Identidade da Loja</h3>
+                  </div>
+                  <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nome da Loja</label>
+                      <input 
+                        type="text" 
+                        value={settingsForm.businessName}
+                        onChange={(e) => setSettingsForm({...settingsForm, businessName: e.target.value})}
+                        className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-[#0055ff] transition-colors"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Slogan / Frase de Efeito</label>
+                      <input 
+                        type="text" 
+                        value={settingsForm.slogan}
+                        onChange={(e) => setSettingsForm({...settingsForm, slogan: e.target.value})}
+                        className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-[#0055ff] transition-colors"
+                        placeholder="Ex: Embalagens para seu negócio"
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
+
+              {/* TELA DE EQUIPES E PERMISSÕES */}
+              {settingsSubPanel === 'equipe' && (
+                <div className="space-y-6">
+                  {/* Formulário de Convite */}
+                  <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-8 shadow-sm">
+                    <h3 className="text-slate-800 font-black uppercase tracking-wider text-sm mb-2">Convidar Funcionário</h3>
+                    <p className="text-xs text-slate-500 font-medium mb-6">Autorize e-mails do Google (Gmail) para que sua equipe possa acessar o painel.</p>
+                    
+                    <form onSubmit={handleAddTeamMember} className="flex flex-col sm:flex-row items-end gap-4">
+                      <div className="w-full space-y-2">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">E-mail (Conta Google)</label>
+                        <input 
+                          type="email" 
+                          required
+                          value={newTeamEmail}
+                          onChange={(e) => setNewTeamEmail(e.target.value)}
+                          placeholder="vendedor@gmail.com"
+                          className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-[#0055ff] transition-colors"
+                        />
+                      </div>
+                      <div className="w-full sm:w-64 space-y-2 shrink-0">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Permissão</label>
+                        <select 
+                          value={newTeamRole}
+                          onChange={(e) => setNewTeamRole(e.target.value)}
+                          className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-[#0055ff] transition-colors"
+                        >
+                          <option>Vendedor / Atendente</option>
+                          <option>Administrador (Total)</option>
+                        </select>
+                      </div>
+                      <button type="submit" className="w-full sm:w-auto px-8 py-3.5 bg-[#0055ff] hover:bg-blue-700 text-white font-black uppercase tracking-wider rounded-xl shadow-lg transition-colors text-[11px] shrink-0 h-[52px]">
+                        Liberar Acesso
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Lista da Equipe */}
+                  <div className="bg-white border-2 border-gray-100 rounded-[2rem] overflow-hidden shadow-sm">
+                    <div className="bg-gray-50 px-8 py-5 border-b-2 border-gray-100 flex items-center justify-between">
+                      <h3 className="text-slate-800 font-black uppercase tracking-wider text-sm">Contas Autorizadas</h3>
+                      <span className="bg-[#111827] text-white text-[10px] font-bold px-3 py-1 rounded-full">{teamMembers.length} usuários</span>
+                    </div>
+                    <div className="divide-y-2 divide-gray-50">
+                      {teamMembers.map(member => (
+                        <div key={member.id} className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-gray-50 transition-colors">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-gray-200 text-slate-600 flex items-center justify-center font-black text-sm shrink-0">
+                              {member.email.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="text-sm font-black text-slate-800">{member.email}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${member.role.includes('Admin') ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>
+                                  {member.role}
+                                </span>
+                                <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${member.status === 'Ativo' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                                  {member.status}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          {member.role !== 'Administrador (Dono)' && (
+                            <button onClick={() => setTeamMembers(teamMembers.filter(m => m.id !== member.id))} className="text-slate-400 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 transition-colors">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
           )}
         </main>
