@@ -79,7 +79,23 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
   const [openVisualAccordion, setOpenVisualAccordion] = useState<string | null>('cores');
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
-  // Upload Direto para o Cloudinary
+  // Assim que o painel abrir, ele vai olhar no LocalStorage e puxar a cor/logo salvas!
+  React.useEffect(() => {
+    const savedColor = localStorage.getItem('velo_theme_color');
+    const savedLogo = localStorage.getItem('velo_store_logo');
+    const savedName = localStorage.getItem('velo_store_name');
+    const savedSlogan = localStorage.getItem('velo_store_slogan');
+
+    setSettingsForm(prev => ({
+      ...prev,
+      primaryColor: savedColor || prev.primaryColor,
+      logoUrl: savedLogo || prev.logoUrl,
+      businessName: savedName || prev.businessName,
+      slogan: savedSlogan || prev.slogan
+    }));
+  }, []);
+
+  // Upload Direto para o Cloudinary usando variáveis de ambiente (.env)
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -88,24 +104,34 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'order
     const formData = new FormData();
     formData.append('file', file);
     
-    // IMPORTANTE: Troque 'demo' e 'docs_upload_example_us' pelas chaves reais do Velo Delivery depois!
-    formData.append('upload_preset', 'docs_upload_example_us'); 
+    // Puxa os dados seguros do arquivo .env.local
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    
+    if (!uploadPreset || !cloudName) {
+      alert("Faltam as chaves do Cloudinary no arquivo .env.local!");
+      setIsUploadingLogo(false);
+      return;
+    }
+
+    formData.append('upload_preset', uploadPreset); 
     
     try {
-      // Usando uma conta de demonstração pública do Cloudinary para o teste funcionar agora
-      const res = await fetch(`https://api.cloudinary.com/v1_1/demo/image/upload`, {
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
         method: 'POST',
         body: formData
       });
       const data = await res.json();
+      
       if (data.secure_url) {
+        // Se deu certo, ele coloca o link final na caixinha de texto automaticamente!
         setSettingsForm({ ...settingsForm, logoUrl: data.secure_url });
       } else {
-        alert("Erro no upload. Verifique as credenciais do Cloudinary no código.");
+        alert(`Erro do Cloudinary: ${data.error?.message || "Preset pode não estar como Unsigned"}`);
       }
     } catch (error) {
       console.error(error);
-      alert("Erro ao enviar a imagem.");
+      alert("Erro de conexão ao enviar a imagem.");
     } finally {
       setIsUploadingLogo(false);
     }
