@@ -1,74 +1,52 @@
 import { Metadata } from 'next';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../services/firebase';
 import CustomerCatalog from '../../components/CustomerCatalog';
 
-type Props = {
-  params: { loja: string };
-};
+export const dynamic = 'force-dynamic';
+const PROJECT_ID = 'velo-loja-virtual'; // <- ID direto aqui também!
 
-// Next.js: Geração Dinâmica de SEO, Favicon e WhatsApp (Open Graph)
+type Props = { params: { loja: string } };
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const tenantId = params.loja;
   
-  // 1. Valores Padrão (Fallback caso a loja não tenha configurado logo/nome ainda)
   let title = 'Velo Loja Virtual';
   let description = 'O melhor catálogo de produtos.';
-  // IMPORTANTE: O WhatsApp exige uma URL absoluta (https://...) para mostrar a imagem.
   let logoUrl = 'https://app.velodelivery.com.br/velo%20loja%20virtual%20logo.png'; 
 
   try {
-    // 2. Bate no Firebase ANTES da tela renderizar
-    const docRef = doc(db, 'tenants', tenantId);
-    const docSnap = await getDoc(docRef);
+    // Bate na REST API usando o parâmetro dinâmico da loja
+    const res = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/tenants/${tenantId}`, {
+      cache: 'no-store'
+    });
 
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      
-      // 3. Substitui pelos dados reais do Painel do Lojista
-      if (data.businessName) title = data.businessName;
-      if (data.slogan) description = data.slogan;
-      if (data.logoUrl) logoUrl = data.logoUrl; // O link do Cloudinary já é https://
+    if (res.ok) {
+      const data = await res.json();
+      const fields = data.fields;
+      if (fields) {
+        if (fields.businessName?.stringValue) title = fields.businessName.stringValue;
+        if (fields.slogan?.stringValue) description = fields.slogan.stringValue;
+        if (fields.logoUrl?.stringValue) logoUrl = fields.logoUrl.stringValue;
+      }
     }
   } catch (error) {
-    console.error("Erro ao buscar metadados dinâmicos para a loja:", error);
+    console.error("Erro fatal ao buscar metadados para a loja:", error);
   }
 
-  // 4. Injeta as tags na cabeça ( <head> ) do HTML
   return {
     title: title,
     description: description,
-    icons: {
-      icon: logoUrl, // Muda o Favicon lá na aba do Chrome
-      shortcut: logoUrl,
-      apple: logoUrl,
-    },
+    icons: { icon: logoUrl, shortcut: logoUrl, apple: logoUrl },
     openGraph: {
       title: title,
       description: description,
       siteName: title,
-      // O WhatsApp lê este array 'images' para criar aquele card de pré-visualização
-      images: [
-        {
-          url: logoUrl, 
-          width: 800,
-          height: 800,
-          alt: `Logomarca da loja ${title}`,
-        },
-      ],
+      images: [{ url: logoUrl, width: 800, height: 800, alt: `Logomarca da loja ${title}` }],
       locale: 'pt_BR',
       type: 'website',
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: title,
-      description: description,
-      images: [logoUrl],
     }
   };
 }
 
-// Renderiza a Vitrine passando o ID da loja
 export default function LojaPage({ params }: Props) {
   return <CustomerCatalog tenantId={params.loja} />;
 }

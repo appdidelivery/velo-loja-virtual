@@ -92,46 +92,46 @@ export default function CustomerCatalog({ tenantId = 'tenant_mamedes123' }: { te
   useEffect(() => {
     setMounted(true);
     
-    const loadTheme = async () => {
-      // 1. Tenta pegar do LocalStorage
-      const savedColor = localStorage.getItem('velo_theme_color');
-      const savedLogo = localStorage.getItem('velo_store_logo');
-      const savedName = localStorage.getItem('velo_store_name');
-      const savedSlogan = localStorage.getItem('velo_store_slogan');
-      const savedWhatsapp = localStorage.getItem('velo_store_whatsapp');
-      const savedLayout = localStorage.getItem('velo_store_layout');
-      
-      if (savedColor) setThemeColor(savedColor);
-      if (savedLogo) setStoreLogo(savedLogo);
-      if (savedName) setStoreName(savedName);
-      if (savedSlogan) setStoreSlogan(savedSlogan);
-      if (savedWhatsapp) setStoreWhatsapp(savedWhatsapp);
-      if (savedLayout) setProductLayout(savedLayout as 'list' | 'grid');
-
-      // 2. Busca no Firebase
-      if (tenantId) {
-        try {
-          const docRef = doc(db, 'tenants', tenantId);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            if (data.primaryColor) setThemeColor(data.primaryColor);
-            if (data.logoUrl) setStoreLogo(data.logoUrl);
-            if (data.businessName) setStoreName(data.businessName);
-            if (data.slogan) setStoreSlogan(data.slogan);
-            if (data.whatsappNumber) setStoreWhatsapp(data.whatsappNumber);
-            if (data.productLayout) setProductLayout(data.productLayout as 'list' | 'grid');
-          }
-        } catch (error) {
-          console.error("Erro ao buscar tema do banco:", error);
-        }
-      }
-    };
-
-    loadTheme();
-    window.addEventListener('storage', loadTheme);
+    // 1. Carrega do LocalStorage para ser instantâneo no PC do Lojista
+    const savedColor = localStorage.getItem('velo_theme_color');
+    const savedLogo = localStorage.getItem('velo_store_logo');
+    const savedName = localStorage.getItem('velo_store_name');
+    const savedSlogan = localStorage.getItem('velo_store_slogan');
+    const savedWhatsapp = localStorage.getItem('velo_store_whatsapp');
+    const savedLayout = localStorage.getItem('velo_store_layout');
     
-    return () => window.removeEventListener('storage', loadTheme);
+    if (savedColor) setThemeColor(savedColor);
+    if (savedLogo) setStoreLogo(savedLogo);
+    if (savedName) setStoreName(savedName);
+    if (savedSlogan) setStoreSlogan(savedSlogan);
+    if (savedWhatsapp) setStoreWhatsapp(savedWhatsapp);
+    if (savedLayout) setProductLayout(savedLayout as 'list' | 'grid');
+
+    // 2. Conexão REAL-TIME com o Firebase (Mágica no Celular/Produção)
+    import('firebase/firestore').then(({ onSnapshot, doc }) => {
+      if (tenantId) {
+        const unsub = onSnapshot(
+          doc(db, 'tenants', tenantId), 
+          (docSnap) => {
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              if (data.primaryColor) setThemeColor(data.primaryColor);
+              if (data.logoUrl) setStoreLogo(data.logoUrl);
+              if (data.businessName) setStoreName(data.businessName);
+              if (data.slogan) setStoreSlogan(data.slogan);
+              if (data.whatsappNumber) setStoreWhatsapp(data.whatsappNumber);
+              if (data.productLayout) setProductLayout(data.productLayout as 'list' | 'grid');
+            }
+          },
+          (error) => {
+            console.error("❌ ERRO GRAVE NO FIREBASE: As Regras de Segurança estão bloqueando a leitura da loja!", error);
+            alert("Aviso para o Desenvolvedor: Libere a permissão de leitura da coleção 'tenants' no Console do Firebase.");
+          }
+        );
+        
+        return () => unsub();
+      }
+    });
   }, [tenantId]);
 
   // Produtos filtrados pela categoria selecionada E PELA BUSCA
