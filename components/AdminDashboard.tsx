@@ -394,11 +394,11 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
     try {
       console.log("1. Solicitando XML via Backend Velo...");
       
-      // Chama a nossa API segura (passa direto por qualquer CORS/Adblock)
-      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const apiUrl = isLocal ? '/api/import-xml' : 'https://app.velodelivery.com.br/api/import-xml'; // ⚠️ Mude para o domínio base do seu app depois
-      
-      const response = await fetch(apiUrl, {
+      // 🔥 Correção Arquitetural: 
+      // Chama sempre a rota local /api/import-xml relativa ao domínio atual.
+      // Assim, se estiver no localhost chama localhost/api, se estiver na Sacola chama app.sacola/api.
+      // Zero bloqueios de CORS.
+      const response = await fetch('/api/import-xml', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ xmlUrl: xmlUrl })
