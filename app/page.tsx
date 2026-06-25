@@ -3,6 +3,9 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import CustomerCatalog from '../components/CustomerCatalog';
 
+// 🔥 MÁGICA AQUI: Obriga o Next.js a NUNCA fazer cache desta página, sempre buscando do Firebase no carregamento!
+export const dynamic = 'force-dynamic';
+
 // Aqui definimos qual é a loja principal que deve carregar quando alguém acessa apenas a raiz (/)
 const DEFAULT_TENANT_ID = 'mamedes'; 
 

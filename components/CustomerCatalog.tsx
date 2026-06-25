@@ -222,7 +222,7 @@ export default function CustomerCatalog({ tenantId = 'tenant_mamedes123' }: { te
   const handleWhatsAppCheckout = () => {
     if (cart.length === 0 || !customerName.trim() || !customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim()) return;
 
-    let message = `🛒 *SOLICITAÇÃO DE ORÇAMENTO - ${settings.businessName}*\n\n`;
+    let message = `🛒 *SOLICITAÇÃO DE ORÇAMENTO - ${storeName}*\n\n`;
     
     message += `*Dados do Cliente:*\n`;
     message += `👤 Empresa: ${customerName}\n`;
@@ -474,13 +474,13 @@ export default function CustomerCatalog({ tenantId = 'tenant_mamedes123' }: { te
             🚚 <strong>Comprou R$ 999,00?</strong> Frete é Grátis! <a href="#" className="underline hover:text-[#357b64]">Clique aqui para saber +</a>
           </aside>
 
-          <header style={{ backgroundColor: THEME.primary }} className="w-full sticky top-0 z-40 shadow-md">
+          <header style={{ backgroundColor: themeColor }} className="w-full sticky top-0 z-40 shadow-md">
             <div className="max-w-[1300px] mx-auto px-4 py-4 sm:py-5 flex items-center justify-between gap-4 sm:gap-8">
               <div className="flex items-center gap-3">
                 <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-1 text-white hover:bg-white/10 rounded"><Menu className="w-6 h-6" /></button>
                 <a href="/" className="flex flex-col text-white group outline-none">
-                  <span className="text-2xl sm:text-4xl font-extrabold tracking-tighter leading-none group-hover:opacity-90">{settings.businessName.split(' ')[0]}</span>
-                  <span className="text-[9px] sm:text-[11px] uppercase tracking-[0.2em] opacity-80">{settings.businessName.split(' ').slice(1).join(' ') || 'Embalagens'}</span>
+                  <span className="text-2xl sm:text-4xl font-extrabold tracking-tighter leading-none group-hover:opacity-90">{storeName.split(' ')[0]}</span>
+                  <span className="text-[9px] sm:text-[11px] uppercase tracking-[0.2em] opacity-80">{storeName.split(' ').slice(1).join(' ') || storeSlogan}</span>
                 </a>
               </div>
               <div className="hidden sm:flex flex-1 max-w-2xl relative">
@@ -568,8 +568,8 @@ export default function CustomerCatalog({ tenantId = 'tenant_mamedes123' }: { te
 
           <footer style={{ backgroundColor: THEME.dark }} className="text-gray-300 pt-12 pb-6 text-sm">
             <div className="max-w-[1300px] mx-auto px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-              <div className="space-y-4"><span className="text-3xl font-extrabold text-white">{settings.businessName}</span><p className="text-xs text-gray-400">Embalagens práticas para seu negócio.</p></div>
-              <div className="space-y-4"><h4 className="text-white font-bold">Ligue para nós:</h4><p className="flex items-start gap-2"><Phone className="w-4 h-4" /><strong className="text-white">{settings.whatsappNumber}</strong></p></div>
+              <div className="space-y-4"><span className="text-3xl font-extrabold text-white">{storeName}</span><p className="text-xs text-gray-400">{storeSlogan}</p></div>
+              <div className="space-y-4"><h4 className="text-white font-bold">Ligue para nós:</h4><p className="flex items-start gap-2"><Phone className="w-4 h-4" /><strong className="text-white">{storeWhatsapp}</strong></p></div>
             </div>
           </footer>
         </div>
