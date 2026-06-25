@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Mamedes Papéis | Plataforma',
-  description: 'A melhor plataforma de vendas e catálogos para o seu negócio.',
+  title: "Velo Varejo | Crie sua Loja Virtual",
+  description: "Plataforma completa de vendas pelo WhatsApp e E-commerce.",
   metadataBase: new URL('https://app.mamedes.com.br'),
   icons: {
     icon: '/velo loja virtual logo.png',
@@ -28,7 +28,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
