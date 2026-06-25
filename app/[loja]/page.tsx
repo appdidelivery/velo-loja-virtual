@@ -1,8 +1,9 @@
 import { Metadata } from 'next';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../services/firebase';
 import CustomerCatalog from '../../components/CustomerCatalog';
 
 export const dynamic = 'force-dynamic';
-const PROJECT_ID = 'velo-loja-virtual'; // <- ID direto aqui também!
 
 type Props = { params: { loja: string } };
 
@@ -14,22 +15,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   let logoUrl = 'https://app.velodelivery.com.br/velo%20loja%20virtual%20logo.png'; 
 
   try {
-    // Bate na REST API usando o parâmetro dinâmico da loja
-    const res = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/tenants/${tenantId}`, {
-      cache: 'no-store'
-    });
+    const docRef = doc(db, 'tenants', tenantId);
+    const docSnap = await getDoc(docRef);
 
-    if (res.ok) {
-      const data = await res.json();
-      const fields = data.fields;
-      if (fields) {
-        if (fields.businessName?.stringValue) title = fields.businessName.stringValue;
-        if (fields.slogan?.stringValue) description = fields.slogan.stringValue;
-        if (fields.logoUrl?.stringValue) logoUrl = fields.logoUrl.stringValue;
-      }
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      if (data.businessName) title = data.businessName;
+      if (data.slogan) description = data.slogan;
+      if (data.logoUrl) logoUrl = data.logoUrl;
     }
   } catch (error) {
-    console.error("Erro fatal ao buscar metadados para a loja:", error);
+    console.error(`Erro ao buscar metadados para a loja ${tenantId}:`, error);
   }
 
   return {

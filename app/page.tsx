@@ -1,37 +1,31 @@
 import { Metadata } from 'next';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../services/firebase';
 import CustomerCatalog from '../components/CustomerCatalog';
 
-// 🔥 Mata o cache da Vercel na raiz do sistema
 export const dynamic = 'force-dynamic';
-
 const DEFAULT_TENANT_ID = 'mamedes'; 
-const PROJECT_ID = 'velo-loja-virtual'; // <- Colocamos o ID do seu Firebase direto aqui!
 
 export async function generateMetadata(): Promise<Metadata> {
+  // O seu Plano B (Caso o banco de dados falhe ou o lojista não tenha configurado)
   let title = 'Catálogo Digital | Velo Varejo';
   let description = 'Faça seu pedido diretamente pelo nosso site de forma rápida e segura.';
   let logoUrl = 'https://app.velodelivery.com.br/velo%20loja%20virtual%20logo.png';
 
   try {
-    // 🔥 Bate na REST API Oficial do Google (Fura qualquer cache e não trava no SSR)
-    const res = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/tenants/${DEFAULT_TENANT_ID}`, {
-      cache: 'no-store' 
-    });
+    // 🔥 Agora sim! Usa a SUA conexão do Firebase (já autenticada pelas chaves)
+    const docRef = doc(db, 'tenants', DEFAULT_TENANT_ID);
+    const docSnap = await getDoc(docRef);
 
-    if (res.ok) {
-      const data = await res.json();
-      
-      const fields = data.fields;
-      if (fields) {
-        if (fields.businessName?.stringValue) title = fields.businessName.stringValue;
-        if (fields.slogan?.stringValue) description = fields.slogan.stringValue;
-        if (fields.logoUrl?.stringValue) logoUrl = fields.logoUrl.stringValue;
-      }
-    } else {
-      console.error("❌ O FIREBASE BLOQUEOU O SERVIDOR. Libere leitura pública na coleção tenants!");
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      // Substitui o Plano B pelos dados reais do cliente
+      if (data.businessName) title = data.businessName;
+      if (data.slogan) description = data.slogan;
+      if (data.logoUrl) logoUrl = data.logoUrl;
     }
   } catch (error) {
-    console.error("Erro ao conectar com a API do Firebase:", error);
+    console.error("Erro ao buscar metadados no Firebase:", error);
   }
 
   return {
