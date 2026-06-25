@@ -2,17 +2,17 @@ import { Metadata } from 'next';
 import CustomerCatalog from '../components/CustomerCatalog';
 
 export const dynamic = 'force-dynamic';
-const PROJECT_ID = 'velo-loja-virtual'; // Seu ID real do Firebase
+const PROJECT_ID = 'velo-loja-virtual'; 
 const DEFAULT_TENANT_ID = 'mamedes'; 
 
 export async function generateMetadata(): Promise<Metadata> {
-  let title = 'Catálogo Digital | Mamedes Papéis';
-  let description = 'Faça seu pedido diretamente pelo nosso site de forma rápida e segura.';
+  let title = 'Loja Online';
+  let description = 'Catálogo de Produtos';
   let logoUrl = 'https://app.velodelivery.com.br/velo%20loja%20virtual%20logo.png';
 
   try {
-    // 🌐 Bate direto na API do Google (Infalível na Vercel)
-    const res = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/tenants/${DEFAULT_TENANT_ID}`, {
+    const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+    const res = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/tenants/${DEFAULT_TENANT_ID}?key=${apiKey}`, {
       cache: 'no-store' 
     });
 
@@ -48,7 +48,8 @@ export default async function HomePage() {
   let tenantData = null;
   
   try {
-    const res = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/tenants/${DEFAULT_TENANT_ID}`, {
+    const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+    const res = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/tenants/${DEFAULT_TENANT_ID}?key=${apiKey}`, {
       cache: 'no-store' 
     });
 

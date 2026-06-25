@@ -9,12 +9,16 @@ type Props = { params: { loja: string } };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const tenantId = params.loja;
   
-  let title = 'Catálogo Online';
-  let description = 'O melhor catálogo de produtos.';
+  let title = 'Loja Online';
+  let description = 'Catálogo de Produtos';
   let logoUrl = 'https://app.velodelivery.com.br/velo%20loja%20virtual%20logo.png'; 
 
   try {
-    const res = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/tenants/${tenantId}`, {
+    // 🔥 Puxa a chave da Vercel / .env.local
+    const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+    
+    // 🌐 Bate na REST API enviando a Chave (?key=) para o Google não bloquear!
+    const res = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/tenants/${tenantId}?key=${apiKey}`, {
       cache: 'no-store'
     });
 
@@ -26,6 +30,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         if (fields.slogan?.stringValue) description = fields.slogan.stringValue;
         if (fields.logoUrl?.stringValue) logoUrl = fields.logoUrl.stringValue;
       }
+    } else {
+      console.error("Firebase REST falhou:", await res.text());
     }
   } catch (error) {
     console.error("Erro na API REST:", error);
@@ -50,7 +56,8 @@ export default async function LojaPage({ params }: Props) {
   let tenantData = null;
   
   try {
-    const res = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/tenants/${params.loja}`, {
+    const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+    const res = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/tenants/${params.loja}?key=${apiKey}`, {
       cache: 'no-store' 
     });
 
