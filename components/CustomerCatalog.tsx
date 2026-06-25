@@ -13,6 +13,8 @@ import { Product, TenantSettings } from '../types';
 import { INITIAL_SETTINGS } from '../data/mokedData';
 import { useProducts } from '../hooks/useProducts';
 import { useOrders } from '../hooks/useOrders'; // Importamos o novo hook
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../services/firebase';
 
 // --- CONFIGURAÇÕES DE CONFIANÇA (E-E-A-T) PARA SEO/AEO ---
 const STORE_TRUST_DATA = {
@@ -88,14 +90,10 @@ export default function CustomerCatalog({ tenantId = 'tenant_mamedes123' }: { te
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   useEffect(() => {
-    setVisibleCount(25);
-  }, [selectedCategory, searchQuery]);
-
-  useEffect(() => {
     setMounted(true);
     
-    // Função que busca a cor e logo
-    const loadTheme = () => {
+    const loadTheme = async () => {
+      // 1. Tenta pegar do LocalStorage
       const savedColor = localStorage.getItem('velo_theme_color');
       const savedLogo = localStorage.getItem('velo_store_logo');
       const savedName = localStorage.getItem('velo_store_name');
@@ -109,16 +107,32 @@ export default function CustomerCatalog({ tenantId = 'tenant_mamedes123' }: { te
       if (savedSlogan) setStoreSlogan(savedSlogan);
       if (savedWhatsapp) setStoreWhatsapp(savedWhatsapp);
       if (savedLayout) setProductLayout(savedLayout as 'list' | 'grid');
+
+      // 2. Busca no Firebase
+      if (tenantId) {
+        try {
+          const docRef = doc(db, 'tenants', tenantId);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.primaryColor) setThemeColor(data.primaryColor);
+            if (data.logoUrl) setStoreLogo(data.logoUrl);
+            if (data.businessName) setStoreName(data.businessName);
+            if (data.slogan) setStoreSlogan(data.slogan);
+            if (data.whatsappNumber) setStoreWhatsapp(data.whatsappNumber);
+            if (data.productLayout) setProductLayout(data.productLayout as 'list' | 'grid');
+          }
+        } catch (error) {
+          console.error("Erro ao buscar tema do banco:", error);
+        }
+      }
     };
 
-    // 1. Carrega assim que a página abre
     loadTheme();
-
-    // 2. Fica "escutando" se o Lojista apertar o botão de Salvar lá no Admin
     window.addEventListener('storage', loadTheme);
     
     return () => window.removeEventListener('storage', loadTheme);
-  }, []);
+  }, [tenantId]);
 
   // Produtos filtrados pela categoria selecionada E PELA BUSCA
   const filteredActiveProducts = useMemo(() => {

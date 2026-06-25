@@ -286,21 +286,35 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
   };
 
   // Salvar Configurações
-  const saveSettings = (e: React.FormEvent) => {
+  const saveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setSettings(settingsForm);
     
-    // Salva no navegador para a Vitrine ler as customizações
+    // Salva no navegador para atualização instantânea no Desktop
     localStorage.setItem('velo_theme_color', settingsForm.primaryColor);
     localStorage.setItem('velo_store_logo', settingsForm.logoUrl);
     localStorage.setItem('velo_store_name', settingsForm.businessName);
     localStorage.setItem('velo_store_slogan', settingsForm.slogan);
     localStorage.setItem('velo_store_whatsapp', settingsForm.whatsappNumber);
-    
-    // Salva as Configurações Gerais
     localStorage.setItem('velo_store_mode', settingsForm.storeMode || 'orcamento');
     localStorage.setItem('velo_store_maintenance', settingsForm.maintenanceMode ? 'true' : 'false');
     localStorage.setItem('velo_store_layout', settingsForm.productLayout || 'list');
+    
+    // 🔥 AGORA SIM! SALVA NO FIREBASE PARA O WHATSAPP E CELULARES LEREM 🔥
+    try {
+      await setDoc(doc(db, 'tenants', authRole.tenantId), {
+        businessName: settingsForm.businessName,
+        slogan: settingsForm.slogan,
+        logoUrl: settingsForm.logoUrl,
+        primaryColor: settingsForm.primaryColor,
+        whatsappNumber: settingsForm.whatsappNumber,
+        storeMode: settingsForm.storeMode,
+        maintenanceMode: settingsForm.maintenanceMode,
+        productLayout: settingsForm.productLayout
+      }, { merge: true });
+    } catch (error) {
+      console.error("Erro ao salvar dados vitais no Firebase:", error);
+    }
     
     window.dispatchEvent(new Event('storage'));
     
