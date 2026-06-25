@@ -1,35 +1,30 @@
 import { Metadata } from 'next';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../services/firebase';
 import CustomerCatalog from '../components/CustomerCatalog';
 
+// 🔥 Mata o cache da Vercel para sempre ler do banco em tempo real
 export const dynamic = 'force-dynamic';
-const PROJECT_ID = 'velo-loja-virtual';
-const DEFAULT_TENANT_ID = 'mamedes';
-
-// Função auxiliar para buscar os dados sem depender de chaves da Vercel
-async function fetchTenantData(tenantId: string) {
-  try {
-    const res = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/tenants/${tenantId}`, {
-      cache: 'no-store'
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.fields || null;
-  } catch (error) {
-    return null;
-  }
-}
+const DEFAULT_TENANT_ID = 'mamedes'; 
 
 export async function generateMetadata(): Promise<Metadata> {
-  let title = 'Catálogo Exclusivo';
-  let description = 'Faça seu pedido diretamente pelo nosso site de forma rápida e segura.';
+  let title = 'Velo Loja Virtual';
+  let description = 'O melhor catálogo de produtos.';
   let logoUrl = 'https://app.velodelivery.com.br/velo%20loja%20virtual%20logo.png';
 
-  const fields = await fetchTenantData(DEFAULT_TENANT_ID);
-  
-  if (fields) {
-    if (fields.businessName?.stringValue) title = fields.businessName.stringValue;
-    if (fields.slogan?.stringValue) description = fields.slogan.stringValue;
-    if (fields.logoUrl?.stringValue) logoUrl = fields.logoUrl.stringValue;
+  try {
+    // 🌐 Usa o Firebase Oficial (Ele já tem suas chaves e o Google nunca bloqueia)
+    const docRef = doc(db, 'tenants', DEFAULT_TENANT_ID);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      if (data.businessName) title = data.businessName;
+      if (data.slogan) description = data.slogan;
+      if (data.logoUrl) logoUrl = data.logoUrl;
+    }
+  } catch (error) {
+    console.error("Erro ao buscar metadados no Firebase:", error);
   }
 
   return {
@@ -40,7 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: title,
       description: description,
       siteName: title,
-      images: [{ url: logoUrl, width: 800, height: 800, alt: title }],
+      images: [{ url: logoUrl, width: 800, height: 800, alt: `Logomarca da loja ${title}` }],
       locale: 'pt_BR',
       type: 'website',
     }
@@ -49,17 +44,24 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function HomePage() {
   let tenantData = null;
-  const fields = await fetchTenantData(DEFAULT_TENANT_ID);
+  
+  try {
+    const docRef = doc(db, 'tenants', DEFAULT_TENANT_ID);
+    const docSnap = await getDoc(docRef);
 
-  if (fields) {
-    tenantData = {
-      businessName: fields.businessName?.stringValue || null,
-      slogan: fields.slogan?.stringValue || null,
-      logoUrl: fields.logoUrl?.stringValue || null,
-      primaryColor: fields.primaryColor?.stringValue || null,
-      whatsappNumber: fields.whatsappNumber?.stringValue || null,
-      productLayout: fields.productLayout?.stringValue || null,
-    };
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      tenantData = {
+        businessName: data.businessName || null,
+        slogan: data.slogan || null,
+        logoUrl: data.logoUrl || null,
+        primaryColor: data.primaryColor || null,
+        whatsappNumber: data.whatsappNumber || null,
+        productLayout: data.productLayout || null,
+      };
+    }
+  } catch (e) {
+    console.error("Erro ao pré-carregar loja no servidor:", e);
   }
 
   return (
