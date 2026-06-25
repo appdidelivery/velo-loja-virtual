@@ -74,6 +74,7 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'categ
   const [isXmlModalOpen, setIsXmlModalOpen] = useState(false);
   const [xmlUrl, setXmlUrl] = useState('https://loja.mamedes.com.br/xml/b7ef8/googlemerchant.xml');
   const [isImporting, setIsImporting] = useState(false);
+  const [isAutoSync, setIsAutoSync] = useState(true); // 🔥 Habilita o Robô de 24h
 
   // Search and Filter states
   const [productSearch, setProductSearch] = useState('');
@@ -416,7 +417,7 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
       };
 
       const importLimit = items.length;
-      console.log(`3. Importando todos os ${importLimit} produtos...`);
+      console.log(`3. Importando/Atualizando todos os ${importLimit} produtos...`);
 
       for (let i = 0; i < importLimit; i++) {
         const item = items[i];
@@ -425,7 +426,6 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
         const description = getTag(item, "description", "");
         const imageLink = getTag(item, "image_link");
         
-        // Tratamento robusto de preço BR
         const priceRaw = getTag(item, "price") || "0";
         const cleanPriceString = priceRaw.replace(/[^\d.,]/g, '').replace(',', '.');
         const priceNumber = Number(cleanPriceString) || 0;
@@ -436,27 +436,45 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
         const ean = getTag(item, "gtin");
         const sku = getTag(item, "id") || `SKU-XML-${Date.now().toString().slice(-4)}${i}`;
 
-        await addProduct({
-          name: title.substring(0, 100),
-          description: description.substring(0, 400),
-          price: priceNumber,
-          imageUrl: imageLink || "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600",
-          category: category,
-          stock: 99,
-          sku: sku,
-          isActive: true,
-          ean: ean,
-          ncm: '',
-          weight: 0,
-          seoTitle: title.substring(0, 60),
-          seoDescription: description.substring(0, 160),
-          tenantId: authRole.tenantId
-        });
+        // 🔥 REGRA 1 E 2: Verifica se já existe para NÃO DUPLICAR e NUNCA DELETAR
+        const existingProduct = products.find(p => p.sku === sku || p.ean === ean);
 
+        if (existingProduct) {
+          // Já existe! Atualiza apenas o preço e garante que está ativo. (NÃO DELETA)
+          await updateProduct(existingProduct.id, {
+            price: priceNumber,
+            isActive: true, 
+            stock: 99 // Opcional: recarrega o estoque
+          });
+        } else {
+          // Produto Novo! Cadastra do zero.
+          await addProduct({
+            name: title.substring(0, 100),
+            description: description.substring(0, 400),
+            price: priceNumber,
+            imageUrl: imageLink || "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600",
+            category: category,
+            stock: 99,
+            sku: sku,
+            isActive: true,
+            ean: ean,
+            ncm: '',
+            weight: 0,
+            seoTitle: title.substring(0, 60),
+            seoDescription: description.substring(0, 160),
+            tenantId: authRole.tenantId
+          });
+        }
         importedCount++;
       }
 
-      alert(`✅ Sincronização concluída!\n\n${importedCount} produtos foram cadastrados com sucesso.`);
+      // 🔥 Salva a preferência do Robô de 24h no Firebase para o servidor saber
+      await setDoc(doc(db, 'tenants', authRole.tenantId), {
+        xmlUrl: xmlUrl,
+        autoSyncXml: isAutoSync
+      }, { merge: true });
+
+      alert(`✅ Sincronização concluída!\n\n${importedCount} produtos foram verificados e atualizados sem apagar nada.`);
       setIsXmlModalOpen(false);
     } catch (error: any) {
       console.error(error);
@@ -1857,6 +1875,18 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
                   className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-medium text-slate-800 p-4 rounded-xl focus:border-[#ff7b00] outline-none transition-colors" 
                   placeholder="https://loja.mamedes.com.br/xml/googlemerchant.xml"
                 />
+              </div>
+
+              {/* Toggle do Robô de 24h */}
+              <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <div>
+                  <h4 className="text-xs font-black uppercase text-slate-700">Robô Automático (24h)</h4>
+                  <p className="text-[10px] text-slate-500 font-medium">O sistema verificará o link diariamente para atualizar preços e adicionar novos itens.</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={isAutoSync} onChange={(e) => setIsAutoSync(e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0055ff]"></div>
+                </label>
               </div>
               
               <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 flex items-start gap-3">
