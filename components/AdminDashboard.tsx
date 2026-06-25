@@ -46,12 +46,23 @@ export default function AdminDashboard() {
     }
   };
 
-  // Multi-tenant auth details simulation (Movi para cima para podermos usar o tenantId)
+  // Captura o domínio real automaticamente para separar os bancos de dados
+  const getInitialTenant = () => {
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname;
+      // Se você estiver codando no localhost, ele puxa mamedes para não quebrar seus testes.
+      // Se estiver em produção, ele puxa o domínio real exato (ex: app.sacolaonline.com.br).
+      return (host === 'localhost' || host === '127.0.0.1') ? 'app.mamedes.com.br' : host;
+    }
+    return 'app.mamedes.com.br'; // Fallback de segurança para o servidor (Next.js SSR)
+  };
+
+  // Multi-tenant auth details simulation
   const [authRole, setAuthRole] = useState({
-    email: 'contato@mamedes.com.br',
+    email: `admin@${getInitialTenant().replace('app.', '')}`,
     role: 'merchant_owner',
     businessType: 'whatsapp_catalog', 
-    tenantId: 'mamedes' // ID REAL DA LOJA
+    tenantId: getInitialTenant() // 🔥 MAGIA MULTI-TENANT ACONTECENDO AQUI 🔥
   });
 
   // Conexão em Tempo Real com o Firebase (Magia acontecendo!)
@@ -72,7 +83,7 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'categ
 
   // Estados para o Importador de XML
   const [isXmlModalOpen, setIsXmlModalOpen] = useState(false);
-  const [xmlUrl, setXmlUrl] = useState('https://loja.mamedes.com.br/xml/b7ef8/googlemerchant.xml');
+  const [xmlUrl, setXmlUrl] = useState(''); // Começa vazio para o lojista colar o XML dele
   const [isImporting, setIsImporting] = useState(false);
   const [isAutoSync, setIsAutoSync] = useState(true); // 🔥 Habilita o Robô de 24h
 
