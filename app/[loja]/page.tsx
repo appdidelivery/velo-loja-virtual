@@ -1,76 +1,65 @@
-import CustomerCatalog from '@/components/CustomerCatalog';
 import { Metadata } from 'next';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/services/firebase';
+// Ajuste o caminho do Firebase conforme sua estrutura real, ex: '@/services/firebase' ou '../../services/firebase'
+import { db } from '../../services/firebase'; 
+// Ajuste o caminho do Componente da Vitrine conforme sua estrutura real
+import CustomerCatalog from '../../components/CustomerCatalog';
 
-export async function generateMetadata({ params }: { params: { loja?: string } }): Promise<Metadata> {
-  // TRAVA DE SEGURANÇA BÁSICA
-  const tenantId = params?.loja || 'mamedes'; 
-  const formattedStoreName = tenantId.replace(/-/g, ' ').toUpperCase();
-  
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://app.mamedes.com.br';
-  const domainUrl = `${baseUrl}/${tenantId}`;
-  
-  // Variáveis padrão de fallback (Caso a loja não tenha configurado nada ainda)
-  let imageUrl = `${baseUrl}/velo loja virtual logo.png`;
-  let siteTitle = `${formattedStoreName} | Catálogo Online`;
-  let siteDescription = 'Faça seu orçamento ou pedido online de forma rápida, segura e prática.';
+type Props = {
+  params: { loja: string };
+};
 
-  // INTERCEPTAÇÃO NO FIREBASE: Busca as configurações reais da loja em milissegundos
+// Next.js App Router: Geração de Metadata Dinâmica
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const tenantId = params.loja;
+  
+  // Valores Fallback/Padrão caso dê algum erro
+  let title = 'Velo Loja Virtual';
+  let description = 'Catálogo Exclusivo';
+  let logoUrl = '/favicon.ico';
+
   try {
-    const tenantRef = doc(db, 'tenants', tenantId);
-    const tenantSnap = await getDoc(tenantRef);
-    
-    if (tenantSnap.exists()) {
-      const data = tenantSnap.data();
-      if (data.logoUrl) imageUrl = data.logoUrl;
-      if (data.businessName) siteTitle = `${data.businessName} | Catálogo Online`;
-      if (data.slogan) siteDescription = data.slogan;
+    const docRef = doc(db, 'tenants', tenantId);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      // Puxa os dados reais salvos no Painel
+      title = data.businessName || title;
+      description = data.slogan || description;
+      logoUrl = data.logoUrl || logoUrl;
     }
   } catch (error) {
-    console.error(`Erro ao buscar metadados para ${tenantId}:`, error);
+    console.error("Erro ao buscar metadados para SEO/WhatsApp:", error);
   }
 
   return {
-    title: siteTitle,
-    description: siteDescription,
-    metadataBase: new URL(baseUrl),
-    icons: {
-      icon: imageUrl,
-      apple: imageUrl,
-    },
+    title: title,
+    description: description,
     openGraph: {
-      title: siteTitle,
-      description: siteDescription,
-      url: domainUrl,
-      siteName: formattedStoreName,
+      title: title,
+      description: description,
+      url: `https://seu-dominio.com.br/${tenantId}`, // MUDE PARA O SEU DOMÍNIO REAL
+      siteName: title,
       images: [
         {
-          url: imageUrl, 
+          url: logoUrl, // Esta imagem vai aparecer no WhatsApp!
           width: 800,
-          height: 600,
-          alt: `Logo da loja ${formattedStoreName}`,
+          height: 800,
+          alt: `Logo da loja ${title}`,
         },
       ],
       locale: 'pt_BR',
       type: 'website',
     },
-    twitter: {
-      card: 'summary_large_image',
-      title: siteTitle,
-      description: siteDescription,
-      images: [imageUrl],
+    icons: {
+      icon: logoUrl,
+      shortcut: logoUrl,
+      apple: logoUrl,
     },
   };
 }
 
-export default function LojaDinamica({ params }: { params: { loja?: string } }) {
-  // TRAVA DE SEGURANÇA TAMBÉM NO COMPONENTE
-  const tenantId = params?.loja || 'mamedes';
-
-  return (
-    <main>
-      <CustomerCatalog tenantId={tenantId} />
-    </main>
-  );
+export default function LojaPage({ params }: Props) {
+  return <CustomerCatalog tenantId={params.loja} />;
 }

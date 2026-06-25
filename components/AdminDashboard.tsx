@@ -6,7 +6,7 @@ import {
   Search, CheckCircle2, DollarSign, Eye, EyeOff, User, Sparkles,
   Layers, AlertCircle, Send, HelpCircle, FileCheck, Percent,
   TrendingUp, X, CreditCard, Sun, Moon, ExternalLink, ChevronDown, List,
-  Megaphone, ChevronLeft, ChevronRight, Filter,
+  Megaphone, ChevronLeft, ChevronRight, Filter, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -22,6 +22,29 @@ import { db } from '../services/firebase';
 export default function AdminDashboard() {
   // Theme state
   const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Cache state
+  const [isClearingCache, setIsClearingCache] = useState(false);
+
+  const handleClearCache = async () => {
+    setIsClearingCache(true);
+    try {
+      const res = await fetch('/api/revalidate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: `/${authRole.tenantId}` })
+      });
+      if (res.ok) {
+        alert('✅ Vitrine atualizada com sucesso! O cache da loja foi limpo.');
+      } else {
+        alert('⚠️ Erro ao atualizar a vitrine.');
+      }
+    } catch (error) {
+      alert('⚠️ Erro de conexão ao limpar cache.');
+    } finally {
+      setIsClearingCache(false);
+    }
+  };
 
   // Multi-tenant auth details simulation (Movi para cima para podermos usar o tenantId)
   const [authRole, setAuthRole] = useState({
@@ -801,9 +824,23 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
             <div className="space-y-8 max-w-6xl mx-auto">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <h2 className="text-3xl sm:text-4xl font-black italic uppercase text-[#111827] tracking-tighter">Visão Geral</h2>
-                <button className="bg-[#111827] hover:bg-black text-white px-6 py-3.5 rounded-full font-black text-[11px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg">
-                  Fechar Caixa / Relatório
-                </button>
+                <div className="flex flex-col sm:flex-row items-center gap-3">
+                  <button 
+                    onClick={handleClearCache} 
+                    disabled={isClearingCache} 
+                    className="w-full sm:w-auto bg-white border-2 border-gray-200 text-[#111827] hover:border-[#111827] hover:bg-gray-50 px-6 py-3.5 rounded-full font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-sm disabled:opacity-50"
+                  >
+                    {isClearingCache ? (
+                      <div className="w-4 h-4 border-2 border-[#111827] border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4" />
+                    )}
+                    Atualizar Vitrine (Cache)
+                  </button>
+                  <button className="w-full sm:w-auto bg-[#111827] hover:bg-black text-white px-6 py-3.5 rounded-full font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg">
+                    Fechar Caixa / Relatório
+                  </button>
+                </div>
               </div>
 
               {/* Escola Velo Delivery Highlight Card */}
