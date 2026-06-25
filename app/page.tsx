@@ -1,19 +1,17 @@
 import { Metadata } from 'next';
 import CustomerCatalog from '../components/CustomerCatalog';
 
-// 🔥 Mata o cache da Vercel e obriga a ler do banco de dados na hora
 export const dynamic = 'force-dynamic';
-
+const PROJECT_ID = 'velo-loja-virtual'; // Seu ID real do Firebase
 const DEFAULT_TENANT_ID = 'mamedes'; 
-const PROJECT_ID = 'velo-loja-virtual'; // ID do Firebase cravado para o TypeScript não reclamar
 
 export async function generateMetadata(): Promise<Metadata> {
-  let title = 'Catálogo Digital | Velo Varejo';
+  let title = 'Catálogo Digital | Mamedes Papéis';
   let description = 'Faça seu pedido diretamente pelo nosso site de forma rápida e segura.';
   let logoUrl = 'https://app.velodelivery.com.br/velo%20loja%20virtual%20logo.png';
 
   try {
-    // 🌐 Bate na REST API do Google via 'fetch' (Isso nunca trava no servidor da Vercel)
+    // 🌐 Bate direto na API do Google (Infalível na Vercel)
     const res = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/tenants/${DEFAULT_TENANT_ID}`, {
       cache: 'no-store' 
     });
@@ -28,7 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
       }
     }
   } catch (error) {
-    console.error("Erro na API do Firebase:", error);
+    console.error("Erro na API REST:", error);
   }
 
   return {
@@ -39,7 +37,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: title,
       description: description,
       siteName: title,
-      images: [{ url: logoUrl, width: 800, height: 800, alt: `Logomarca ${title}` }],
+      images: [{ url: logoUrl, width: 800, height: 800, alt: title }],
       locale: 'pt_BR',
       type: 'website',
     }

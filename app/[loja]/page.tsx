@@ -9,7 +9,7 @@ type Props = { params: { loja: string } };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const tenantId = params.loja;
   
-  let title = 'Velo Loja Virtual';
+  let title = 'Catálogo Online';
   let description = 'O melhor catálogo de produtos.';
   let logoUrl = 'https://app.velodelivery.com.br/velo%20loja%20virtual%20logo.png'; 
 
@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       }
     }
   } catch (error) {
-    console.error("Erro na API do Firebase:", error);
+    console.error("Erro na API REST:", error);
   }
 
   return {
@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: title,
       description: description,
       siteName: title,
-      images: [{ url: logoUrl, width: 800, height: 800, alt: `Logomarca ${title}` }],
+      images: [{ url: logoUrl, width: 800, height: 800, alt: title }],
       locale: 'pt_BR',
       type: 'website',
     }
