@@ -1891,7 +1891,7 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
                   value={xmlUrl} 
                   onChange={(e) => setXmlUrl(e.target.value)} 
                   className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-medium text-slate-800 p-4 rounded-xl focus:border-[#ff7b00] outline-none transition-colors" 
-                  placeholder="https://loja.mamedes.com.br/xml/googlemerchant.xml"
+                  placeholder="https://seusite.com.br/xml/googlemerchant.xml"
                 />
               </div>
 
