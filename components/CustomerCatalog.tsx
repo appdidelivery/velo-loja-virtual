@@ -35,13 +35,26 @@ const THEME = {
 
 // A vitrine agora recebe os dados já mastigados do Servidor (initialData)
 export default function CustomerCatalog({ 
-  tenantId = 'mamedes', 
+  tenantId: propTenantId, // Renomeamos a prop para podermos sobrescrevê-la
   initialData 
 }: { 
   tenantId?: string;
   initialData?: any; 
 }) {
   const settings: TenantSettings = INITIAL_SETTINGS;
+
+  // 🔥 MAGIA MULTI-TENANT NA VITRINE: Lê a URL automaticamente, ignorando hardcodes!
+  const tenantId = (() => {
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname;
+      // Regra da Mamedes (Legado)
+      if (host === 'app.mamedes.com.br' || host === 'localhost' || host === '127.0.0.1') {
+        return 'mamedes';
+      }
+      return host; // Para Sacola Online e outros clientes novos
+    }
+    return propTenantId || 'mamedes'; // Fallback para o Servidor (SSR)
+  })();
 
   const { products, loading } = useProducts(tenantId);
   const { addOrder } = useOrders(tenantId);
