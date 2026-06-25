@@ -50,11 +50,18 @@ export default function AdminDashboard() {
   const getInitialTenant = () => {
     if (typeof window !== 'undefined') {
       const host = window.location.hostname;
-      // Se você estiver codando no localhost, ele puxa mamedes para não quebrar seus testes.
-      // Se estiver em produção, ele puxa o domínio real exato (ex: app.sacolaonline.com.br).
-      return (host === 'localhost' || host === '127.0.0.1') ? 'app.mamedes.com.br' : host;
+      
+      // REGRA DE LEGADO (MAMEDES): 
+      // Como os produtos antigos já estão salvos no Firebase sob o ID "mamedes",
+      // forçamos o sistema a usar a palavra curta para este cliente específico.
+      if (host === 'app.mamedes.com.br' || host === 'localhost' || host === '127.0.0.1') {
+        return 'mamedes';
+      }
+      
+      // Para clientes NOVOS (como Sacola Online), usamos a URL inteira nativamente.
+      return host; 
     }
-    return 'app.mamedes.com.br'; // Fallback de segurança para o servidor (Next.js SSR)
+    return 'mamedes'; // Fallback de segurança para o servidor (Next.js SSR)
   };
 
   // Multi-tenant auth details simulation
