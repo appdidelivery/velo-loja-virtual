@@ -290,7 +290,7 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
     e.preventDefault();
     setSettings(settingsForm);
     
-    // Salva no navegador para atualização instantânea no Desktop
+    // 1. Salva no navegador (Rápido)
     localStorage.setItem('velo_theme_color', settingsForm.primaryColor);
     localStorage.setItem('velo_store_logo', settingsForm.logoUrl);
     localStorage.setItem('velo_store_name', settingsForm.businessName);
@@ -300,7 +300,7 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
     localStorage.setItem('velo_store_maintenance', settingsForm.maintenanceMode ? 'true' : 'false');
     localStorage.setItem('velo_store_layout', settingsForm.productLayout || 'list');
     
-    // 🔥 AGORA SIM! SALVA NO FIREBASE PARA O WHATSAPP E CELULARES LEREM 🔥
+    // 2. Tenta Salvar no Firebase
     try {
       await setDoc(doc(db, 'tenants', authRole.tenantId), {
         businessName: settingsForm.businessName,
@@ -312,8 +312,11 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
         maintenanceMode: settingsForm.maintenanceMode,
         productLayout: settingsForm.productLayout
       }, { merge: true });
+      
+      alert("✅ SUCESSO! Dados salvos no Firebase. A vitrine e o WhatsApp já podem ler os novos dados.");
     } catch (error) {
-      console.error("Erro ao salvar dados vitais no Firebase:", error);
+      console.error("Erro no Firebase:", error);
+      alert("❌ ERRO: O Firebase recusou salvar. Verifique o terminal do VS Code ou as regras do Firestore.");
     }
     
     window.dispatchEvent(new Event('storage'));
