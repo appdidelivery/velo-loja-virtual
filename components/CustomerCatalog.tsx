@@ -33,18 +33,20 @@ const THEME = {
   dark: '#2a2a2a', // Rodapé
 };
 
-// Agora a vitrine recebe o tenantId para saber de qual loja puxar os produtos
-export default function CustomerCatalog({ tenantId = 'tenant_mamedes123' }: { tenantId?: string }) {
+// A vitrine agora recebe os dados já mastigados do Servidor (initialData)
+export default function CustomerCatalog({ 
+  tenantId = 'mamedes', 
+  initialData 
+}: { 
+  tenantId?: string;
+  initialData?: any; 
+}) {
   const settings: TenantSettings = INITIAL_SETTINGS;
 
-  // Magia do Firebase: Puxa os produtos E os pedidos exclusivos desta loja
   const { products, loading } = useProducts(tenantId);
   const { addOrder } = useOrders(tenantId);
   
-  // Só mostra na vitrine os produtos que o lojista marcou como "Ativo"
   const activeProducts = useMemo(() => products.filter(p => p.isActive), [products]);
-
-  // Extrair categorias únicas para o Menu
   const categories = useMemo(() => Array.from(new Set(activeProducts.map(p => p.category))), [activeProducts]);
 
   // Estados
@@ -53,33 +55,26 @@ export default function CustomerCatalog({ tenantId = 'tenant_mamedes123' }: { te
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   
-  // Estados do Modo Orçamento
   const [customerName, setCustomerName] = useState('');
   const [customerCnpj, setCustomerCnpj] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Pix');
-  
-  // Estados de Endereço (Modo Orçamento)
   const [cep, setCep] = useState('');
   const [address, setAddress] = useState({ street: '', neighborhood: '', city: '', state: '' });
   const [addressNumber, setAddressNumber] = useState('');
   const [complement, setComplement] = useState('');
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   
- // Toggle de Layout: 'complete' (Loja Integrada) ou 'webview' (Mobile App)
-  // No futuro isso virá do Firebase: settings.businessType === 'whatsapp_catalog'
   const [layoutMode, setLayoutMode] = useState<'complete' | 'webview'>('webview');
-  
-  // Estado para o filtro de categorias no Webview
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
 
-  // Estados Customizáveis de Visual
-  const [themeColor, setThemeColor] = useState('#357b64'); // Cor padrão Velo Verde
-  const [storeLogo, setStoreLogo] = useState('');
-  const [storeName, setStoreName] = useState(settings.businessName);
-  const [storeSlogan, setStoreSlogan] = useState('Catálogo Exclusivo');
-  const [storeWhatsapp, setStoreWhatsapp] = useState(settings.whatsappNumber);
-  const [productLayout, setProductLayout] = useState<'list' | 'grid'>('list');
-  
+  // 🔥 MÁGICA AQUI: Os estados agora iniciam com os dados REAIS vindos do servidor!
+  const [themeColor, setThemeColor] = useState(initialData?.primaryColor || '#357b64');
+  const [storeLogo, setStoreLogo] = useState(initialData?.logoUrl || '');
+  const [storeName, setStoreName] = useState(initialData?.businessName || settings.businessName);
+  const [storeSlogan, setStoreSlogan] = useState(initialData?.slogan || 'Catálogo Exclusivo');
+  const [storeWhatsapp, setStoreWhatsapp] = useState(initialData?.whatsappNumber || settings.whatsappNumber);
+  const [productLayout, setProductLayout] = useState<'list' | 'grid'>(initialData?.productLayout || 'list');
+    
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 

@@ -7,19 +7,16 @@ export const dynamic = 'force-dynamic';
 const DEFAULT_TENANT_ID = 'mamedes'; 
 
 export async function generateMetadata(): Promise<Metadata> {
-  // O seu Plano B (Caso o banco de dados falhe ou o lojista não tenha configurado)
   let title = 'Catálogo Digital | Velo Varejo';
   let description = 'Faça seu pedido diretamente pelo nosso site de forma rápida e segura.';
   let logoUrl = 'https://app.velodelivery.com.br/velo%20loja%20virtual%20logo.png';
 
   try {
-    // 🔥 Agora sim! Usa a SUA conexão do Firebase (já autenticada pelas chaves)
     const docRef = doc(db, 'tenants', DEFAULT_TENANT_ID);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
       const data = docSnap.data();
-      // Substitui o Plano B pelos dados reais do cliente
       if (data.businessName) title = data.businessName;
       if (data.slogan) description = data.slogan;
       if (data.logoUrl) logoUrl = data.logoUrl;
@@ -43,10 +40,32 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  let tenantData = null;
+  
+  try {
+    // Usamos o próprio Firebase limpinho e unificado para buscar os dados de cor
+    const docRef = doc(db, 'tenants', DEFAULT_TENANT_ID);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      tenantData = {
+        businessName: data.businessName || null,
+        slogan: data.slogan || null,
+        logoUrl: data.logoUrl || null,
+        primaryColor: data.primaryColor || null,
+        whatsappNumber: data.whatsappNumber || null,
+        productLayout: data.productLayout || null,
+      };
+    }
+  } catch (e) {
+    console.error("Erro ao pré-carregar loja no servidor:", e);
+  }
+
   return (
     <main>
-      <CustomerCatalog tenantId={DEFAULT_TENANT_ID} />
+      <CustomerCatalog tenantId={DEFAULT_TENANT_ID} initialData={tenantData} />
     </main>
   );
 }

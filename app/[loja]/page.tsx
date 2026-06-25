@@ -43,6 +43,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default function LojaPage({ params }: Props) {
-  return <CustomerCatalog tenantId={params.loja} />;
+export default async function LojaPage({ params }: Props) {
+  let tenantData = null;
+  
+  try {
+    const docRef = doc(db, 'tenants', params.loja);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      tenantData = {
+        businessName: data.businessName || null,
+        slogan: data.slogan || null,
+        logoUrl: data.logoUrl || null,
+        primaryColor: data.primaryColor || null,
+        whatsappNumber: data.whatsappNumber || null,
+        productLayout: data.productLayout || null,
+      };
+    }
+  } catch (e) {
+    console.error("Erro ao pré-carregar loja dinâmica no servidor:", e);
+  }
+
+  return <CustomerCatalog tenantId={params.loja} initialData={tenantData} />;
 }
