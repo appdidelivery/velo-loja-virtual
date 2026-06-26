@@ -107,6 +107,14 @@ export default function CustomerCatalog({
   useEffect(() => {
     setMounted(true);
     
+    // 🔥 MODO PREVIEW INSTANTÂNEO (Lê os parâmetros da URL vindos do iframe do Admin)
+    const urlParams = new URLSearchParams(window.location.search);
+    const previewLayout = urlParams.get('preview_layout');
+    const previewColor = urlParams.get('preview_color');
+    
+    if (previewLayout) setProductLayout(previewLayout as 'list' | 'grid');
+    if (previewColor) setThemeColor(previewColor);
+    
     // 1. Carrega do LocalStorage para ser instantâneo no PC do Lojista
     const savedColor = localStorage.getItem('velo_theme_color');
     const savedLogo = localStorage.getItem('velo_store_logo');

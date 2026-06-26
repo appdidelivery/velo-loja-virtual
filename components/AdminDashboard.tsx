@@ -1403,9 +1403,9 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
                       {/* Pré-visualização Real do Site (Iframe) */}
                       <div className="max-w-[340px] mx-auto border-[10px] border-slate-900 rounded-[3rem] h-[650px] overflow-hidden relative shadow-2xl bg-white">
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-900 rounded-b-3xl z-50"></div>
-                        {/* O Iframe aponta para a rota da loja para mostrar a versão real mobile */}
+                        {/* O Iframe injeta os dados que estão sendo editados via URL Parameters para preview instantâneo */}
                         <iframe 
-                          src={`/${authRole.tenantId}`} 
+                          src={`/${authRole.tenantId}?preview_layout=${settingsForm.productLayout || 'list'}&preview_color=${encodeURIComponent(settingsForm.primaryColor)}`} 
                           title="Preview da Loja" 
                           className="w-full h-full border-none custom-scrollbar"
                         />
