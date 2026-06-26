@@ -5,13 +5,16 @@ import CustomerCatalog from '../../components/CustomerCatalog';
 
 export const dynamic = 'force-dynamic';
 
-type Props = { params: { loja: string } };
+// Tipagem flexível para aceitar tanto Next.js 14 quanto Next.js 15 (Promises)
+type Props = { params: any };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const host = params.loja;
+  // 🔥 NEXT.JS 15 FIX: Espera o parâmetro carregar e garante que seja uma string
+  const resolvedParams = await params;
+  const host = resolvedParams?.loja || '';
   
   // 🔥 Regra de Legado: Salva a Mamedes!
-  const tenantId = (host === 'app.mamedes.com.br' || host.includes('localhost')) ? 'mamedes' : host;
+  const tenantId = (host === 'app.mamedes.com.br' || host.includes('localhost') || host === 'mamedes') ? 'mamedes' : host;
   
   let title = 'Velo Loja Virtual';
   let description = 'Catálogo e E-commerce B2B.';
@@ -48,10 +51,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function LojaPage({ params }: Props) {
   let tenantData = null;
-  const host = params.loja;
   
-  // 🔥 Regra de Legado: Salva a Mamedes!
-  const tenantId = (host === 'app.mamedes.com.br' || host.includes('localhost')) ? 'mamedes' : host;
+  // 🔥 NEXT.JS 15 FIX: Espera o parâmetro carregar e garante que seja uma string
+  const resolvedParams = await params;
+  const host = resolvedParams?.loja || '';
+  
+  // 🔥 Regra de Legado: Salva a Mamedes e evita o Crash
+  const tenantId = (host === 'app.mamedes.com.br' || host.includes('localhost') || host === 'mamedes') ? 'mamedes' : host;
   
   try {
     const docRef = doc(db, 'tenants', tenantId);
