@@ -437,10 +437,13 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
       const importLimit = items.length;
       console.log(`3. Importando/Atualizando todos os ${importLimit} produtos...`);
 
+      // 🔥 LÓGICA DE AGRUPAMENTO DE VARIAÇÕES 🔥
+      const productsMap = new Map();
+
       for (let i = 0; i < importLimit; i++) {
         const item = items[i];
         
-        const title = getTag(item, "title", "") || "Produto Importado";
+        let title = getTag(item, "title", "") || "Produto Importado";
         const description = getTag(item, "description", "");
         const imageLink = getTag(item, "image_link");
         
@@ -453,35 +456,73 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
         
         const ean = getTag(item, "gtin");
         const sku = getTag(item, "id") || `SKU-XML-${Date.now().toString().slice(-4)}${i}`;
+        
+        // A Loja Integrada manda "item_group_id" para unir as variações. Se não tiver, agrupa pelo Título exato.
+        const groupId = getTag(item, "item_group_id", "") || title.trim();
 
-        // 🔥 REGRA 1 E 2: Verifica se já existe para NÃO DUPLICAR e NUNCA DELETAR
-        const existingProduct = products.find(p => p.sku === sku || p.ean === ean);
+        if (!productsMap.has(groupId)) {
+            // Produto principal (Primeira vez que o robô vê)
+            productsMap.set(groupId, {
+                name: title.substring(0, 100),
+                description: description.substring(0, 400),
+                price: priceNumber,
+                imageUrl: imageLink || "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600",
+                category: category,
+                stock: 99,
+                sku: sku,
+                isActive: true,
+                ean: ean || '',
+                ncm: '',
+                weight: 0,
+                seoTitle: title.substring(0, 60),
+                seoDescription: description.substring(0, 160),
+                tenantId: authRole.tenantId,
+                variations: [] // Inicia vazio
+            });
+        } else {
+            // Achou uma variação! Vamos acoplar no produto principal.
+            const existingProd = productsMap.get(groupId);
+            
+            // Se for a primeira variação a entrar, transforma o produto principal na opção 1
+            if (existingProd.variations.length === 0) {
+                existingProd.variations.push({
+                    name: `Ref: ${existingProd.sku.split('-').pop()}`, // Ex: Ref: 06
+                    price: existingProd.price,
+                    sku: existingProd.sku
+                });
+            }
+            
+            // Adiciona a nova variação
+            existingProd.variations.push({
+                name: `Ref: ${sku.split('-').pop()}`, // Ex: Ref: 04
+                price: priceNumber,
+                sku: sku
+            });
+
+            // Ordena as variações pelo preço (do menor para o maior, assim a qtde menor vem primeiro no botão)
+            existingProd.variations.sort((a: any, b: any) => a.price - b.price);
+
+            // Mantém o preço base do produto sempre como o MENOR preço ("A partir de R$ XX")
+            if (priceNumber < existingProd.price) {
+                existingProd.price = priceNumber;
+            }
+        }
+      }
+
+      // Agora salva o MAP agrupado no Firebase
+      for (const prodData of productsMap.values()) {
+        // Verifica se já existe pelo Nome (Já que as variações mudam de SKU)
+        const existingProduct = products.find(p => p.name === prodData.name);
 
         if (existingProduct) {
-          // Já existe! Atualiza apenas o preço e garante que está ativo. (NÃO DELETA)
           await updateProduct(existingProduct.id, {
-            price: priceNumber,
-            isActive: true, 
-            stock: 99 // Opcional: recarrega o estoque
+            price: prodData.price,
+            variations: prodData.variations, // Atualiza as variações para aparecerem na tela
+            isActive: true,
+            stock: 99
           });
         } else {
-          // Produto Novo! Cadastra do zero.
-          await addProduct({
-            name: title.substring(0, 100),
-            description: description.substring(0, 400),
-            price: priceNumber,
-            imageUrl: imageLink || "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600",
-            category: category,
-            stock: 99,
-            sku: sku,
-            isActive: true,
-            ean: ean,
-            ncm: '',
-            weight: 0,
-            seoTitle: title.substring(0, 60),
-            seoDescription: description.substring(0, 160),
-            tenantId: authRole.tenantId
-          });
+          await addProduct(prodData);
         }
         importedCount++;
       }

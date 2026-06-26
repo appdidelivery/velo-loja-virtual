@@ -96,6 +96,13 @@ export default function CustomerCatalog({
   
   // Estado para controlar qual produto está aberto no Modal
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  // Estado para controlar qual variação de quantidade está selecionada no Modal
+  const [selectedVariationIndex, setSelectedVariationIndex] = useState<number>(0);
+
+  // Zera a variação selecionada sempre que abrir um produto novo
+  useEffect(() => {
+    if (selectedProduct) setSelectedVariationIndex(0);
+  }, [selectedProduct]);
 
   useEffect(() => {
     setMounted(true);
@@ -629,19 +636,66 @@ export default function CustomerCatalog({
                     {selectedProduct.description || 'Nenhuma descrição fornecida para este produto.'}
                   </p>
                 </div>
+
+                {/* INÍCIO: UI DE VARIAÇÕES (Ex: 500, 1000, 3000) */}
+                {/* @ts-ignore - Aceitando variações dinâmicas do Firebase */}
+                {selectedProduct.variations && selectedProduct.variations.length > 0 && (
+                  <div className="mb-6">
+                    <p className="text-[11px] font-bold text-gray-800 uppercase tracking-widest mb-3">Selecione a opção de Quantidade:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {/* @ts-ignore */}
+                      {selectedProduct.variations.map((varItem: any, idx: number) => (
+                        <button
+                          key={idx}
+                          onClick={() => setSelectedVariationIndex(idx)}
+                          className={`px-5 py-2.5 border-2 rounded-lg text-sm font-bold transition-all ${
+                            selectedVariationIndex === idx 
+                              ? 'shadow-sm' 
+                              : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                          }`}
+                          style={selectedVariationIndex === idx ? { borderColor: themeColor, color: themeColor, backgroundColor: `${themeColor}10` } : {}}
+                        >
+                          {varItem.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* FIM: UI DE VARIAÇÕES */}
               </div>
 
               <div className="p-6 sm:p-8 bg-gray-50 border-t border-gray-100 shrink-0 flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Preço Unitário</p>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    {/* @ts-ignore */}
+                    {selectedProduct.variations && selectedProduct.variations.length > 0 ? 'A Partir de' : 'Preço Unitário'}
+                  </p>
                   <p style={{ color: themeColor }} className="text-2xl sm:text-3xl font-black tracking-tight">
-                    R$ {selectedProduct.price.toFixed(2)}
+                    {/* @ts-ignore */}
+                    R$ {(selectedProduct.variations && selectedProduct.variations.length > 0 
+                      // @ts-ignore
+                      ? selectedProduct.variations[selectedVariationIndex].price 
+                      : selectedProduct.price).toFixed(2)}
                   </p>
                 </div>
                 
                 <button 
                   onClick={() => {
-                    handleAddToCart(selectedProduct);
+                    // Truque de Mestre: Se tiver variação, "falsificamos" o produto pro carrinho aceitar ele separadamente
+                    // @ts-ignore
+                    const productToAdd = selectedProduct.variations && selectedProduct.variations.length > 0 
+                      ? { 
+                          ...selectedProduct, 
+                          // @ts-ignore
+                          id: `${selectedProduct.id}-${selectedVariationIndex}`, 
+                          // @ts-ignore
+                          name: `${selectedProduct.name} (${selectedProduct.variations[selectedVariationIndex].name})`,
+                          // @ts-ignore
+                          price: selectedProduct.variations[selectedVariationIndex].price
+                        } 
+                      : selectedProduct;
+                    
+                    handleAddToCart(productToAdd);
                     setSelectedProduct(null);
                   }}
                   style={{ backgroundColor: themeColor }}
