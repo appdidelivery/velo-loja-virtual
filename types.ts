@@ -11,14 +11,14 @@ export interface Product {
   stock: number;
   sku: string;
   isActive: boolean;
-  tenantId?: string;
-  // Novos campos Fiscais e Logísticos
-  ean?: string; // Código de Barras (GTIN) obrigatório para Google Shopping
-  ncm?: string; // Nomenclatura Comum do Mercosul para NFe
-  weight?: number; // Peso em KG
-  // Novos campos de SEO
+  tenantId: string;
+  ean?: string;
+  ncm?: string;
+  weight?: number;
   seoTitle?: string;
   seoDescription?: string;
+  variations?: any[]; // 🔥 Adicionado para o TypeScript parar de chiar
+  images?: string[];  // 🔥 Adicionado para a galeria de imagens
 }
 
 export interface Order {

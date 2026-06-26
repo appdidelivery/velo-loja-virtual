@@ -98,22 +98,12 @@ export default function CustomerCatalog({
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   // Estado para controlar qual variação de quantidade está selecionada no Modal
   const [selectedVariationIndex, setSelectedVariationIndex] = useState<number>(0);
+  // 🔥 NOVO: Estado para a Galeria de Imagens
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
 
-  // Zera a variação selecionada sempre que abrir um produto novo
-  useEffect(() => {
-    if (selectedProduct) setSelectedVariationIndex(0);
-  }, [selectedProduct]);
-
+  // Zera as seleções sempre que abrir um produto novo
   useEffect(() => {
     setMounted(true);
-    
-    // 🔥 MODO PREVIEW INSTANTÂNEO (Lê os parâmetros da URL vindos do iframe do Admin)
-    const urlParams = new URLSearchParams(window.location.search);
-    const previewLayout = urlParams.get('preview_layout');
-    const previewColor = urlParams.get('preview_color');
-    
-    if (previewLayout) setProductLayout(previewLayout as 'list' | 'grid');
-    if (previewColor) setThemeColor(previewColor);
     
     // 1. Carrega do LocalStorage para ser instantâneo no PC do Lojista
     const savedColor = localStorage.getItem('velo_theme_color');
@@ -131,9 +121,12 @@ export default function CustomerCatalog({
     if (savedLayout) setProductLayout(savedLayout as 'list' | 'grid');
 
     // 2. Conexão REAL-TIME com o Firebase (Mágica no Celular/Produção)
-    import('firebase/firestore').then(({ onSnapshot, doc }) => {
+    let unsubscribe = () => {};
+
+    const setupFirebase = async () => {
       if (tenantId) {
-        const unsub = onSnapshot(
+        const { onSnapshot, doc } = await import('firebase/firestore');
+        unsubscribe = onSnapshot(
           doc(db, 'tenants', tenantId), 
           (docSnap) => {
             if (docSnap.exists()) {
@@ -145,16 +138,14 @@ export default function CustomerCatalog({
               if (data.whatsappNumber) setStoreWhatsapp(data.whatsappNumber);
               if (data.productLayout) setProductLayout(data.productLayout as 'list' | 'grid');
             }
-          },
-          (error) => {
-            console.error("❌ ERRO GRAVE NO FIREBASE: As Regras de Segurança estão bloqueando a leitura da loja!", error);
-            alert("Aviso para o Desenvolvedor: Libere a permissão de leitura da coleção 'tenants' no Console do Firebase.");
           }
         );
-        
-        return () => unsub();
       }
-    });
+    };
+
+    setupFirebase();
+    
+    return () => unsubscribe();
   }, [tenantId]);
 
   // Produtos filtrados pela categoria selecionada E PELA BUSCA
@@ -432,8 +423,9 @@ export default function CustomerCatalog({
                       <div 
                         key={product.id} 
                         onClick={() => setSelectedProduct(product)} 
-                        className={`bg-white p-3 rounded-[1.5rem] shadow-sm border border-gray-100 relative overflow-hidden group cursor-pointer hover:border-gray-300 transition-colors flex ${
-                          productLayout === 'grid' ? 'flex-col' : 'gap-4 items-center'
+                        // 🔥 Adicionei o 'w-full' aqui para a Grade não amassar o card
+                        className={`w-full bg-white p-3 rounded-[1.5rem] shadow-sm border border-gray-100 relative overflow-hidden group cursor-pointer hover:border-gray-300 transition-colors flex ${
+                          productLayout === 'grid' ? 'flex-col items-start' : 'gap-4 items-center'
                         }`}
                       >
                         {product.stock <= 10 && <div className="absolute top-0 left-0 bg-red-500 text-white text-[8px] font-black uppercase px-2 py-1 rounded-br-lg z-10">Últimos</div>}
@@ -615,7 +607,7 @@ export default function CustomerCatalog({
       )}
 
       {/* =========================================
-          MODAL DE DETALHES DO PRODUTO
+          MODAL DE DETALHES DO PRODUTO E GALERIA
           ========================================= */}
       <AnimatePresence>
         {selectedProduct && (
@@ -640,9 +632,33 @@ export default function CustomerCatalog({
                 <X className="w-5 h-5" />
               </button>
 
-              <div className="w-full h-64 sm:h-80 bg-gray-50 flex items-center justify-center p-8 shrink-0 relative">
-                <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="w-full h-full object-contain mix-blend-multiply" />
+              {/* 🔥 NOVA GALERIA DE IMAGENS */}
+              <div className="w-full bg-gray-50 flex flex-col items-center p-6 shrink-0 relative border-b border-gray-100">
+                {/* Foto Principal */}
+                <div className="w-full h-56 sm:h-72 flex items-center justify-center mb-4">
+                  {/* @ts-ignore */}
+                  <img src={selectedProduct.images && selectedProduct.images.length > 0 ? selectedProduct.images[selectedImageIndex] : selectedProduct.imageUrl} alt={selectedProduct.name} className="w-full h-full object-contain mix-blend-multiply transition-opacity duration-300" />
+                </div>
+                
+                {/* Miniaturas (Só aparecem se tiver mais de 1 foto) */}
+                {/* @ts-ignore */}
+                {selectedProduct.images && selectedProduct.images.length > 1 && (
+                  <div className="flex gap-3 overflow-x-auto max-w-full pb-2 custom-scrollbar">
+                    {/* @ts-ignore */}
+                    {selectedProduct.images.map((imgUrl: string, idx: number) => (
+                      <button 
+                        key={idx} 
+                        onClick={() => setSelectedImageIndex(idx)}
+                        className={`w-16 h-16 shrink-0 rounded-xl border-2 p-1.5 bg-white overflow-hidden transition-all ${selectedImageIndex === idx ? 'shadow-md scale-105' : 'border-transparent hover:border-gray-300 opacity-60 hover:opacity-100'}`}
+                        style={selectedImageIndex === idx ? { borderColor: themeColor } : {}}
+                      >
+                        <img src={imgUrl} className="w-full h-full object-contain mix-blend-multiply" alt="Thumbnail" />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
+              {/* FIM DA GALERIA */}
 
               <div className="flex-1 overflow-y-auto p-6 sm:p-8 custom-scrollbar bg-white">
                 <div className="mb-2">
@@ -662,7 +678,7 @@ export default function CustomerCatalog({
                 </div>
 
                 {/* INÍCIO: UI DE VARIAÇÕES (Ex: 500, 1000, 3000) */}
-                {/* @ts-ignore - Aceitando variações dinâmicas do Firebase */}
+                {/* @ts-ignore */}
                 {selectedProduct.variations && selectedProduct.variations.length > 0 && (
                   <div className="mb-6">
                     <p className="text-[11px] font-bold text-gray-800 uppercase tracking-widest mb-3">Selecione a opção de Quantidade:</p>
@@ -696,16 +712,13 @@ export default function CustomerCatalog({
                   </p>
                   <p style={{ color: themeColor }} className="text-2xl sm:text-3xl font-black tracking-tight">
                     {/* @ts-ignore */}
-                    R$ {(selectedProduct.variations && selectedProduct.variations.length > 0 
-                      // @ts-ignore
-                      ? selectedProduct.variations[selectedVariationIndex].price 
-                      : selectedProduct.price).toFixed(2)}
+                    R$ {(selectedProduct.variations && selectedProduct.variations.length > 0 ? selectedProduct.variations[selectedVariationIndex].price : selectedProduct.price).toFixed(2)}
                   </p>
                 </div>
                 
                 <button 
                   onClick={() => {
-                    // Truque de Mestre: Se tiver variação, "falsificamos" o produto pro carrinho aceitar ele separadamente
+                    // Truque de Mestre para Carrinho
                     // @ts-ignore
                     const productToAdd = selectedProduct.variations && selectedProduct.variations.length > 0 
                       ? { 

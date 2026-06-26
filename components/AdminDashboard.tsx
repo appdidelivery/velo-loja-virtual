@@ -451,11 +451,20 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
         const cleanPriceString = priceRaw.replace(/[^\d.,]/g, '').replace(',', '.');
         const priceNumber = Number(cleanPriceString) || 0;
         
-        const rawCategory = getTag(item, "product_type") || "Geral";
+       const rawCategory = getTag(item, "product_type") || "Geral";
         const category = rawCategory.split('>').pop()?.trim() || rawCategory;
         
         const ean = getTag(item, "gtin");
         const sku = getTag(item, "id") || `SKU-XML-${Date.now().toString().slice(-4)}${i}`;
+
+        // 🔥 EXTRAÇÃO MULTI-IMAGENS: Pega a foto principal e as secundárias (se houver)
+        let additionalImages: string[] = [];
+        let addNodes = item.getElementsByTagName("g:additional_image_link");
+        if (addNodes.length === 0) addNodes = item.getElementsByTagName("additional_image_link");
+        for (let j = 0; j < addNodes.length; j++) {
+            if (addNodes[j]?.textContent) additionalImages.push(addNodes[j].textContent);
+        }
+        const itemImages = [imageLink, ...additionalImages].filter(Boolean);
         
         // A Loja Integrada manda "item_group_id" para unir as variações. Se não tiver, agrupa pelo Título exato.
         const groupId = getTag(item, "item_group_id", "") || title.trim();
@@ -467,6 +476,7 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
                 description: description.substring(0, 400),
                 price: priceNumber,
                 imageUrl: imageLink || "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600",
+                images: itemImages, // 🔥 Array com todas as fotos juntas
                 category: category,
                 stock: 99,
                 sku: sku,
@@ -518,6 +528,7 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
           await updateProduct(existingProduct.id, {
             price: prodData.price,
             variations: prodData.variations, // Atualiza as variações para aparecerem na tela
+            images: prodData.images, // 🔥 Garante que a galeria inteira suba pro Firebase
             isActive: true,
             stock: 99
           });
@@ -1403,9 +1414,9 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
                       {/* Pré-visualização Real do Site (Iframe) */}
                       <div className="max-w-[340px] mx-auto border-[10px] border-slate-900 rounded-[3rem] h-[650px] overflow-hidden relative shadow-2xl bg-white">
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-900 rounded-b-3xl z-50"></div>
-                        {/* O Iframe injeta os dados que estão sendo editados via URL Parameters para preview instantâneo */}
+                        {/* O Iframe aponta para a rota da loja segura e passaremos as configs em tempo real via localStorage */}
                         <iframe 
-                          src={`/${authRole.tenantId}?preview_layout=${settingsForm.productLayout || 'list'}&preview_color=${encodeURIComponent(settingsForm.primaryColor)}`} 
+                          src={`/${authRole.tenantId}`} 
                           title="Preview da Loja" 
                           className="w-full h-full border-none custom-scrollbar"
                         />
