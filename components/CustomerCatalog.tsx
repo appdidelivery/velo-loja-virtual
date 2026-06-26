@@ -643,23 +643,20 @@ export default function CustomerCatalog({
                   <img src={selectedProduct.images && selectedProduct.images.length > 0 ? selectedProduct.images[selectedImageIndex] : selectedProduct.imageUrl} alt={selectedProduct.name} className="w-full h-full object-contain mix-blend-multiply transition-opacity duration-300" />
                 </div>
                 
-                {/* Miniaturas (Só aparecem se tiver mais de 1 foto) */}
-                {/* @ts-ignore */}
-                {selectedProduct.images && selectedProduct.images.length > 1 && (
-                  <div className="flex gap-3 overflow-x-auto max-w-full pb-2 custom-scrollbar">
-                    {/* @ts-ignore */}
-                    {selectedProduct.images.map((imgUrl: string, idx: number) => (
-                      <button 
-                        key={idx} 
-                        onClick={() => setSelectedImageIndex(idx)}
-                        className={`w-16 h-16 shrink-0 rounded-xl border-2 p-1.5 bg-white overflow-hidden transition-all ${selectedImageIndex === idx ? 'shadow-md scale-105' : 'border-transparent hover:border-gray-300 opacity-60 hover:opacity-100'}`}
-                        style={selectedImageIndex === idx ? { borderColor: themeColor } : {}}
-                      >
-                        <img src={imgUrl} className="w-full h-full object-contain mix-blend-multiply" alt="Thumbnail" />
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {/* 🔥 Miniaturas: Aparece sempre, usando a galeria ou a foto principal como fallback */}
+                <div className="flex gap-3 overflow-x-auto max-w-full pb-2 custom-scrollbar">
+                  {/* @ts-ignore */}
+                  {(selectedProduct.images && selectedProduct.images.length > 0 ? selectedProduct.images : [selectedProduct.imageUrl]).map((imgUrl: string, idx: number) => (
+                    <button 
+                      key={idx} 
+                      onClick={() => setSelectedImageIndex(idx)}
+                      className={`w-16 h-16 shrink-0 rounded-xl border-2 p-1.5 bg-white overflow-hidden transition-all ${selectedImageIndex === idx ? 'shadow-md scale-105' : 'border-transparent hover:border-gray-300 opacity-60 hover:opacity-100'}`}
+                      style={selectedImageIndex === idx ? { borderColor: themeColor } : {}}
+                    >
+                      <img src={imgUrl} className="w-full h-full object-contain mix-blend-multiply" alt="Thumbnail" />
+                    </button>
+                  ))}
+                </div>
               </div>
               {/* FIM DA GALERIA */}
 

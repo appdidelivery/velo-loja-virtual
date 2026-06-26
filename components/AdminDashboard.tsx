@@ -893,7 +893,8 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
 
           <div className="p-5 border-t border-gray-100 bg-gray-50/50">
             <div className="flex items-center justify-center mb-4">
-               <a href={`/${authRole.tenantId}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-[#111827] hover:text-[#0055ff] transition-colors">
+               {/* 🔥 FURA-CACHE: O Date.now() cria uma URL única que a Vercel é obrigada a renderizar nova! */}
+               <a href={`/${authRole.tenantId}?nocache=${Date.now()}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-[#111827] hover:text-[#0055ff] transition-colors">
                  <ExternalLink className="w-4 h-4"/> VER LOJA ONLINE
                </a>
             </div>
