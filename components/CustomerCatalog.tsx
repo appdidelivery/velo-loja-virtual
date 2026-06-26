@@ -418,28 +418,44 @@ export default function CustomerCatalog({
                 </div>
               ) : (
                 <>
-                  {paginatedProducts.map(product => (
-                    <div key={product.id} onClick={() => setSelectedProduct(product)} className="bg-white p-3 rounded-[1.5rem] shadow-sm border border-gray-100 flex gap-4 items-center relative overflow-hidden group cursor-pointer hover:border-gray-300 transition-colors">
-                      {product.stock <= 10 && <div className="absolute top-0 left-0 bg-red-500 text-white text-[8px] font-black uppercase px-2 py-1 rounded-br-lg z-10">Últimos</div>}
-                      <div className="w-20 h-20 bg-gray-50 rounded-xl p-1.5 shrink-0 border border-gray-100 relative">
-                        <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform" />
-                      </div>
-                      <div className="flex-1 min-w-0 py-1">
-                        <h3 className="text-xs font-bold text-gray-800 leading-tight mb-1 line-clamp-2 pr-2">{product.name}</h3>
-                        <p className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">{product.category}</p>
-                        <div className="flex items-center justify-between mt-auto">
-                          <span style={{ color: themeColor }} className="text-sm font-black">R$ {product.price.toFixed(2)}</span>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); handleAddToCart(product); }} 
-                            style={{ backgroundColor: themeColor }}
-                            className="w-8 h-8 text-white rounded-full flex items-center justify-center shadow-sm hover:scale-105 transition-transform"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </button>
+                  {/* Container Dinâmico: Se for 'grid', divide em 2 colunas. Se for 'list', fica em 1 coluna. */}
+                  <div className={productLayout === 'grid' ? "grid grid-cols-2 gap-3" : "flex flex-col gap-3"}>
+                    {paginatedProducts.map(product => (
+                      <div 
+                        key={product.id} 
+                        onClick={() => setSelectedProduct(product)} 
+                        className={`bg-white p-3 rounded-[1.5rem] shadow-sm border border-gray-100 relative overflow-hidden group cursor-pointer hover:border-gray-300 transition-colors flex ${
+                          productLayout === 'grid' ? 'flex-col' : 'gap-4 items-center'
+                        }`}
+                      >
+                        {product.stock <= 10 && <div className="absolute top-0 left-0 bg-red-500 text-white text-[8px] font-black uppercase px-2 py-1 rounded-br-lg z-10">Últimos</div>}
+                        
+                        {/* Imagem Inteligente: No grid ela cresce (aspect-square), na lista ela fica quadradinha pequena */}
+                        <div className={`${productLayout === 'grid' ? 'w-full aspect-square mb-3' : 'w-20 h-20 shrink-0'} bg-gray-50 rounded-xl p-1.5 border border-gray-100 relative`}>
+                          <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform" />
+                        </div>
+                        
+                        <div className="flex-1 flex flex-col min-w-0 py-1 w-full">
+                          <h3 className="text-xs font-bold text-gray-800 leading-tight mb-1 line-clamp-2 pr-2">{product.name}</h3>
+                          <p className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider truncate">{product.category}</p>
+                          <div className="flex items-center justify-between mt-auto">
+                            <span style={{ color: themeColor }} className="text-sm font-black truncate">
+                              {/* Se o produto tiver variação, mostra o preço a partir do menor, senão mostra o preço normal */}
+                              {/* @ts-ignore */}
+                              R$ {(product.variations && product.variations.length > 0 ? product.variations[0].price : product.price).toFixed(2)}
+                            </span>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleAddToCart(product); }} 
+                              style={{ backgroundColor: themeColor }}
+                              className="w-8 h-8 shrink-0 text-white rounded-full flex items-center justify-center shadow-sm hover:scale-105 transition-transform"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                   
                   {filteredActiveProducts.length > visibleCount && (
                     <div className="py-6 flex justify-center">
