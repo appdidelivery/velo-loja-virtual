@@ -422,8 +422,11 @@ export default function CustomerCatalog({
                     {paginatedProducts.map(product => (
                       <div 
                         key={product.id} 
-                        onClick={() => setSelectedProduct(product)} 
-                        // 🔥 Adicionei o 'w-full' aqui para a Grade não amassar o card
+                        onClick={() => {
+                          setSelectedVariationIndex(0);
+                          setSelectedImageIndex(0);
+                          setSelectedProduct(product);
+                        }} 
                         className={`w-full bg-white p-3 rounded-[1.5rem] shadow-sm border border-gray-100 relative overflow-hidden group cursor-pointer hover:border-gray-300 transition-colors flex ${
                           productLayout === 'grid' ? 'flex-col items-start' : 'gap-4 items-center'
                         }`}

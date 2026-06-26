@@ -386,7 +386,7 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
   // Count pending chats count
   const unreadChatsCount = chats.filter(c => c.unread).length;
 
-  // --- LÓGICA DE IMPORTAÇÃO REAL DE XML (GOOGLE MERCHANT) ---
+  // --- LÓGICA DE IMPORTAÇÃO REAL DE XML (AGRUPAMENTO E GALERIA DE FOTOS) ---
   const handleImportXML = async () => {
     if (!xmlUrl) return alert("Por favor, insira uma URL válida.");
     setIsImporting(true);
@@ -394,10 +394,6 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
     try {
       console.log("1. Solicitando XML via Backend Velo...");
       
-      // 🔥 Correção Arquitetural: 
-      // Chama sempre a rota local /api/import-xml relativa ao domínio atual.
-      // Assim, se estiver no localhost chama localhost/api, se estiver na Sacola chama app.sacola/api.
-      // Zero bloqueios de CORS.
       const response = await fetch('/api/import-xml', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -415,19 +411,13 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(xmlText, "text/xml");
       
-      // Procura por <item> (Padrão RSS/Merchant) ou <entry> (Padrão Atom)
       let items = xmlDoc.getElementsByTagName("item");
-      if (items.length === 0) {
-        items = xmlDoc.getElementsByTagName("entry");
-      }
+      if (items.length === 0) items = xmlDoc.getElementsByTagName("entry");
 
-      if (items.length === 0) {
-        throw new Error("Nenhum produto encontrado. Verifique se o XML tem a tag <item>.");
-      }
+      if (items.length === 0) throw new Error("Nenhum produto encontrado. Verifique se o XML tem a tag <item>.");
 
       let importedCount = 0;
 
-      // Extrator inteligente: Lê a tag com ou sem o prefixo 'g:'
       const getTag = (el: any, tag: string, prefix = "g") => {
         let val = el.getElementsByTagName(`${prefix}:${tag}`)[0]?.textContent;
         if (!val) val = el.getElementsByTagName(tag)[0]?.textContent;
@@ -437,7 +427,6 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
       const importLimit = items.length;
       console.log(`3. Importando/Atualizando todos os ${importLimit} produtos...`);
 
-      // 🔥 LÓGICA DE AGRUPAMENTO DE VARIAÇÕES 🔥
       const productsMap = new Map();
 
       for (let i = 0; i < importLimit; i++) {
@@ -451,13 +440,13 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
         const cleanPriceString = priceRaw.replace(/[^\d.,]/g, '').replace(',', '.');
         const priceNumber = Number(cleanPriceString) || 0;
         
-       const rawCategory = getTag(item, "product_type") || "Geral";
+        const rawCategory = getTag(item, "product_type") || "Geral";
         const category = rawCategory.split('>').pop()?.trim() || rawCategory;
         
         const ean = getTag(item, "gtin");
         const sku = getTag(item, "id") || `SKU-XML-${Date.now().toString().slice(-4)}${i}`;
 
-        // 🔥 EXTRAÇÃO MULTI-IMAGENS: Pega a foto principal e as secundárias (se houver)
+        // 🔥 EXTRAÇÃO MULTI-IMAGENS: Pega a foto principal e as secundárias
         let additionalImages: string[] = [];
         let addNodes = item.getElementsByTagName("g:additional_image_link");
         if (addNodes.length === 0) addNodes = item.getElementsByTagName("additional_image_link");
@@ -466,7 +455,6 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
         }
         const itemImages = [imageLink, ...additionalImages].filter(Boolean);
         
-        // A Loja Integrada manda "item_group_id" para unir as variações. Se não tiver, agrupa pelo Título exato.
         const groupId = getTag(item, "item_group_id", "") || title.trim();
 
         if (!productsMap.has(groupId)) {
@@ -476,7 +464,7 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
                 description: description.substring(0, 400),
                 price: priceNumber,
                 imageUrl: imageLink || "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600",
-                images: itemImages, // 🔥 Array com todas as fotos juntas
+                images: itemImages, // Salva a galeria inicial
                 category: category,
                 stock: 99,
                 sku: sku,
@@ -487,48 +475,48 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
                 seoTitle: title.substring(0, 60),
                 seoDescription: description.substring(0, 160),
                 tenantId: authRole.tenantId,
-                variations: [] // Inicia vazio
+                variations: [] 
             });
         } else {
             // Achou uma variação! Vamos acoplar no produto principal.
             const existingProd = productsMap.get(groupId);
             
-            // Se for a primeira variação a entrar, transforma o produto principal na opção 1
+            // 🔥 MÁGICA DA GALERIA: Se tem foto nova da variação, injeta no álbum!
+            if (imageLink && !existingProd.images.includes(imageLink)) {
+                existingProd.images.push(imageLink);
+            }
+            
             if (existingProd.variations.length === 0) {
                 existingProd.variations.push({
-                    name: `Ref: ${existingProd.sku.split('-').pop()}`, // Ex: Ref: 06
+                    name: `Ref: ${existingProd.sku.split('-').pop()}`, 
                     price: existingProd.price,
                     sku: existingProd.sku
                 });
             }
             
-            // Adiciona a nova variação
             existingProd.variations.push({
-                name: `Ref: ${sku.split('-').pop()}`, // Ex: Ref: 04
+                name: `Ref: ${sku.split('-').pop()}`, 
                 price: priceNumber,
                 sku: sku
             });
 
-            // Ordena as variações pelo preço (do menor para o maior, assim a qtde menor vem primeiro no botão)
             existingProd.variations.sort((a: any, b: any) => a.price - b.price);
 
-            // Mantém o preço base do produto sempre como o MENOR preço ("A partir de R$ XX")
             if (priceNumber < existingProd.price) {
                 existingProd.price = priceNumber;
             }
         }
       }
 
-      // Agora salva o MAP agrupado no Firebase
+      // Salva no Firebase
       for (const prodData of productsMap.values()) {
-        // Verifica se já existe pelo Nome (Já que as variações mudam de SKU)
         const existingProduct = products.find(p => p.name === prodData.name);
 
         if (existingProduct) {
           await updateProduct(existingProduct.id, {
             price: prodData.price,
-            variations: prodData.variations, // Atualiza as variações para aparecerem na tela
-            images: prodData.images, // 🔥 Garante que a galeria inteira suba pro Firebase
+            variations: prodData.variations, 
+            images: prodData.images, // Atualiza as fotos no banco
             isActive: true,
             stock: 99
           });
@@ -538,13 +526,12 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
         importedCount++;
       }
 
-      // 🔥 Salva a preferência do Robô de 24h no Firebase para o servidor saber
       await setDoc(doc(db, 'tenants', authRole.tenantId), {
         xmlUrl: xmlUrl,
         autoSyncXml: isAutoSync
       }, { merge: true });
 
-      alert(`✅ Sincronização concluída!\n\n${importedCount} produtos foram verificados e atualizados sem apagar nada.`);
+      alert(`✅ Sincronização concluída!\n\n${importedCount} produtos foram agrupados com suas variações e fotos.`);
       setIsXmlModalOpen(false);
     } catch (error: any) {
       console.error(error);
