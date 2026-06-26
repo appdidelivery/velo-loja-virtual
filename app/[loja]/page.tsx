@@ -8,11 +8,14 @@ export const dynamic = 'force-dynamic';
 type Props = { params: { loja: string } };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const tenantId = params.loja;
+  const host = params.loja;
+  
+  // 🔥 Regra de Legado: Salva a Mamedes!
+  const tenantId = (host === 'app.mamedes.com.br' || host.includes('localhost')) ? 'mamedes' : host;
   
   let title = 'Velo Loja Virtual';
-  let description = 'O melhor catálogo de produtos.';
-  let logoUrl = 'https://app.velodelivery.com.br/velo%20loja%20virtual%20logo.png'; 
+  let description = 'Catálogo e E-commerce B2B.';
+  let logoUrl = '/velo loja virtual logo.png'; 
 
   try {
     const docRef = doc(db, 'tenants', tenantId);
@@ -45,9 +48,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function LojaPage({ params }: Props) {
   let tenantData = null;
+  const host = params.loja;
+  
+  // 🔥 Regra de Legado: Salva a Mamedes!
+  const tenantId = (host === 'app.mamedes.com.br' || host.includes('localhost')) ? 'mamedes' : host;
   
   try {
-    const docRef = doc(db, 'tenants', params.loja);
+    const docRef = doc(db, 'tenants', tenantId);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
@@ -65,5 +72,5 @@ export default async function LojaPage({ params }: Props) {
     console.error("Erro ao pré-carregar loja dinâmica no servidor:", e);
   }
 
-  return <CustomerCatalog tenantId={params.loja} initialData={tenantData} />;
+  return <CustomerCatalog tenantId={tenantId} initialData={tenantData} />;
 }
