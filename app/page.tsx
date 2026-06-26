@@ -1,20 +1,25 @@
 import { Metadata } from 'next';
+import { headers } from 'next/headers';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import CustomerCatalog from '../components/CustomerCatalog';
 
-// 🔥 Mata o cache da Vercel para sempre ler do banco em tempo real
 export const dynamic = 'force-dynamic';
-const DEFAULT_TENANT_ID = 'mamedes'; 
 
 export async function generateMetadata(): Promise<Metadata> {
-  let title = 'Velo Loja Virtual';
-  let description = 'O melhor catálogo de produtos.';
-  let logoUrl = 'https://app.velodelivery.com.br/velo%20loja%20virtual%20logo.png';
+  // 🔥 Espera os cabeçalhos carregarem (Proteção Next.js 15)
+  const headersList = await headers();
+  const host = headersList.get('host') || '';
+  
+  // Regra da Mamedes (Legado)
+  const tenantId = (host === 'app.mamedes.com.br' || host.includes('localhost') || host === 'mamedes') ? 'mamedes' : host;
+  
+  let title = 'Loja Virtual';
+  let description = 'Catálogo B2B e E-commerce.';
+  let logoUrl = '/velo loja virtual logo.png'; 
 
   try {
-    // 🌐 Usa o Firebase Oficial (Ele já tem suas chaves e o Google nunca bloqueia)
-    const docRef = doc(db, 'tenants', DEFAULT_TENANT_ID);
+    const docRef = doc(db, 'tenants', tenantId);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
@@ -24,7 +29,7 @@ export async function generateMetadata(): Promise<Metadata> {
       if (data.logoUrl) logoUrl = data.logoUrl;
     }
   } catch (error) {
-    console.error("Erro ao buscar metadados no Firebase:", error);
+    console.error(`Erro ao buscar metadados para a loja ${tenantId}:`, error);
   }
 
   return {
@@ -35,7 +40,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: title,
       description: description,
       siteName: title,
-      images: [{ url: logoUrl, width: 800, height: 800, alt: `Logomarca da loja ${title}` }],
+      images: [{ url: logoUrl, width: 800, height: 800, alt: title }],
       locale: 'pt_BR',
       type: 'website',
     }
@@ -45,8 +50,15 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function HomePage() {
   let tenantData = null;
   
+  // 🔥 Espera os cabeçalhos carregarem (Proteção Next.js 15)
+  const headersList = await headers();
+  const host = headersList.get('host') || '';
+  
+  // Regra da Mamedes (Legado)
+  const tenantId = (host === 'app.mamedes.com.br' || host.includes('localhost') || host === 'mamedes') ? 'mamedes' : host;
+  
   try {
-    const docRef = doc(db, 'tenants', DEFAULT_TENANT_ID);
+    const docRef = doc(db, 'tenants', tenantId);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
@@ -61,12 +73,9 @@ export default async function HomePage() {
       };
     }
   } catch (e) {
-    console.error("Erro ao pré-carregar loja no servidor:", e);
+    console.error("Erro ao pré-carregar loja dinâmica no servidor:", e);
   }
 
-  return (
-    <main>
-      <CustomerCatalog tenantId={DEFAULT_TENANT_ID} initialData={tenantData} />
-    </main>
-  );
+  // Entrega os dados mastigados e REAIS para a Vitrine
+  return <CustomerCatalog tenantId={tenantId} initialData={tenantData} />;
 }
