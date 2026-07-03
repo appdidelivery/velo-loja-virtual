@@ -60,10 +60,25 @@ export interface ChatSession {
   tenantId: string;
 }
 
+// --- INTEGRAÇÕES ---
+export interface GoogleBusinessProfileIntegration {
+  accessToken: string;
+  refreshToken: string | null;
+  expiresIn: number;
+  tokenType: string;
+  connectedAt: string;
+  locationId?: string;
+  accountId?: string;
+  healthStatus: 'healthy' | 'degraded' | 'offline';
+}
+
 export interface TenantSettings {
   tenantId: string;
   businessName: string;
-  integrations?: any;
+  integrations?: {
+    google_my_business?: GoogleBusinessProfileIntegration;
+    [key: string]: any; // Mantém compatibilidade com outras integrações que você já possua
+  };
   customDomain?: string;
   whatsappNumber: string;
   currency: string;

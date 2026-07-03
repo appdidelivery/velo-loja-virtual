@@ -18,6 +18,8 @@ import { useProducts } from '../hooks/useProducts';
 import { useOrders } from '../hooks/useOrders';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import GoogleIntegrationDashboard from './GoogleIntegrationDashboard';
+import { FaGoogle } from 'react-icons/fa6';
 
 export default function AdminDashboard() {
   // Theme state
@@ -81,8 +83,8 @@ export default function AdminDashboard() {
   const [settings, setSettings] = useState<TenantSettings>(INITIAL_SETTINGS);
 
   // Navigation tabs
-const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'categories' | 'orders' | 'chats' | 'settings'>('dashboard');
-  
+const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'categories' | 'orders' | 'chats' | 'settings' | 'google_business'>('dashboard');
+
   // Controles do novo Menu estilo Loja Integrada
   const [isSettingsExpanded, setIsSettingsExpanded] = useState(false);
   const [settingsSubPanel, setSettingsSubPanel] = useState('gerais');
@@ -175,8 +177,9 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'categ
   const [settingsForm, setSettingsForm] = useState({ 
     ...settings, 
     primaryColor: '#357b64',
+    storeNiche: 'varejo',
     logoUrl: '',
-    slogan: 'Catálogo Exclusivo', 
+    slogan: 'Catálogo Exclusivo',
     whatsappNumber: '5511999999999', 
     mpAccessToken: '',
     metaPhoneId: '',
@@ -223,6 +226,26 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'categ
   }, []);
 
 const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
+
+  // Função Genérica de Upload para o Cloudinary (Usada pelo GMB e pelo Produto)
+  const uploadImageToCloudinary = async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    
+    if (!uploadPreset || !cloudName) throw new Error("Chaves do Cloudinary ausentes.");
+    formData.append('upload_preset', uploadPreset); 
+    
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (data.secure_url) return data.secure_url;
+    throw new Error("Erro no upload da imagem");
+  };
 
   // Upload da Foto do Produto para o Cloudinary
   const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -852,12 +875,8 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
               </button>
             )}
 
-            <button onClick={() => setActivePanel('products')} className={`w-full flex items-center gap-3 px-5 py-3.5 rounded-full text-sm font-black uppercase tracking-wider transition-all ${activePanel === 'products' ? 'bg-[#111827] text-white shadow-lg shadow-black/20' : 'text-slate-500 hover:bg-gray-100 hover:text-slate-900'}`}>
-              <ShoppingBag className="w-5 h-5" /> PRODUTOS
-            </button>
-
-            <button onClick={() => setActivePanel('categories')} className={`w-full flex items-center gap-3 px-5 py-3.5 rounded-full text-sm font-black uppercase tracking-wider transition-all ${activePanel === 'categories' ? 'bg-[#111827] text-white shadow-lg shadow-black/20' : 'text-slate-500 hover:bg-gray-100 hover:text-slate-900'}`}>
-              <List className="w-5 h-5" /> CATEGORIAS
+            <button onClick={() => setActivePanel('products')} className={`w-full flex items-center gap-3 px-5 py-3.5 rounded-full text-sm font-black uppercase tracking-wider transition-all ${activePanel === 'products' || activePanel === 'categories' ? 'bg-[#111827] text-white shadow-lg shadow-black/20' : 'text-slate-500 hover:bg-gray-100 hover:text-slate-900'}`}>
+              <ShoppingBag className="w-5 h-5" /> CATÁLOGO
             </button>
 
             {/* Oculta PEDIDOS se for Catálogo Simples */}
@@ -866,6 +885,15 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
                 <FileCheck className="w-5 h-5" /> PEDIDOS
               </button>
             )}
+
+            <button onClick={() => setActivePanel('google_business')} className={`w-full flex items-center gap-3 px-5 py-3.5 rounded-full text-sm font-black uppercase tracking-wider transition-all relative overflow-hidden ${activePanel === 'google_business' ? 'bg-white text-slate-900 shadow-[0_0_15px_rgba(66,133,244,0.2)] border border-slate-100 z-10' : 'text-slate-500 hover:bg-gray-100 hover:text-slate-900'}`}>
+              {activePanel === 'google_business' && (
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-blue-500 via-red-500 to-yellow-400"></div>
+              )}
+              <FaGoogle className="w-5 h-5 text-blue-500 shrink-0" />
+              GOOGLE MEU NEGÓCIO
+            </button>
+
             <button onClick={() => setActivePanel('chats')} className={`w-full flex items-center justify-between px-5 py-3.5 rounded-full text-sm font-black uppercase tracking-wider transition-all ${activePanel === 'chats' ? 'bg-[#111827] text-white shadow-lg shadow-black/20' : 'text-slate-500 hover:bg-gray-100 hover:text-slate-900'}`}>
               <div className="flex items-center gap-3"><MessageSquare className="w-5 h-5" /> ATENDIMENTO</div>
               {unreadChatsCount > 0 && <span className="w-5 h-5 bg-[#ff7b00] text-white rounded-full text-[10px] flex items-center justify-center shadow-sm">{unreadChatsCount}</span>}
@@ -1051,10 +1079,24 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
             <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-8 space-y-6 max-w-6xl mx-auto shadow-sm animate-in fade-in slide-in-from-bottom-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-gray-50 pb-6">
                 <div>
-                  <h2 className="text-2xl font-black italic uppercase text-[#111827]">Categorias</h2>
-                  <p className="text-sm font-bold text-slate-400 mt-1">Organize as vitrines do seu cardápio.</p>
+                    {/* NOVO: SUB-Navegação de Catálogo */}
+                    <div className="flex bg-gray-100 p-1 rounded-full w-max shadow-inner mb-4">
+                        <button 
+                            onClick={() => setActivePanel('products')} 
+                            className="px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all text-slate-500 hover:text-[#111827]"
+                        >
+                            📦 Produtos / Serviços
+                        </button>
+                        <button 
+                            onClick={() => setActivePanel('categories')} 
+                            className="px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all bg-white text-[#111827] shadow-sm"
+                        >
+                            📑 Categorias
+                        </button>
+                    </div>
+                  <p className="text-sm font-bold text-slate-400 mt-1">Organize as vitrines da sua loja.</p>
                 </div>
-                <button 
+                <button
                   onClick={() => {
                     setEditingCategory(null);
                     setCategoryForm({name: '', order: 1, isActive: true}); 
@@ -1122,7 +1164,22 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
           {activePanel === 'products' && (
             <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-8 space-y-6 max-w-6xl mx-auto shadow-sm">
               <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b-2 border-gray-50 pb-6">
-                <h2 className="text-2xl font-black italic uppercase text-[#111827]">Produtos</h2>
+                
+                {/* NOVO: SUB-Navegação de Catálogo */}
+                <div className="flex bg-gray-100 p-1 rounded-full w-max shadow-inner">
+                    <button 
+                        onClick={() => setActivePanel('products')} 
+                        className="px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all bg-white text-[#111827] shadow-sm"
+                    >
+                        📦 Produtos / Serviços
+                    </button>
+                    <button 
+                        onClick={() => setActivePanel('categories')} 
+                        className="px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all text-slate-500 hover:text-[#111827]"
+                    >
+                        📑 Categorias
+                    </button>
+                </div>
                 
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-full border border-gray-200">
@@ -1286,6 +1343,18 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
                 </div>
               </div>
               <AdminChat />
+            </div>
+          )}
+
+          {activePanel === 'google_business' && (
+            <div className="space-y-6 max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+               <GoogleIntegrationDashboard 
+                  storeId={authRole.tenantId} 
+                  products={products} 
+                  storeStatus={settings} 
+                  settings={settings}
+                  uploadImageToCloudinary={uploadImageToCloudinary}
+               />
             </div>
           )}
 
@@ -1599,6 +1668,39 @@ const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
                         maxLength={13}
                       />
                     </div>
+
+                    {/* NOVO CAMPO: CATEGORIA GOOGLE MEU NEGÓCIO */}
+                    <div className="space-y-2 md:col-span-2 pt-4 border-t border-gray-100">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                        <FaGoogle className="w-3.5 h-3.5 text-blue-500" /> Categoria do Negócio (Google)
+                      </label>
+                      <p className="text-[10px] text-slate-400 font-medium -mt-1">Define como sua loja será categorizada para o SEO e Integração GMB.</p>
+                      <select 
+                        value={settingsForm.storeNiche || 'varejo'}
+                        onChange={(e) => setSettingsForm({...settingsForm, storeNiche: e.target.value})}
+                        className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-blue-500 transition-colors cursor-pointer"
+                      >
+                        <optgroup label="Varejo e Comércio">
+                            <option value="varejo">Loja de Varejo Geral (Roupas, Eletrônicos, Utilidades)</option>
+                            <option value="mercado">Supermercado / Conveniência / Empório</option>
+                            <option value="farmacia">Farmácia / Drogaria</option>
+                            <option value="petshop">Pet Shop / Agropecuária</option>
+                            <option value="floricultura">Floricultura / Presentes</option>
+                        </optgroup>
+                        <optgroup label="Serviços e Estética">
+                            <option value="salao_beleza">Salão de Beleza / Barbearia / Estética</option>
+                            <option value="clinica">Clínica / Consultório</option>
+                            <option value="oficina">Oficina Mecânica / Assistência Técnica</option>
+                            <option value="servicos_gerais">Serviços Gerais (Limpeza, Reformas, Manutenção)</option>
+                        </optgroup>
+                        <optgroup label="Alimentação (Food Service)">
+                            <option value="restaurante">Restaurante / Lanchonete</option>
+                            <option value="doceria">Doceria / Açaiteria / Cafeteria</option>
+                            <option value="bebidas">Adega / Distribuidora de Bebidas</option>
+                        </optgroup>
+                      </select>
+                    </div>
+
                   </div>
                 </div>
               )}
