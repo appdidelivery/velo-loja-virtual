@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { doc, getDoc } from 'firebase/firestore';
+import { TEMPLATES } from '../data/templatesConfig';
 import { db } from '../services/firebase';
 import CustomerCatalog from '../components/CustomerCatalog';
 

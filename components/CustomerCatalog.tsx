@@ -5,18 +5,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShoppingCart, Search, Menu, User, HeadphonesIcon, 
   ChevronDown, Star, ShieldCheck, MapPin, Phone, 
-  Mail, X, Plus, Minus, Trash2, CheckCircle2, LayoutGrid, ClipboardList
+  X, Plus, Minus, Trash2, LayoutGrid, ClipboardList, ShoppingBag,
+  Scissors, Smartphone, Sofa, Wrench, Shirt, Gem, Beer, ChevronRight, Sparkles
 } from 'lucide-react';
 
-// IMPORTAÇÕES CORRIGIDAS (Usando caminhos relativos em vez de @/)
 import { Product, TenantSettings } from '../types';
 import { INITIAL_SETTINGS } from '../data/mokedData';
 import { useProducts } from '../hooks/useProducts';
-import { useOrders } from '../hooks/useOrders'; // Importamos o novo hook
-import { doc, getDoc } from 'firebase/firestore';
+import { useOrders } from '../hooks/useOrders'; 
+import { doc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import { TEMPLATES } from '../data/templatesConfig';
 
-// --- CONFIGURAÇÕES DE CONFIANÇA (E-E-A-T) PARA SEO/AEO ---
 const STORE_TRUST_DATA = {
   cnpj: '45.123.456/0001-99',
   address: 'Rua das Embalagens, 1578 - Centro, São Paulo - SP, 01310-200',
@@ -25,17 +25,15 @@ const STORE_TRUST_DATA = {
   email: 'vendas@velovarejo.com.br'
 };
 
-// Cores baseadas no print (Tema Loja Integrada Padrão)
 const THEME = {
-  primary: '#357b64', // Verde principal
-  secondary: '#2c6b56', // Verde escuro (menu)
-  accent: '#25D366', // Verde WhatsApp
-  dark: '#2a2a2a', // Rodapé
+  primary: '#357b64',
+  secondary: '#2c6b56',
+  accent: '#25D366',
+  dark: '#2a2a2a',
 };
 
-// A vitrine agora recebe os dados já mastigados do Servidor (initialData)
 export default function CustomerCatalog({ 
-  tenantId: propTenantId, // Renomeamos a prop para podermos sobrescrevê-la
+  tenantId: propTenantId,
   initialData 
 }: { 
   tenantId?: string;
@@ -43,17 +41,15 @@ export default function CustomerCatalog({
 }) {
   const settings: TenantSettings = INITIAL_SETTINGS;
 
-  // 🔥 MAGIA MULTI-TENANT NA VITRINE: Lê a URL automaticamente, ignorando hardcodes!
   const tenantId = (() => {
     if (typeof window !== 'undefined') {
       const host = window.location.hostname;
-      // Regra da Mamedes (Legado)
       if (host === 'app.mamedes.com.br' || host === 'localhost' || host === '127.0.0.1') {
         return 'mamedes';
       }
-      return host; // Para Sacola Online e outros clientes novos
+      return host; 
     }
-    return propTenantId || 'mamedes'; // Fallback para o Servidor (SSR)
+    return propTenantId || 'mamedes'; 
   })();
 
   const { products, loading } = useProducts(tenantId);
@@ -62,7 +58,6 @@ export default function CustomerCatalog({
   const activeProducts = useMemo(() => products.filter(p => p.isActive), [products]);
   const categories = useMemo(() => Array.from(new Set(activeProducts.map(p => p.category))), [activeProducts]);
 
-  // Estados
   const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -80,32 +75,28 @@ export default function CustomerCatalog({
   const [layoutMode, setLayoutMode] = useState<'complete' | 'webview'>('webview');
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
 
-  // 🔥 MÁGICA AQUI: Os estados agora iniciam com os dados REAIS vindos do servidor!
   const [themeColor, setThemeColor] = useState(initialData?.primaryColor || '#357b64');
   const [storeLogo, setStoreLogo] = useState(initialData?.logoUrl || '');
   const [storeName, setStoreName] = useState(initialData?.businessName || settings.businessName);
   const [storeSlogan, setStoreSlogan] = useState(initialData?.slogan || 'Catálogo Exclusivo');
   const [storeWhatsapp, setStoreWhatsapp] = useState(initialData?.whatsappNumber || settings.whatsappNumber);
   const [productLayout, setProductLayout] = useState<'list' | 'grid'>(initialData?.productLayout || 'list');
-    
+  const [templateId, setTemplateId] = useState(initialData?.templateId || 'conveniencia_padrao');
+  const [storeMode, setStoreMode] = useState<'ecommerce' | 'catalogo' | 'orcamento'>(initialData?.storeMode || 'ecommerce');
+
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const [visibleCount, setVisibleCount] = useState(25);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   
-  // Estado para controlar qual produto está aberto no Modal
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  // Estado para controlar qual variação de quantidade está selecionada no Modal
   const [selectedVariationIndex, setSelectedVariationIndex] = useState<number>(0);
-  // 🔥 NOVO: Estado para a Galeria de Imagens
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
 
-  // Zera as seleções sempre que abrir um produto novo
   useEffect(() => {
     setMounted(true);
     
-    // 1. Carrega do LocalStorage para ser instantâneo no PC do Lojista
     const savedColor = localStorage.getItem('velo_theme_color');
     const savedLogo = localStorage.getItem('velo_store_logo');
     const savedName = localStorage.getItem('velo_store_name');
@@ -120,7 +111,6 @@ export default function CustomerCatalog({
     if (savedWhatsapp) setStoreWhatsapp(savedWhatsapp);
     if (savedLayout) setProductLayout(savedLayout as 'list' | 'grid');
 
-    // 2. Conexão REAL-TIME com o Firebase (Mágica no Celular/Produção)
     let unsubscribe = () => {};
 
     const setupFirebase = async () => {
@@ -137,6 +127,8 @@ export default function CustomerCatalog({
               if (data.slogan) setStoreSlogan(data.slogan);
               if (data.whatsappNumber) setStoreWhatsapp(data.whatsappNumber);
               if (data.productLayout) setProductLayout(data.productLayout as 'list' | 'grid');
+              if (data.templateId) setTemplateId(data.templateId);
+              if (data.storeMode) setStoreMode(data.storeMode);
             }
           }
         );
@@ -144,11 +136,9 @@ export default function CustomerCatalog({
     };
 
     setupFirebase();
-    
     return () => unsubscribe();
   }, [tenantId]);
 
-  // Produtos filtrados pela categoria selecionada E PELA BUSCA
   const filteredActiveProducts = useMemo(() => {
     let filtered = activeProducts;
     if (selectedCategory !== 'Todos') {
@@ -197,7 +187,6 @@ export default function CustomerCatalog({
     }
   };
 
-  // --- LÓGICA DO CARRINHO ---
   const cartTotalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
   const cartTotalValue = cart.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
 
@@ -232,7 +221,6 @@ export default function CustomerCatalog({
     setCart(prev => prev.filter(item => item.product.id !== productId));
   };
 
-  // --- CHECKOUT WHATSAPP (MODO ORÇAMENTO) ---
   const handleWhatsAppCheckout = () => {
     if (cart.length === 0 || !customerName.trim() || !customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim()) return;
 
@@ -261,10 +249,9 @@ export default function CustomerCatalog({
 
     const encodedMessage = encodeURIComponent(message);
     
-    // 1. SALVA NO BANCO DE DADOS ANTES DE ABRIR O WHATSAPP
     addOrder({
       customerName: customerName,
-      customerPhone: '', // Poderíamos pedir o celular no form também depois
+      customerPhone: '', 
       items: cart.map(item => ({
         productId: item.product.id,
         name: item.product.name,
@@ -279,16 +266,13 @@ export default function CustomerCatalog({
       notes: `CNPJ: ${customerCnpj} | Pagamento: ${paymentMethod} | CEP: ${cep}`
     });
 
-    // 2. ABRE O WHATSAPP
     const rawPhone = storeWhatsapp.replace(/\D/g, '');
     window.open(`https://wa.me/${rawPhone}?text=${encodedMessage}`, '_blank');
     
-    // 3. LIMPA O CARRINHO
     setCart([]);
     setIsCartOpen(false);
   };
 
-  // --- SCHEMA MARKUP (JSON-LD) PARA MUVERA / GOOGLE AEO ---
   const generateStructuredData = () => {
     const organizationSchema = {
       "@context": "https://schema.org",
@@ -323,59 +307,49 @@ export default function CustomerCatalog({
 
   if (!mounted) return null;
 
+  const currentTemplate = TEMPLATES.find((t: any) => t.id === templateId) || TEMPLATES[9]; 
+
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-800 font-sans selection:bg-[#357b64] selection:text-white relative">
-      
-      {/* INJEÇÃO ESTRUTURAL DE SEO */}
+    <div 
+      className="min-h-screen text-gray-800 relative bg-gray-50"
+      style={{ fontFamily: currentTemplate.fontFamily }}
+    >
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: generateStructuredData() }} />
 
       {layoutMode === 'webview' ? (
-        /* =========================================
-           1. LAYOUT WEBVIEW (Focado em Mobile/Orçamento)
-           ========================================= */
-        // O h-[100dvh] (Dynamic Viewport Height) é o que trava a tela exatamente no tamanho do celular, impedindo que o menu fuja.
-        <div className="flex justify-center bg-[#1a1a1a] h-[100dvh] overflow-hidden">
-          <div className="w-full max-w-md bg-white h-full flex flex-col relative shadow-2xl overflow-hidden">
+        <div className="flex justify-center bg-black h-[100dvh] overflow-hidden">
+          <div className="w-full max-w-md bg-gray-50 h-full flex flex-col relative shadow-2xl overflow-hidden">
             
-            {/* Header App-like com Cor Dinâmica */}
-            <header style={{ backgroundColor: themeColor }} className="text-white px-5 py-4 flex flex-col shrink-0 z-10 rounded-b-[2rem] shadow-sm transition-colors duration-500">
+            {/* CABEÇALHO LIMPO */}
+            <header className="bg-white px-5 py-3 flex flex-col z-40 shrink-0 shadow-sm relative">
               <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center font-black text-xl shadow-inner border-2 border-white/30 shrink-0 overflow-hidden">
-                    {storeLogo ? (
-                      <img src={storeLogo} alt="Logo" className="w-full h-full object-contain p-1" />
-                    ) : (
-                      <span style={{ color: themeColor }}>{storeName.charAt(0)}</span>
-                    )}
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-inner shrink-0 overflow-hidden border border-gray-100">
+                    {storeLogo ? <img src={storeLogo} alt="Logo" className="w-full h-full object-contain p-1" /> : <span style={{ color: currentTemplate.primaryColor }} className="font-black text-lg">{storeName.charAt(0)}</span>}
                   </div>
-                  <div className="overflow-hidden">
-                    <h1 className="text-sm font-black leading-tight uppercase tracking-wider truncate">{storeName}</h1>
-                    <p className="text-[10px] font-medium opacity-80 mt-0.5">{storeSlogan}</p>
+                  <div className="flex flex-col">
+                    <h1 className="text-sm font-black leading-tight uppercase tracking-widest text-slate-800">{storeName}</h1>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <button onClick={() => setIsSearchOpen(!isSearchOpen)} className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors">
-                    <Search className="w-4 h-4" />
-                  </button>
-                </div>
+                <button onClick={() => setIsSearchOpen(!isSearchOpen)} className="p-2.5 bg-gray-50 hover:bg-gray-100 rounded-full text-slate-600 transition-colors">
+                  <Search className="w-4 h-4" />
+                </button>
               </div>
 
-              {/* Barra de Busca Expansível */}
               <AnimatePresence>
                 {isSearchOpen && (
-                  <motion.div initial={{ height: 0, opacity: 0, marginTop: 0 }} animate={{ height: 'auto', opacity: 1, marginTop: 16 }} exit={{ height: 0, opacity: 0, marginTop: 0 }} className="overflow-hidden">
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden w-full mt-3">
                     <div className="relative">
                       <input 
                         type="text" 
-                        placeholder="Buscar produto..." 
+                        placeholder="O que você procura?" 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-white/20 text-white placeholder:text-white/60 border border-white/30 text-xs px-4 py-2.5 rounded-full outline-none focus:bg-white focus:text-gray-900 focus:placeholder:text-gray-400 transition-all"
+                        className="w-full bg-gray-100 text-slate-800 placeholder:text-slate-400 border-none text-sm font-bold px-4 py-3 rounded-xl outline-none focus:ring-2 transition-all shadow-inner"
+                        style={{ '--tw-ring-color': currentTemplate.primaryColor } as any}
                       />
                       {searchQuery && (
-                        <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white">
-                          <X className="w-4 h-4" />
-                        </button>
+                        <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"><X className="w-4 h-4" /></button>
                       )}
                     </div>
                   </motion.div>
@@ -383,120 +357,295 @@ export default function CustomerCatalog({
               </AnimatePresence>
             </header>
 
-            {/* Categorias Horizontais em Pílulas */}
-            <div className="px-4 py-3 bg-white shrink-0 flex items-center gap-2 overflow-x-auto custom-scrollbar border-b border-gray-50">
-              <button 
-                onClick={() => {setSelectedCategory('Todos'); setSearchQuery('');}}
-                style={selectedCategory === 'Todos' ? { backgroundColor: themeColor, color: '#fff' } : {}}
-                className={`px-5 py-2 text-[11px] font-bold rounded-full whitespace-nowrap transition-colors ${selectedCategory === 'Todos' ? 'shadow-md' : 'bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200'}`}
-              >
-                Todos
-              </button>
-              {categories.map(cat => (
-                <button 
-                  key={cat} 
-                  onClick={() => {setSelectedCategory(cat); setSearchQuery('');}}
-                  style={selectedCategory === cat ? { backgroundColor: themeColor, color: '#fff' } : {}}
-                  className={`px-5 py-2 text-[11px] font-bold rounded-full whitespace-nowrap transition-colors ${selectedCategory === cat ? 'shadow-md' : 'bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200'}`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
+            <main className="flex-1 overflow-y-auto custom-scrollbar pb-32">
+              
+              {/* TARJA */}
+              {currentTemplate.defaultContent.announcementBar && (
+                <div style={{ backgroundColor: currentTemplate.primaryColor }} className="w-full text-center py-2 px-4 shadow-inner">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white leading-none flex items-center justify-center gap-2">
+                    <Sparkles size={12}/> {currentTemplate.defaultContent.announcementBar}
+                  </span>
+                </div>
+              )}
 
-            {/* Lista de Produtos (Cards Otimizados Mobile) */}
-            <main className="flex-1 overflow-y-auto px-4 pb-24 bg-gray-50/50 custom-scrollbar space-y-3 pt-2">
-              {loading ? (
-                <div className="flex flex-col items-center justify-center py-20">
-                  <div className="w-8 h-8 border-4 border-[#357b64] border-t-transparent rounded-full animate-spin"></div>
+              {/* HERO BANNER E MINI BANNERS */}
+              <div className="p-4 pb-2 bg-white rounded-b-3xl shadow-sm mb-4">
+                <div className="w-full h-40 md:h-48 rounded-2xl overflow-hidden relative shadow-md group">
+                  <img src={currentTemplate.heroImage} className="w-full h-full object-cover" alt="Banner Principal" />
+                  <div className={`absolute inset-0 ${currentTemplate.category === 'servicos' ? 'bg-black/60' : 'bg-gradient-to-r from-black/80 to-transparent'} flex flex-col justify-center p-6`}>
+                    <h2 className="text-2xl font-black text-white leading-tight shadow-black drop-shadow-md max-w-[80%] uppercase">
+                      {currentTemplate.defaultContent.heroTitle}
+                    </h2>
+                    <p className="text-[10px] font-bold text-gray-200 mt-1 max-w-[70%]">
+                      {currentTemplate.defaultContent.heroSubtitle}
+                    </p>
+                  </div>
                 </div>
-              ) : paginatedProducts.length === 0 ? (
-                <div className="text-center py-10">
-                  <p className="text-sm font-bold text-gray-500">Nenhum produto localizado.</p>
-                  <button onClick={() => {setSelectedCategory('Todos'); setSearchQuery('');}} className="mt-3 text-[10px] font-bold text-white px-4 py-2 rounded-full" style={{ backgroundColor: themeColor }}>Limpar filtros</button>
-                </div>
-              ) : (
-                <>
-                  {/* Container Dinâmico: Se for 'grid', divide em 2 colunas. Se for 'list', fica em 1 coluna. */}
-                  <div className={productLayout === 'grid' ? "grid grid-cols-2 gap-3" : "flex flex-col gap-3"}>
-                    {paginatedProducts.map(product => (
-                      <div 
-                        key={product.id} 
-                        onClick={() => {
-                          setSelectedVariationIndex(0);
-                          setSelectedImageIndex(0);
-                          setSelectedProduct(product);
-                        }} 
-                        className={`w-full bg-white p-3 rounded-[1.5rem] shadow-sm border border-gray-100 relative overflow-hidden group cursor-pointer hover:border-gray-300 transition-colors flex ${
-                          productLayout === 'grid' ? 'flex-col items-start' : 'gap-4 items-center'
-                        }`}
-                      >
-                        {product.stock <= 10 && <div className="absolute top-0 left-0 bg-red-500 text-white text-[8px] font-black uppercase px-2 py-1 rounded-br-lg z-10">Últimos</div>}
-                        
-                        {/* Imagem Inteligente: No grid ela cresce (aspect-square), na lista ela fica quadradinha pequena */}
-                        <div className={`${productLayout === 'grid' ? 'w-full aspect-square mb-3' : 'w-20 h-20 shrink-0'} bg-gray-50 rounded-xl p-1.5 border border-gray-100 relative`}>
-                          <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform" />
-                        </div>
-                        
-                        <div className="flex-1 flex flex-col min-w-0 py-1 w-full">
-                          <h3 className="text-xs font-bold text-gray-800 leading-tight mb-1 line-clamp-2 pr-2">{product.name}</h3>
-                          <p className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider truncate">{product.category}</p>
-                          <div className="flex items-center justify-between mt-auto">
-                            <span style={{ color: themeColor }} className="text-sm font-black truncate">
-                              {/* Se o produto tiver variação, mostra o preço a partir do menor, senão mostra o preço normal */}
-                              {/* @ts-ignore */}
-                              R$ {(product.variations && product.variations.length > 0 ? product.variations[0].price : product.price).toFixed(2)}
-                            </span>
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleAddToCart(product); }} 
-                              style={{ backgroundColor: themeColor }}
-                              className="w-8 h-8 shrink-0 text-white rounded-full flex items-center justify-center shadow-sm hover:scale-105 transition-transform"
-                            >
-                              <Plus className="w-4 h-4" />
-                            </button>
-                          </div>
+
+                {currentTemplate.defaultContent.miniBanners && currentTemplate.defaultContent.miniBanners.length > 0 && (
+                  <div className="mt-4 flex gap-3 overflow-x-auto custom-scrollbar pb-2 snap-x">
+                    {currentTemplate.defaultContent.miniBanners.map((bannerUrl: string, idx: number) => (
+                      <div key={idx} className="w-64 shrink-0 h-24 bg-gray-100 rounded-xl overflow-hidden shadow-sm border border-gray-200 snap-center relative">
+                        <img src={bannerUrl} className="w-full h-full object-cover" alt="Mini Promo" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-2">
+                          <span style={{ backgroundColor: currentTemplate.primaryColor }} className="px-2 py-0.5 rounded text-[8px] font-black uppercase text-white tracking-widest shadow-sm">Oferta</span>
                         </div>
                       </div>
                     ))}
                   </div>
-                  
-                  {filteredActiveProducts.length > visibleCount && (
-                    <div className="py-6 flex justify-center">
-                      <button 
-                        onClick={handleLoadMore}
-                        disabled={isLoadingMore}
-                        style={{ color: themeColor, borderColor: themeColor }}
-                        className="px-6 py-2.5 border-2 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                      >
-                        {isLoadingMore ? 'Carregando...' : 'Ver mais produtos'}
-                      </button>
+                )}
+              </div>
+
+              {/* CATEGORIAS COM ÍCONES */}
+              <div className="px-4 py-2">
+                <h3 className="text-[11px] font-black uppercase text-slate-500 tracking-widest mb-3 px-1">Menu Rápido</h3>
+                <div className="flex gap-3 overflow-x-auto custom-scrollbar pb-2">
+                  <button 
+                    onClick={() => {setSelectedCategory('Todos'); setSearchQuery('');}}
+                    className={`flex flex-col items-center gap-1.5 shrink-0 w-16 transition-all ${selectedCategory === 'Todos' ? 'opacity-100 scale-105' : 'opacity-60 hover:opacity-100'}`}
+                  >
+                    <div style={selectedCategory === 'Todos' ? { backgroundColor: currentTemplate.primaryColor, color: '#fff', borderColor: currentTemplate.primaryColor } : {}} className="w-14 h-14 rounded-[1rem] bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-500">
+                      <LayoutGrid size={24} />
                     </div>
-                  )}
-                </>
-              )}
+                    <span className="text-[9px] font-bold text-gray-700 truncate w-full text-center uppercase tracking-widest">Todos</span>
+                  </button>
+
+                  {categories.map(cat => {
+                    const cName = cat.toLowerCase();
+                    let Icon = ShoppingBag;
+                    if (cName.includes('cabelo') || cName.includes('corte') || cName.includes('barba') || cName.includes('unha')) Icon = Scissors;
+                    else if (cName.includes('celular') || cName.includes('tech') || cName.includes('acess')) Icon = Smartphone;
+                    else if (cName.includes('sofá') || cName.includes('limpeza') || cName.includes('impermeabil')) Icon = Sofa;
+                    else if (cName.includes('elétrica') || cName.includes('reparo') || cName.includes('mecânica') || cName.includes('obra')) Icon = Wrench;
+                    else if (cName.includes('camisa') || cName.includes('moda') || cName.includes('roupa')) Icon = Shirt;
+                    else if (cName.includes('joia') || cName.includes('beleza') || cName.includes('estética')) Icon = Gem;
+                    else if (cName.includes('bebida') || cName.includes('conveni') || cName.includes('cerveja')) Icon = Beer;
+
+                    return (
+                      <button 
+                        key={cat} 
+                        onClick={() => {setSelectedCategory(cat); setSearchQuery('');}}
+                        className={`flex flex-col items-center gap-1.5 shrink-0 w-16 transition-all ${selectedCategory === cat ? 'opacity-100 scale-105' : 'opacity-60 hover:opacity-100'}`}
+                      >
+                        <div style={selectedCategory === cat ? { backgroundColor: currentTemplate.primaryColor, color: '#fff', borderColor: currentTemplate.primaryColor } : {}} className="w-14 h-14 rounded-[1rem] bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-500">
+                          <Icon size={24} />
+                        </div>
+                        <span className={`text-[9px] font-bold truncate w-full text-center uppercase tracking-widest ${selectedCategory === cat ? 'text-gray-900' : 'text-gray-500'}`}>{cat}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* VITRINE DE PRODUTOS */}
+              <div className="px-4 mt-4">
+                <div className="flex justify-between items-end mb-4 px-1">
+                  <h3 className="text-[13px] font-black uppercase text-slate-800 tracking-widest flex items-center gap-1.5">
+                    {currentTemplate.category === 'servicos' ? <><ClipboardList size={16} style={{ color: currentTemplate.primaryColor }}/> Nossos Serviços</> : <><ShoppingBag size={16} style={{ color: currentTemplate.primaryColor }}/> Catálogo</>}
+                  </h3>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{filteredActiveProducts.length} itens</span>
+                </div>
+
+                {loading ? (
+                  <div className="flex flex-col items-center justify-center py-10">
+                    <div style={{ borderTopColor: currentTemplate.primaryColor }} className="w-8 h-8 border-4 border-gray-300 rounded-full animate-spin"></div>
+                  </div>
+                ) : paginatedProducts.length === 0 ? (
+                  <div className="text-center py-10 bg-white rounded-3xl border border-gray-200 p-8 shadow-sm">
+                    <Search size={40} className="mx-auto text-gray-300 mb-4"/>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Nenhum item localizado.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    
+                    {/* LAYOUT SERVIÇOS */}
+                    {currentTemplate.category === 'servicos' ? (
+                      <div className="flex flex-col gap-5">
+                        {paginatedProducts.map(product => (
+                          <div key={product.id} onClick={() => { setSelectedVariationIndex(0); setSelectedProduct(product); }} className="w-full bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col group cursor-pointer active:scale-[0.98] transition-all">
+                            <div className="w-full h-40 bg-gray-100 relative overflow-hidden">
+                              <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                              <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-2 py-1 rounded-md text-[9px] font-black text-slate-700 uppercase tracking-widest shadow-sm">
+                                {product.category}
+                              </div>
+                            </div>
+                            
+                            <div className="p-5 flex flex-col min-w-0">
+                              <h3 className="text-lg font-black text-slate-800 leading-tight mb-1">{product.name}</h3>
+                              <p className="text-xs font-medium text-slate-500 line-clamp-2 leading-relaxed mb-4">{product.description || 'Clique para ver detalhes do serviço.'}</p>
+                              
+                              <div className="flex items-center justify-between mt-auto border-t border-gray-100 pt-4">
+                                {storeMode !== 'catalogo' && (
+                                  <>
+                                    <div>
+                                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">A partir de</p>
+                                      <span style={{ color: currentTemplate.primaryColor }} className="text-xl font-black truncate">
+                                        {/* @ts-ignore */}
+                                        R$ {((product as any).promotionalPrice > 0 ? (product as any).promotionalPrice : (product.variations && product.variations.length > 0 ? product.variations[0].price : product.price)).toFixed(2)}
+                                      </span>
+                                    </div>
+                                    <button style={{ backgroundColor: currentTemplate.primaryColor }} className="px-5 py-2.5 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md flex items-center gap-2">
+                                      Agendar <ChevronRight size={14}/>
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+
+                      <div className={currentTemplate.gridConfig === 'grid' || currentTemplate.gridConfig === 'masonry' ? 'grid grid-cols-2 gap-3' : 'flex flex-col gap-3'}>
+                        {paginatedProducts.map(product => (
+                          <div key={product.id} onClick={() => { setSelectedVariationIndex(0); setSelectedProduct(product); }} className={`w-full bg-white rounded-[1.5rem] shadow-sm border border-gray-100 group cursor-pointer active:scale-[0.98] transition-transform overflow-hidden ${currentTemplate.gridConfig === 'list' ? 'p-3 flex items-center gap-4' : 'p-3 flex flex-col'}`}>
+                            
+                            <div className={`${currentTemplate.gridConfig === 'list' ? 'w-24 h-24 shrink-0' : 'w-full aspect-square mb-2'} bg-gray-50 rounded-xl p-1.5 border border-gray-100 relative overflow-hidden`}>
+                              <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform" />
+                              {(product as any).promotionalPrice > 0 && (
+                                <div className="absolute top-1 left-1 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase shadow-sm">Promo</div>
+                              )}
+                            </div>
+                            
+                            <div className={`flex flex-col min-w-0 flex-1 ${currentTemplate.gridConfig === 'list' ? 'py-1' : ''}`}>
+                              <h3 className="text-xs font-bold text-slate-800 leading-tight mb-1 line-clamp-2">{product.name}</h3>
+                              
+                              <div className={`flex items-end justify-between mt-auto ${currentTemplate.gridConfig === 'list' ? '' : 'pt-2'}`}>
+                                {storeMode !== 'catalogo' && (
+                                  <>
+                                    <div className="flex flex-col">
+                                      {(product as any).promotionalPrice > 0 && <span className="text-[9px] text-slate-400 line-through font-bold">R$ {Number(product.price).toFixed(2)}</span>}
+                                      <span style={{ color: currentTemplate.primaryColor }} className="text-sm font-black truncate">
+                                        {/* @ts-ignore */}
+                                        R$ {((product as any).promotionalPrice > 0 ? (product as any).promotionalPrice : (product.variations && product.variations.length > 0 ? product.variations[0].price : product.price)).toFixed(2)}
+                                      </span>
+                                    </div>
+                                    {currentTemplate.gridConfig === 'list' && (
+                                      <div style={{ backgroundColor: currentTemplate.primaryColor }} className="w-8 h-8 shrink-0 text-white rounded-full flex items-center justify-center shadow-md">
+                                        <Plus className="w-4 h-4" />
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {filteredActiveProducts.length > visibleCount && (
+                      <div className="py-4 flex justify-center">
+                        <button 
+                          onClick={handleLoadMore}
+                          disabled={isLoadingMore}
+                          style={{ backgroundColor: currentTemplate.primaryColor }}
+                          className="px-8 py-4 rounded-2xl text-xs font-black text-white uppercase tracking-widest flex items-center gap-2 hover:opacity-90 transition-opacity shadow-lg"
+                        >
+                          {isLoadingMore ? 'Carregando...' : 'Carregar mais itens'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* RODAPÉ */}
+              <div className="mt-12 mb-8 mx-4 bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-sm">
+                <div className="p-6 border-b border-gray-100 bg-gradient-to-br from-gray-50 to-white">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Star size={16} fill="#f59e0b" className="text-yellow-500" />
+                    <Star size={16} fill="#f59e0b" className="text-yellow-500" />
+                    <Star size={16} fill="#f59e0b" className="text-yellow-500" />
+                    <Star size={16} fill="#f59e0b" className="text-yellow-500" />
+                    <Star size={16} fill="#f59e0b" className="text-yellow-500" />
+                  </div>
+                  <p className="text-xs font-bold text-slate-700 italic leading-relaxed">
+                    {currentTemplate.defaultContent.reviewMock}
+                  </p>
+                  <div className="mt-4 flex items-center gap-2">
+                    <ShieldCheck size={14} className="text-green-600" />
+                    <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Avaliação Verificada</span>
+                  </div>
+                </div>
+
+                <div className="p-6 bg-slate-900 text-white">
+                    <h3 className="text-[11px] font-black uppercase text-slate-300 tracking-widest flex items-center gap-2 mb-4">
+                      <MapPin size={16} style={{ color: currentTemplate.primaryColor }}/> Onde Estamos
+                    </h3>
+                    <div className="w-full h-32 rounded-xl overflow-hidden border border-slate-700 mb-4 bg-slate-800">
+                      <iframe 
+                        width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen 
+                        src={`https://maps.google.com/maps?q=${encodeURIComponent((settings as any).address || STORE_TRUST_DATA.address)}&output=embed`}
+                      ></iframe>
+                    </div>
+                    <p className="text-[10px] font-bold text-slate-300 mb-2 leading-tight">
+                      {(settings as any).address || STORE_TRUST_DATA.address}
+                    </p>
+                    <p className="text-[10px] font-bold text-slate-400">
+                      CNPJ: {(settings as any).cnpj || STORE_TRUST_DATA.cnpj}
+                    </p>
+                  </div>
+              </div>
+
             </main>
 
-            {/* Bottom Navigation Navbar (Substituído Buscar por Pedidos) */}
-            <nav className="shrink-0 w-full bg-white border-t border-gray-100 flex justify-around items-center px-6 py-3 pb-6 z-20 rounded-t-3xl shadow-[0_-10px_30px_rgba(0,0,0,0.08)]">
-              <button style={{ color: themeColor }} className="flex flex-col items-center gap-1">
+            {/* NAVBAR BOTTOM */}
+            <nav className="shrink-0 w-full bg-white border-t border-gray-200 flex justify-around items-center px-4 py-3 pb-6 z-40 rounded-t-3xl shadow-[0_-10px_30px_rgba(0,0,0,0.05)] relative">
+              <button style={{ color: currentTemplate.primaryColor }} className="flex flex-col items-center gap-1 w-16">
                 <LayoutGrid className="w-5 h-5" />
-                <span className="text-[9px] font-bold">Início</span>
+                <span className="text-[9px] font-bold uppercase tracking-widest">Início</span>
               </button>
-              {/* Novo Botão: Pedidos */}
-              <button onClick={() => alert('Em breve: Acompanhamento de Pedidos!')} className="flex flex-col items-center gap-1 text-gray-400 transition-colors hover:text-gray-800">
+              <button onClick={() => alert('Em breve: Rastreio de Pedidos!')} className="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-800 transition-colors w-16">
                 <ClipboardList className="w-5 h-5" />
-                <span className="text-[9px] font-bold">Pedidos</span>
+                <span className="text-[9px] font-bold uppercase tracking-widest">Pedidos</span>
               </button>
-              <button onClick={() => setIsCartOpen(true)} className="flex flex-col items-center gap-1 text-gray-400 transition-colors relative hover:text-gray-800">
-                <ShoppingCart className="w-5 h-5" />
-                <span className="text-[9px] font-bold">Orçamento</span>
-                {cartTotalItems > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold shadow-sm border border-white">
-                    {cartTotalItems}
-                  </span>
-                )}
-              </button>
+              
+              {storeMode !== 'catalogo' && (
+                <button onClick={() => setIsCartOpen(true)} className="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-800 transition-colors relative w-16">
+                  <ShoppingCart className="w-5 h-5" />
+                  <span className="text-[9px] font-bold uppercase tracking-widest">Carrinho</span>
+                  {cartTotalItems > 0 && (
+                    <span className="absolute -top-1 right-2 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold shadow-sm border border-white">
+                      {cartTotalItems}
+                    </span>
+                  )}
+                </button>
+              )}
             </nav>
+
+            {/* 🔥 STICKY FOOTER DE ALTA CONVERSÃO MOBILE 🔥 */}
+            <AnimatePresence>
+              {storeMode !== 'catalogo' && cart.length > 0 && !isCartOpen && (
+                <motion.div 
+                  initial={{ y: 100, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: 100, opacity: 0 }}
+                  className="absolute bottom-[72px] left-4 right-4 z-30" 
+                >
+                  <button 
+                    onClick={() => setIsCartOpen(true)}
+                    className="w-full text-white py-4 px-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-[0_10px_40px_rgba(0,0,0,0.3)] flex items-center justify-between transition-transform active:scale-95 border-2 border-white/20 backdrop-blur-sm"
+                    style={{ backgroundColor: currentTemplate.primaryColor }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="bg-black/20 p-2 rounded-xl flex items-center gap-1.5">
+                        <ShoppingBag size={14} />
+                        <span>{cartTotalItems}</span>
+                      </div>
+                      <span className="text-left leading-tight truncate max-w-[120px] sm:max-w-[150px]">
+                        {currentTemplate.defaultContent.ctaText}
+                      </span>
+                    </div>
+                    
+                    <span className="text-sm italic drop-shadow-md">
+                      R$ {cartTotalValue.toFixed(2)}
+                    </span>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
           </div>
         </div>
       ) : (
@@ -525,10 +674,12 @@ export default function CustomerCatalog({
                 <button onClick={() => setLayoutMode('webview')} className="hidden lg:block text-[10px] font-bold border border-white/30 px-3 py-1.5 rounded-full hover:bg-white/10">Ver Webview</button>
                 <div className="hidden lg:flex items-center gap-2 cursor-pointer hover:opacity-80"><HeadphonesIcon className="w-6 h-6 opacity-90" /><div className="flex flex-col leading-tight"><span className="text-[11px] font-medium opacity-80">Central de</span><span className="text-xs font-bold flex items-center gap-1">Atendimento <ChevronDown className="w-3 h-3" /></span></div></div>
                 <div className="hidden lg:flex items-center gap-2 cursor-pointer hover:opacity-80"><User className="w-6 h-6 opacity-90" /><div className="flex flex-col leading-tight"><span className="text-[11px] font-medium opacity-80">Bem-vindo(a)</span><span className="text-xs font-bold">Entrar ou Cadastrar <ChevronDown className="inline w-3 h-3" /></span></div></div>
-                <button onClick={() => setIsCartOpen(true)} className="flex items-center gap-2 cursor-pointer hover:scale-105 transition-transform relative group">
-                  <ShoppingCart className="w-7 h-7 sm:w-8 sm:h-8" />
-                  <span className="absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2 bg-red-500 text-white text-[10px] sm:text-xs font-bold w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center rounded-full border-2 border-[#357b64]">{cartTotalItems}</span>
-                </button>
+                {storeMode !== 'catalogo' && (
+                  <button onClick={() => setIsCartOpen(true)} className="flex items-center gap-2 cursor-pointer hover:scale-105 transition-transform relative group">
+                    <ShoppingCart className="w-7 h-7 sm:w-8 sm:h-8" />
+                    <span className="absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2 bg-red-500 text-white text-[10px] sm:text-xs font-bold w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center rounded-full border-2 border-[#357b64]">{cartTotalItems}</span>
+                  </button>
+                )}
               </div>
             </div>
             <div className="sm:hidden px-4 pb-4">
@@ -574,10 +725,14 @@ export default function CustomerCatalog({
 
                         <div className="p-4 flex flex-col flex-1 text-center">
                           <div className="mt-auto">
-                            <div className="flex items-end justify-center gap-2 mb-2"><span className="text-xs text-gray-400 line-through font-medium">R$ {(product.price * 1.1).toFixed(2)}</span><span className="text-xl font-extrabold text-[#357b64]">R$ {product.price.toFixed(2)}</span></div>
-                            <div className="bg-[#f2fcf8] border border-[#c4e4d8] rounded py-2 px-1 flex flex-col items-center justify-center mb-4"><span className="text-sm font-bold text-[#357b64] flex items-center gap-1">R$ {pixPrice.toFixed(2)} <span className="text-[10px] font-normal text-gray-600">no pix</span></span></div>
-                            <button onClick={(e) => { e.stopPropagation(); handleAddToCart(product); }} className="w-full bg-[#357b64] hover:bg-[#2c6b56] text-white font-bold text-sm py-3 rounded mb-2">Comprar</button>
-                            <button onClick={(e) => { e.stopPropagation(); handleAddToCart(product); setIsCartOpen(true); }} className="w-full bg-white border border-[#357b64] text-[#357b64] hover:bg-gray-50 font-bold text-xs py-2 rounded flex items-center justify-center gap-1.5">Orçamento Fácil <Phone className="w-3.5 h-3.5" /></button>
+                            {storeMode !== 'catalogo' && (
+                              <>
+                                <div className="flex items-end justify-center gap-2 mb-2"><span className="text-xs text-gray-400 line-through font-medium">R$ {(product.price * 1.1).toFixed(2)}</span><span className="text-xl font-extrabold text-[#357b64]">R$ {product.price.toFixed(2)}</span></div>
+                                <div className="bg-[#f2fcf8] border border-[#c4e4d8] rounded py-2 px-1 flex flex-col items-center justify-center mb-4"><span className="text-sm font-bold text-[#357b64] flex items-center gap-1">R$ {pixPrice.toFixed(2)} <span className="text-[10px] font-normal text-gray-600">no pix</span></span></div>
+                                <button onClick={(e) => { e.stopPropagation(); handleAddToCart(product); }} className="w-full bg-[#357b64] hover:bg-[#2c6b56] text-white font-bold text-sm py-3 rounded mb-2">Comprar</button>
+                                <button onClick={(e) => { e.stopPropagation(); handleAddToCart(product); setIsCartOpen(true); }} className="w-full bg-white border border-[#357b64] text-[#357b64] hover:bg-gray-50 font-bold text-xs py-2 rounded flex items-center justify-center gap-1.5">Orçamento Fácil <Phone className="w-3.5 h-3.5" /></button>
+                              </>
+                            )}
                           </div>
                         </div>
                       </article>
@@ -640,15 +795,15 @@ export default function CustomerCatalog({
                 {/* Foto Principal */}
                 <div className="w-full h-56 sm:h-72 flex items-center justify-center mb-4">
                   {/* @ts-ignore */}
-                  <img src={selectedProduct.images && selectedProduct.images.length > 0 ? selectedProduct.images[selectedImageIndex] : selectedProduct.imageUrl} alt={selectedProduct.name} className="w-full h-full object-contain mix-blend-multiply transition-opacity duration-300" />
+                  <img src={(selectedProduct as any).images && (selectedProduct as any).images.length > 0 ? (selectedProduct as any).images[selectedImageIndex] : selectedProduct.imageUrl} alt={selectedProduct.name} className="w-full h-full object-contain mix-blend-multiply transition-opacity duration-300" />
                 </div>
                 
                 {/* Miniaturas (Só aparecem se tiver mais de 1 foto) */}
                 {/* @ts-ignore */}
-                {selectedProduct.images && selectedProduct.images.length > 1 && (
+                {(selectedProduct as any).images && (selectedProduct as any).images.length > 1 && (
                   <div className="flex gap-3 overflow-x-auto max-w-full pb-2 custom-scrollbar">
                     {/* @ts-ignore */}
-                    {selectedProduct.images.map((imgUrl: string, idx: number) => (
+                    {(selectedProduct as any).images.map((imgUrl: string, idx: number) => (
                       <button 
                         key={idx} 
                         onClick={() => setSelectedImageIndex(idx)}
@@ -682,12 +837,12 @@ export default function CustomerCatalog({
 
                 {/* INÍCIO: UI DE VARIAÇÕES (Ex: 500, 1000, 3000) */}
                 {/* @ts-ignore */}
-                {selectedProduct.variations && selectedProduct.variations.length > 0 && (
+                {(selectedProduct as any).variations && (selectedProduct as any).variations.length > 0 && (
                   <div className="mb-6">
                     <p className="text-[11px] font-bold text-gray-800 uppercase tracking-widest mb-3">Selecione a opção de Quantidade:</p>
                     <div className="flex flex-wrap gap-2">
                       {/* @ts-ignore */}
-                      {selectedProduct.variations.map((varItem: any, idx: number) => (
+                      {(selectedProduct as any).variations.map((varItem: any, idx: number) => (
                         <button
                           key={idx}
                           onClick={() => setSelectedVariationIndex(idx)}
@@ -707,15 +862,16 @@ export default function CustomerCatalog({
                 {/* FIM: UI DE VARIAÇÕES */}
               </div>
 
-              <div className="p-6 sm:p-8 bg-gray-50 border-t border-gray-100 shrink-0 flex items-center justify-between gap-4">
-                <div>
+              {storeMode !== 'catalogo' && (
+                <div className="p-6 sm:p-8 bg-gray-50 border-t border-gray-100 shrink-0 flex items-center justify-between gap-4">
+                  <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                     {/* @ts-ignore */}
-                    {selectedProduct.variations && selectedProduct.variations.length > 0 ? 'A Partir de' : 'Preço Unitário'}
+                    {(selectedProduct as any).variations && (selectedProduct as any).variations.length > 0 ? 'A Partir de' : 'Preço Unitário'}
                   </p>
                   <p style={{ color: themeColor }} className="text-2xl sm:text-3xl font-black tracking-tight">
                     {/* @ts-ignore */}
-                    R$ {(selectedProduct.variations && selectedProduct.variations.length > 0 ? selectedProduct.variations[selectedVariationIndex].price : selectedProduct.price).toFixed(2)}
+                    R$ {((selectedProduct as any).variations && (selectedProduct as any).variations.length > 0 ? (selectedProduct as any).variations[selectedVariationIndex].price : selectedProduct.price).toFixed(2)}
                   </p>
                 </div>
                 
@@ -723,15 +879,15 @@ export default function CustomerCatalog({
                   onClick={() => {
                     // Truque de Mestre para Carrinho
                     // @ts-ignore
-                    const productToAdd = selectedProduct.variations && selectedProduct.variations.length > 0 
+                    const productToAdd = (selectedProduct as any).variations && (selectedProduct as any).variations.length > 0 
                       ? { 
                           ...selectedProduct, 
                           // @ts-ignore
                           id: `${selectedProduct.id}-${selectedVariationIndex}`, 
                           // @ts-ignore
-                          name: `${selectedProduct.name} (${selectedProduct.variations[selectedVariationIndex].name})`,
+                          name: `${selectedProduct.name} (${(selectedProduct as any).variations[selectedVariationIndex].name})`,
                           // @ts-ignore
-                          price: selectedProduct.variations[selectedVariationIndex].price
+                          price: (selectedProduct as any).variations[selectedVariationIndex].price
                         } 
                       : selectedProduct;
                     
@@ -744,6 +900,7 @@ export default function CustomerCatalog({
                   <Plus className="w-5 h-5" /> Adicionar
                 </button>
               </div>
+              )}
             </motion.div>
           </motion.div>
         )}
@@ -796,21 +953,22 @@ export default function CustomerCatalog({
                 )}
                 <div className="flex justify-between text-sm text-gray-600 mb-1"><span>Subtotal ({cartTotalItems} itens)</span><span className="font-medium">R$ {cartTotalValue.toFixed(2)}</span></div>
                 <div className="flex justify-between text-lg font-black text-gray-900 mb-4 border-t border-gray-100 pt-2"><span>Total s/ Frete</span><span className="text-[#357b64]">R$ {cartTotalValue.toFixed(2)}</span></div>
+                
                 <button 
                   onClick={handleWhatsAppCheckout}
                   disabled={cart.length === 0 || !customerName.trim() || !customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim()}
-                  style={cart.length > 0 && customerName.trim() && customerCnpj.trim() && cep.length === 8 && addressNumber.trim() ? { backgroundColor: themeColor } : {}}
-                  className={`w-full py-3.5 font-extrabold rounded-lg text-xs flex items-center justify-center gap-2 transition-all uppercase tracking-wider ${
+                  style={cart.length > 0 && customerName.trim() && customerCnpj.trim() && cep.length === 8 && addressNumber.trim() ? { backgroundColor: currentTemplate.primaryColor } : {}}
+                  className={`w-full py-4 font-black rounded-xl text-xs flex items-center justify-center gap-2 transition-all uppercase tracking-widest ${
                     cart.length === 0 || !customerName.trim() || !customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim()
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'text-white shadow-lg hover:opacity-90'
+                      : 'text-white shadow-xl hover:scale-[0.98]'
                   }`}
                 >
                   <Phone className="w-4 h-4 fill-current" />
-                  Solicitar Orçamento
+                  {storeMode === 'ecommerce' ? 'Finalizar Pedido (WhatsApp)' : 'Solicitar Orçamento'}
                 </button>
-              </div>
 
+              </div>
             </motion.div>
           </motion.div>
         )}

@@ -21,9 +21,10 @@ export default function GoogleIntegrationDashboard({
     const [isConnected, setIsConnected] = useState(false);
     const [activeTab, setActiveTab] = useState('profile');
 
-    const [profileData, setProfileData] = useState({ title: '', description: '', phone: '', vouchers: [] });
-    const [postData, setPostData] = useState({ summary: '', imageUrl: '', topicType: 'STANDARD', startDate: '', endDate: '' });    const [productSearch, setProductSearch] = useState('');
-    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [profileData, setProfileData] = useState<any>({ title: '', description: '', phone: '', vouchers: [] });
+    const [postData, setPostData] = useState<any>({ summary: '', imageUrl: '', topicType: 'STANDARD', startDate: '', endDate: '' });    
+    const [productSearch, setProductSearch] = useState('');
+    const [selectedProduct, setSelectedProduct] = useState<any>(null);
     const [imageFile, setImageFile] = useState(null);
     const [isGeneratingAI, setIsGeneratingAI] = useState(false);
     const [reviews, setReviews] = useState([]);
