@@ -1,5 +1,3 @@
-// data/templatesConfig.ts
-
 export type HeroLayout = 'centered' | 'left-aligned' | 'split';
 export type GridConfig = 'list' | 'grid' | 'masonry';
 export type TemplateCategory = 'servicos' | 'varejo';
@@ -25,6 +23,30 @@ export interface TemplateConfig {
 }
 
 export const TEMPLATES: TemplateConfig[] = [
+  // ================= CATEGORIA: PADRÃO / VAREJO =================
+  {
+    id: 'nativo_app',
+    templateName: 'Nativo App (Padrão)',
+    category: 'varejo',
+    primaryColor: '#0ea5e9', // Azul moderno padrão
+    fontFamily: '"Inter", sans-serif',
+    heroLayout: 'centered',
+    gridConfig: 'list',
+    previewImage: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&q=80&w=400', // Imagem de celular minimalista
+    heroImage: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&q=80&w=800',
+    defaultContent: {
+      heroTitle: 'Ultra Rápido',
+      heroSubtitle: 'O layout original. Limpo, ultra rápido e focado 100% na experiência mobile nativa.',
+      ctaText: 'Ver Catálogo',
+      reviewMock: '"A facilidade de comprar pelo celular é absurda." - Cliente',
+      announcementBar: '🚚 COMPROU R$ 299,00? FRETE É GRÁTIS!',
+      miniBanners: [
+        'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=600&q=80',
+        'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=600&q=80'
+      ]
+    }
+  },
+
   // ================= CATEGORIA: SERVIÇOS =================
   {
     id: 'barbearia_pro',
