@@ -323,12 +323,12 @@ export default function CustomerCatalog({
             {/* CABEÇALHO NATIVO APP / SACOLA ONLINE */}
             <header 
               className={`px-5 py-4 flex flex-col z-40 shrink-0 shadow-sm relative transition-colors duration-300 ${templateId === 'nativo_app' ? 'rounded-b-[2rem]' : 'bg-white'}`}
-              style={templateId === 'nativo_app' ? { backgroundColor: currentTemplate.primaryColor } : {}}
+              style={templateId === 'nativo_app' ? { backgroundColor: themeColor } : {}}
             >
               <div className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm shrink-0 overflow-hidden">
-                    {storeLogo ? <img src={storeLogo} alt="Logo" className="w-full h-full object-contain p-1.5" /> : <span style={{ color: currentTemplate.primaryColor }} className="font-black text-xl">{storeName.charAt(0)}</span>}
+                    {storeLogo ? <img src={storeLogo} alt="Logo" className="w-full h-full object-contain p-1.5" /> : <span style={{ color: themeColor }} className="font-black text-xl">{storeName.charAt(0)}</span>}
                   </div>
                   <div className="flex flex-col">
                     <h1 className={`text-sm font-black leading-tight uppercase tracking-widest ${templateId === 'nativo_app' ? 'text-white' : 'text-slate-800'}`}>{storeName}</h1>
@@ -353,7 +353,7 @@ export default function CustomerCatalog({
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className={`w-full border-none text-sm font-bold px-4 py-3 rounded-xl outline-none focus:ring-2 transition-all shadow-inner ${templateId === 'nativo_app' ? 'bg-white text-slate-800 placeholder:text-slate-400' : 'bg-gray-100 text-slate-800 placeholder:text-slate-400'}`}
-                        style={{ '--tw-ring-color': templateId === 'nativo_app' ? '#00000020' : currentTemplate.primaryColor } as any}
+                        style={{ '--tw-ring-color': templateId === 'nativo_app' ? '#00000020' : themeColor } as any}
                       />
                       {searchQuery && (
                         <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"><X className="w-4 h-4" /></button>
@@ -363,7 +363,6 @@ export default function CustomerCatalog({
                 )}
               </AnimatePresence>
             </header>
-
             <main className="flex-1 overflow-y-auto custom-scrollbar pb-32">
               
               {/* BANNERS (ESCONDIDOS NO MODO NATIVO APP PARA FICAR IGUAL SACOLA ONLINE) */}
@@ -414,7 +413,7 @@ export default function CustomerCatalog({
                   <button 
                     onClick={() => {setSelectedCategory('Todos'); setSearchQuery('');}}
                     className={`px-5 py-2.5 rounded-full snap-center shrink-0 border transition-all duration-300 ${selectedCategory === 'Todos' ? 'text-white border-transparent font-bold shadow-md' : 'bg-white text-slate-600 border-slate-200 font-bold hover:bg-slate-100'}`}
-                    style={selectedCategory === 'Todos' ? { backgroundColor: currentTemplate.primaryColor, color: '#fff', borderColor: currentTemplate.primaryColor } : {}}
+                    style={selectedCategory === 'Todos' ? { backgroundColor: themeColor, color: '#fff', borderColor: themeColor } : {}}
                   >
                     <span className="text-xs tracking-tight whitespace-nowrap">Todos</span>
                   </button>
@@ -424,7 +423,7 @@ export default function CustomerCatalog({
                         key={cat} 
                         onClick={() => {setSelectedCategory(cat); setSearchQuery('');}}
                         className={`px-5 py-2.5 rounded-full snap-center shrink-0 border transition-all duration-300 ${selectedCategory === cat ? 'text-white border-transparent font-bold shadow-md' : 'bg-white text-slate-600 border-slate-200 font-bold hover:bg-slate-100'}`}
-                        style={selectedCategory === cat ? { backgroundColor: currentTemplate.primaryColor, color: '#fff', borderColor: currentTemplate.primaryColor } : {}}
+                        style={selectedCategory === cat ? { backgroundColor: themeColor, color: '#fff', borderColor: themeColor } : {}}
                     >
                       <span className="text-xs tracking-tight whitespace-nowrap">{cat}</span>
                     </button>
@@ -444,14 +443,18 @@ export default function CustomerCatalog({
                     <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Nenhum item localizado.</p>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-3">
+                  <div className={productLayout === 'grid' ? "grid grid-cols-2 gap-3" : "flex flex-col gap-3"}>
                     {paginatedProducts.map(product => {
                       let hasStock = (product.stock && parseInt(product.stock as any) > 0) || !product.stock;
                       return (
-                        <div key={product.id} onClick={() => { if(hasStock) { setSelectedVariationIndex(0); setSelectedProduct(product); } }} className={`w-full bg-white rounded-[1.5rem] shadow-sm border border-gray-100 p-3 flex flex-row items-center gap-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] ${!hasStock ? 'opacity-60 grayscale' : ''}`}>
+                        <div 
+                          key={product.id} 
+                          onClick={() => { if(hasStock) { setSelectedVariationIndex(0); setSelectedProduct(product); } }} 
+                          className={`w-full bg-white rounded-[1.5rem] shadow-sm border border-gray-100 p-3 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] flex ${productLayout === 'grid' ? 'flex-col gap-2' : 'flex-row items-center gap-4'} ${!hasStock ? 'opacity-60 grayscale' : ''}`}
+                        >
                           
-                          {/* Imagem Esquerda */}
-                          <div className="w-[88px] h-[88px] flex-shrink-0 relative rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 p-1 flex items-center justify-center">
+                          {/* Imagem */}
+                          <div className={`${productLayout === 'grid' ? 'w-full aspect-square' : 'w-[88px] h-[88px] flex-shrink-0'} relative rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 p-1 flex items-center justify-center`}>
                             <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
                             {(product as any).promotionalPrice > 0 && (
                               <div className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-br-lg shadow-sm z-10">OFERTA</div>
@@ -459,8 +462,8 @@ export default function CustomerCatalog({
                             {!hasStock && <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center font-black text-white text-[10px] uppercase tracking-widest backdrop-blur-sm rounded-xl">Esgotado</div>}
                           </div>
                           
-                          {/* Info Direita */}
-                          <div className="flex-1 flex flex-col justify-start min-w-0 py-1">
+                          {/* Info */}
+                          <div className={`flex-1 flex flex-col justify-start min-w-0 ${productLayout === 'grid' ? 'py-0' : 'py-1'}`}>
                             <h3 className="font-bold text-slate-800 text-[13px] leading-tight line-clamp-2">{product.name}</h3>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 mb-3 truncate">{product.category}</p>
                             
@@ -468,13 +471,13 @@ export default function CustomerCatalog({
                               <div className="flex flex-col">
                                   {(product as any).promotionalPrice > 0 ? (
                                       <>
-                                          <span style={{ color: currentTemplate.primaryColor }} className="font-black text-[14px] leading-none">
+                                          <span style={{ color: themeColor }} className="font-black text-[14px] leading-none">
                                               R$ {Number((product as any).promotionalPrice).toFixed(2)}
                                           </span>
                                           <span className="text-[9px] font-bold text-slate-400 line-through mt-0.5">R$ {Number(product.price).toFixed(2)}</span>
                                       </>
                                   ) : (
-                                      <span style={{ color: currentTemplate.primaryColor }} className="font-black text-[14px] leading-none">
+                                      <span style={{ color: themeColor }} className="font-black text-[14px] leading-none">
                                           R$ {Number(product.price)?.toFixed(2)}
                                       </span>
                                   )}
@@ -482,7 +485,7 @@ export default function CustomerCatalog({
                               <button 
                                 onClick={(e) => { e.stopPropagation(); hasStock && handleAddToCart(product); }} 
                                 disabled={!hasStock}
-                                style={hasStock ? { backgroundColor: currentTemplate.primaryColor } : {}}
+                                style={hasStock ? { backgroundColor: themeColor } : {}}
                                 className={`w-8 h-8 rounded-full flex items-center justify-center shadow-md active:scale-90 shrink-0 ${hasStock ? 'text-white' : 'bg-slate-300 text-slate-500'}`}
                               >
                                   <Plus size={18} strokeWidth={3} />
