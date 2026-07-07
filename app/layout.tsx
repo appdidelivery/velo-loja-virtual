@@ -13,12 +13,35 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Velo Varejo | Crie sua Loja Virtual",
-  description: "Plataforma completa de vendas pelo WhatsApp e E-commerce.",
-  metadataBase: new URL('https://app.mamedes.com.br'),
+  title: 'Velo Loja Virtual | Crie seu Catálogo e Delivery Grátis',
+  description: 'Plataforma SaaS completa para lojistas. Catálogo digital, PDV, robô de WhatsApp, IA de vendas e integração com o Google Meu Negócio. Comece sem taxa de comissão.',
+  keywords: ['criar loja virtual', 'catálogo digital', 'delivery no whatsapp', 'pdv online', 'sistema para restaurante', 'sistema para loja', 'robô whatsapp'],
+  authors: [{ name: 'Velo Delivery' }],
+  metadataBase: new URL('https://veloloja.com.br'),
+  openGraph: {
+    type: 'website',
+    url: 'https://veloloja.com.br',
+    title: 'Velo Loja Virtual | O Futuro do seu Delivery e Varejo',
+    description: 'Pare de pagar taxas abusivas. Tenha sua loja própria com WhatsApp automatizado e IA integrada.',
+    siteName: 'Velo Loja Virtual',
+    images: [{
+      url: '/velo loja virtual logo.png',
+      width: 800,
+      height: 600,
+      alt: 'Velo Loja Virtual Dashboard',
+    }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Velo Loja Virtual',
+    description: 'Crie sua loja grátis e venda no piloto automático.',
+    images: ['/velo loja virtual logo.png'],
+  },
   icons: {
     icon: '/velo loja virtual logo.png',
-  }
+    shortcut: '/velo loja virtual logo.png',
+    apple: '/velo loja virtual logo.png',
+  },
 };
 
 export default function RootLayout({
