@@ -359,93 +359,74 @@ export default function CustomerCatalog({
 
             <main className="flex-1 overflow-y-auto custom-scrollbar pb-32">
               
-              {/* TARJA */}
-              {currentTemplate.defaultContent.announcementBar && (
-                <div style={{ backgroundColor: currentTemplate.primaryColor }} className="w-full text-center py-2 px-4 shadow-inner">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white leading-none flex items-center justify-center gap-2">
-                    <Sparkles size={12}/> {currentTemplate.defaultContent.announcementBar}
-                  </span>
-                </div>
+              {/* BANNERS (ESCONDIDOS NO MODO NATIVO APP PARA FICAR IGUAL SACOLA ONLINE) */}
+              {templateId !== 'nativo_app' && (
+                <>
+                  {/* TARJA */}
+                  {currentTemplate.defaultContent.announcementBar && (
+                    <div style={{ backgroundColor: currentTemplate.primaryColor }} className="w-full text-center py-2 px-4 shadow-inner">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white leading-none flex items-center justify-center gap-2">
+                        <Sparkles size={12}/> {currentTemplate.defaultContent.announcementBar}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* HERO BANNER E MINI BANNERS */}
+                  <div className="p-4 pb-2 bg-white rounded-b-3xl shadow-sm mb-4">
+                    <div className="w-full h-40 md:h-48 rounded-2xl overflow-hidden relative shadow-md group">
+                      <img src={currentTemplate.heroImage} className="w-full h-full object-cover" alt="Banner Principal" />
+                      <div className={`absolute inset-0 ${currentTemplate.category === 'servicos' ? 'bg-black/60' : 'bg-gradient-to-r from-black/80 to-transparent'} flex flex-col justify-center p-6`}>
+                        <h2 className="text-2xl font-black text-white leading-tight shadow-black drop-shadow-md max-w-[80%] uppercase">
+                          {currentTemplate.defaultContent.heroTitle}
+                        </h2>
+                        <p className="text-[10px] font-bold text-gray-200 mt-1 max-w-[70%]">
+                          {currentTemplate.defaultContent.heroSubtitle}
+                        </p>
+                      </div>
+                    </div>
+
+                    {currentTemplate.defaultContent.miniBanners && currentTemplate.defaultContent.miniBanners.length > 0 && (
+                      <div className="mt-4 flex gap-3 overflow-x-auto custom-scrollbar pb-2 snap-x">
+                        {currentTemplate.defaultContent.miniBanners.map((bannerUrl: string, idx: number) => (
+                          <div key={idx} className="w-64 shrink-0 h-24 bg-gray-100 rounded-xl overflow-hidden shadow-sm border border-gray-200 snap-center relative">
+                            <img src={bannerUrl} className="w-full h-full object-cover" alt="Mini Promo" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-2">
+                              <span style={{ backgroundColor: currentTemplate.primaryColor }} className="px-2 py-0.5 rounded text-[8px] font-black uppercase text-white tracking-widest shadow-sm">Oferta</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
 
-              {/* HERO BANNER E MINI BANNERS */}
-              <div className="p-4 pb-2 bg-white rounded-b-3xl shadow-sm mb-4">
-                <div className="w-full h-40 md:h-48 rounded-2xl overflow-hidden relative shadow-md group">
-                  <img src={currentTemplate.heroImage} className="w-full h-full object-cover" alt="Banner Principal" />
-                  <div className={`absolute inset-0 ${currentTemplate.category === 'servicos' ? 'bg-black/60' : 'bg-gradient-to-r from-black/80 to-transparent'} flex flex-col justify-center p-6`}>
-                    <h2 className="text-2xl font-black text-white leading-tight shadow-black drop-shadow-md max-w-[80%] uppercase">
-                      {currentTemplate.defaultContent.heroTitle}
-                    </h2>
-                    <p className="text-[10px] font-bold text-gray-200 mt-1 max-w-[70%]">
-                      {currentTemplate.defaultContent.heroSubtitle}
-                    </p>
-                  </div>
-                </div>
-
-                {currentTemplate.defaultContent.miniBanners && currentTemplate.defaultContent.miniBanners.length > 0 && (
-                  <div className="mt-4 flex gap-3 overflow-x-auto custom-scrollbar pb-2 snap-x">
-                    {currentTemplate.defaultContent.miniBanners.map((bannerUrl: string, idx: number) => (
-                      <div key={idx} className="w-64 shrink-0 h-24 bg-gray-100 rounded-xl overflow-hidden shadow-sm border border-gray-200 snap-center relative">
-                        <img src={bannerUrl} className="w-full h-full object-cover" alt="Mini Promo" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-2">
-                          <span style={{ backgroundColor: currentTemplate.primaryColor }} className="px-2 py-0.5 rounded text-[8px] font-black uppercase text-white tracking-widest shadow-sm">Oferta</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* CATEGORIAS COM ÍCONES */}
-              <div className="px-4 py-2">
-                <h3 className="text-[11px] font-black uppercase text-slate-500 tracking-widest mb-3 px-1">Menu Rápido</h3>
-                <div className="flex gap-3 overflow-x-auto custom-scrollbar pb-2">
+              {/* CATEGORIAS (ESTILO SACOLA ONLINE) */}
+              <div className="px-4 py-2 mt-2">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-4 pt-1 snap-x">
                   <button 
                     onClick={() => {setSelectedCategory('Todos'); setSearchQuery('');}}
-                    className={`flex flex-col items-center gap-1.5 shrink-0 w-16 transition-all ${selectedCategory === 'Todos' ? 'opacity-100 scale-105' : 'opacity-60 hover:opacity-100'}`}
+                    className={`px-5 py-2.5 rounded-full snap-center shrink-0 border transition-all duration-300 ${selectedCategory === 'Todos' ? 'text-white border-transparent font-bold shadow-md' : 'bg-white text-slate-600 border-slate-200 font-bold hover:bg-slate-100'}`}
+                    style={selectedCategory === 'Todos' ? { backgroundColor: currentTemplate.primaryColor, color: '#fff', borderColor: currentTemplate.primaryColor } : {}}
                   >
-                    <div style={selectedCategory === 'Todos' ? { backgroundColor: currentTemplate.primaryColor, color: '#fff', borderColor: currentTemplate.primaryColor } : {}} className="w-14 h-14 rounded-[1rem] bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-500">
-                      <LayoutGrid size={24} />
-                    </div>
-                    <span className="text-[9px] font-bold text-gray-700 truncate w-full text-center uppercase tracking-widest">Todos</span>
+                    <span className="text-xs tracking-tight whitespace-nowrap">Todos</span>
                   </button>
 
-                  {categories.map(cat => {
-                    const cName = cat.toLowerCase();
-                    let Icon = ShoppingBag;
-                    if (cName.includes('cabelo') || cName.includes('corte') || cName.includes('barba') || cName.includes('unha')) Icon = Scissors;
-                    else if (cName.includes('celular') || cName.includes('tech') || cName.includes('acess')) Icon = Smartphone;
-                    else if (cName.includes('sofá') || cName.includes('limpeza') || cName.includes('impermeabil')) Icon = Sofa;
-                    else if (cName.includes('elétrica') || cName.includes('reparo') || cName.includes('mecânica') || cName.includes('obra')) Icon = Wrench;
-                    else if (cName.includes('camisa') || cName.includes('moda') || cName.includes('roupa')) Icon = Shirt;
-                    else if (cName.includes('joia') || cName.includes('beleza') || cName.includes('estética')) Icon = Gem;
-                    else if (cName.includes('bebida') || cName.includes('conveni') || cName.includes('cerveja')) Icon = Beer;
-
-                    return (
-                      <button 
+                  {categories.map(cat => (
+                    <button 
                         key={cat} 
                         onClick={() => {setSelectedCategory(cat); setSearchQuery('');}}
-                        className={`flex flex-col items-center gap-1.5 shrink-0 w-16 transition-all ${selectedCategory === cat ? 'opacity-100 scale-105' : 'opacity-60 hover:opacity-100'}`}
-                      >
-                        <div style={selectedCategory === cat ? { backgroundColor: currentTemplate.primaryColor, color: '#fff', borderColor: currentTemplate.primaryColor } : {}} className="w-14 h-14 rounded-[1rem] bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-500">
-                          <Icon size={24} />
-                        </div>
-                        <span className={`text-[9px] font-bold truncate w-full text-center uppercase tracking-widest ${selectedCategory === cat ? 'text-gray-900' : 'text-gray-500'}`}>{cat}</span>
-                      </button>
-                    )
-                  })}
+                        className={`px-5 py-2.5 rounded-full snap-center shrink-0 border transition-all duration-300 ${selectedCategory === cat ? 'text-white border-transparent font-bold shadow-md' : 'bg-white text-slate-600 border-slate-200 font-bold hover:bg-slate-100'}`}
+                        style={selectedCategory === cat ? { backgroundColor: currentTemplate.primaryColor, color: '#fff', borderColor: currentTemplate.primaryColor } : {}}
+                    >
+                      <span className="text-xs tracking-tight whitespace-nowrap">{cat}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* VITRINE DE PRODUTOS */}
-              <div className="px-4 mt-4">
-                <div className="flex justify-between items-end mb-4 px-1">
-                  <h3 className="text-[13px] font-black uppercase text-slate-800 tracking-widest flex items-center gap-1.5">
-                    {currentTemplate.category === 'servicos' ? <><ClipboardList size={16} style={{ color: currentTemplate.primaryColor }}/> Nossos Serviços</> : <><ShoppingBag size={16} style={{ color: currentTemplate.primaryColor }}/> Catálogo</>}
-                  </h3>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{filteredActiveProducts.length} itens</span>
-                </div>
-
+              {/* VITRINE DE PRODUTOS (ESTILO SACOLA ONLINE) */}
+              <div className="px-4 mt-2 mb-8">
                 {loading ? (
                   <div className="flex flex-col items-center justify-center py-10">
                     <div style={{ borderTopColor: currentTemplate.primaryColor }} className="w-8 h-8 border-4 border-gray-300 rounded-full animate-spin"></div>
@@ -456,83 +437,54 @@ export default function CustomerCatalog({
                     <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Nenhum item localizado.</p>
                   </div>
                 ) : (
-                  <div className="space-y-6">
-                    
-                    {/* LAYOUT SERVIÇOS */}
-                    {currentTemplate.category === 'servicos' ? (
-                      <div className="flex flex-col gap-5">
-                        {paginatedProducts.map(product => (
-                          <div key={product.id} onClick={() => { setSelectedVariationIndex(0); setSelectedProduct(product); }} className="w-full bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col group cursor-pointer active:scale-[0.98] transition-all">
-                            <div className="w-full h-40 bg-gray-100 relative overflow-hidden">
-                              <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                              <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-2 py-1 rounded-md text-[9px] font-black text-slate-700 uppercase tracking-widest shadow-sm">
-                                {product.category}
-                              </div>
-                            </div>
+                  <div className="flex flex-col gap-3">
+                    {paginatedProducts.map(product => {
+                      let hasStock = (product.stock && parseInt(product.stock as any) > 0) || !product.stock;
+                      return (
+                        <div key={product.id} onClick={() => { if(hasStock) { setSelectedVariationIndex(0); setSelectedProduct(product); } }} className={`w-full bg-white rounded-[1.5rem] shadow-sm border border-gray-100 p-3 flex flex-row items-center gap-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] ${!hasStock ? 'opacity-60 grayscale' : ''}`}>
+                          
+                          {/* Imagem Esquerda */}
+                          <div className="w-[88px] h-[88px] flex-shrink-0 relative rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 p-1 flex items-center justify-center">
+                            <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
+                            {(product as any).promotionalPrice > 0 && (
+                              <div className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-br-lg shadow-sm z-10">OFERTA</div>
+                            )}
+                            {!hasStock && <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center font-black text-white text-[10px] uppercase tracking-widest backdrop-blur-sm rounded-xl">Esgotado</div>}
+                          </div>
+                          
+                          {/* Info Direita */}
+                          <div className="flex-1 flex flex-col justify-start min-w-0 py-1">
+                            <h3 className="font-bold text-slate-800 text-[13px] leading-tight line-clamp-2">{product.name}</h3>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 mb-3 truncate">{product.category}</p>
                             
-                            <div className="p-5 flex flex-col min-w-0">
-                              <h3 className="text-lg font-black text-slate-800 leading-tight mb-1">{product.name}</h3>
-                              <p className="text-xs font-medium text-slate-500 line-clamp-2 leading-relaxed mb-4">{product.description || 'Clique para ver detalhes do serviço.'}</p>
-                              
-                              <div className="flex items-center justify-between mt-auto border-t border-gray-100 pt-4">
-                                {storeMode !== 'catalogo' && (
-                                  <>
-                                    <div>
-                                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">A partir de</p>
-                                      <span style={{ color: currentTemplate.primaryColor }} className="text-xl font-black truncate">
-                                        {/* @ts-ignore */}
-                                        R$ {((product as any).promotionalPrice > 0 ? (product as any).promotionalPrice : (product.variations && product.variations.length > 0 ? product.variations[0].price : product.price)).toFixed(2)}
+                            <div className="flex items-center justify-between mt-auto">
+                              <div className="flex flex-col">
+                                  {(product as any).promotionalPrice > 0 ? (
+                                      <>
+                                          <span style={{ color: currentTemplate.primaryColor }} className="font-black text-[14px] leading-none">
+                                              R$ {Number((product as any).promotionalPrice).toFixed(2)}
+                                          </span>
+                                          <span className="text-[9px] font-bold text-slate-400 line-through mt-0.5">R$ {Number(product.price).toFixed(2)}</span>
+                                      </>
+                                  ) : (
+                                      <span style={{ color: currentTemplate.primaryColor }} className="font-black text-[14px] leading-none">
+                                          R$ {Number(product.price)?.toFixed(2)}
                                       </span>
-                                    </div>
-                                    <button style={{ backgroundColor: currentTemplate.primaryColor }} className="px-5 py-2.5 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md flex items-center gap-2">
-                                      Agendar <ChevronRight size={14}/>
-                                    </button>
-                                  </>
-                                )}
+                                  )}
                               </div>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); hasStock && handleAddToCart(product); }} 
+                                disabled={!hasStock}
+                                style={hasStock ? { backgroundColor: currentTemplate.primaryColor } : {}}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center shadow-md active:scale-90 shrink-0 ${hasStock ? 'text-white' : 'bg-slate-300 text-slate-500'}`}
+                              >
+                                  <Plus size={18} strokeWidth={3} />
+                              </button>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-
-                      <div className={currentTemplate.gridConfig === 'grid' || currentTemplate.gridConfig === 'masonry' ? 'grid grid-cols-2 gap-3' : 'flex flex-col gap-3'}>
-                        {paginatedProducts.map(product => (
-                          <div key={product.id} onClick={() => { setSelectedVariationIndex(0); setSelectedProduct(product); }} className={`w-full bg-white rounded-[1.5rem] shadow-sm border border-gray-100 group cursor-pointer active:scale-[0.98] transition-transform overflow-hidden ${currentTemplate.gridConfig === 'list' ? 'p-3 flex items-center gap-4' : 'p-3 flex flex-col'}`}>
-                            
-                            <div className={`${currentTemplate.gridConfig === 'list' ? 'w-24 h-24 shrink-0' : 'w-full aspect-square mb-2'} bg-gray-50 rounded-xl p-1.5 border border-gray-100 relative overflow-hidden`}>
-                              <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform" />
-                              {(product as any).promotionalPrice > 0 && (
-                                <div className="absolute top-1 left-1 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase shadow-sm">Promo</div>
-                              )}
-                            </div>
-                            
-                            <div className={`flex flex-col min-w-0 flex-1 ${currentTemplate.gridConfig === 'list' ? 'py-1' : ''}`}>
-                              <h3 className="text-xs font-bold text-slate-800 leading-tight mb-1 line-clamp-2">{product.name}</h3>
-                              
-                              <div className={`flex items-end justify-between mt-auto ${currentTemplate.gridConfig === 'list' ? '' : 'pt-2'}`}>
-                                {storeMode !== 'catalogo' && (
-                                  <>
-                                    <div className="flex flex-col">
-                                      {(product as any).promotionalPrice > 0 && <span className="text-[9px] text-slate-400 line-through font-bold">R$ {Number(product.price).toFixed(2)}</span>}
-                                      <span style={{ color: currentTemplate.primaryColor }} className="text-sm font-black truncate">
-                                        {/* @ts-ignore */}
-                                        R$ {((product as any).promotionalPrice > 0 ? (product as any).promotionalPrice : (product.variations && product.variations.length > 0 ? product.variations[0].price : product.price)).toFixed(2)}
-                                      </span>
-                                    </div>
-                                    {currentTemplate.gridConfig === 'list' && (
-                                      <div style={{ backgroundColor: currentTemplate.primaryColor }} className="w-8 h-8 shrink-0 text-white rounded-full flex items-center justify-center shadow-md">
-                                        <Plus className="w-4 h-4" />
-                                      </div>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                        </div>
+                      )
+                    })}
 
                     {filteredActiveProducts.length > visibleCount && (
                       <div className="py-4 flex justify-center">
@@ -549,44 +501,44 @@ export default function CustomerCatalog({
                   </div>
                 )}
               </div>
-
-              {/* RODAPÉ */}
-              <div className="mt-12 mb-8 mx-4 bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-sm">
-                <div className="p-6 border-b border-gray-100 bg-gradient-to-br from-gray-50 to-white">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Star size={16} fill="#f59e0b" className="text-yellow-500" />
-                    <Star size={16} fill="#f59e0b" className="text-yellow-500" />
-                    <Star size={16} fill="#f59e0b" className="text-yellow-500" />
-                    <Star size={16} fill="#f59e0b" className="text-yellow-500" />
-                    <Star size={16} fill="#f59e0b" className="text-yellow-500" />
-                  </div>
-                  <p className="text-xs font-bold text-slate-700 italic leading-relaxed">
-                    {currentTemplate.defaultContent.reviewMock}
-                  </p>
-                  <div className="mt-4 flex items-center gap-2">
-                    <ShieldCheck size={14} className="text-green-600" />
-                    <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Avaliação Verificada</span>
-                  </div>
-                </div>
-
-                <div className="p-6 bg-slate-900 text-white">
-                    <h3 className="text-[11px] font-black uppercase text-slate-300 tracking-widest flex items-center gap-2 mb-4">
-                      <MapPin size={16} style={{ color: currentTemplate.primaryColor }}/> Onde Estamos
-                    </h3>
-                    <div className="w-full h-32 rounded-xl overflow-hidden border border-slate-700 mb-4 bg-slate-800">
-                      <iframe 
-                        width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen 
-                        src={`https://maps.google.com/maps?q=${encodeURIComponent((settings as any).address || STORE_TRUST_DATA.address)}&output=embed`}
-                      ></iframe>
+              {templateId !== 'nativo_app' && (
+                <div className="mt-12 mb-8 mx-4 bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-sm">
+                  <div className="p-6 border-b border-gray-100 bg-gradient-to-br from-gray-50 to-white">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Star size={16} fill="#f59e0b" className="text-yellow-500" />
+                      <Star size={16} fill="#f59e0b" className="text-yellow-500" />
+                      <Star size={16} fill="#f59e0b" className="text-yellow-500" />
+                      <Star size={16} fill="#f59e0b" className="text-yellow-500" />
+                      <Star size={16} fill="#f59e0b" className="text-yellow-500" />
                     </div>
-                    <p className="text-[10px] font-bold text-slate-300 mb-2 leading-tight">
-                      {(settings as any).address || STORE_TRUST_DATA.address}
+                    <p className="text-xs font-bold text-slate-700 italic leading-relaxed">
+                      {currentTemplate.defaultContent.reviewMock}
                     </p>
-                    <p className="text-[10px] font-bold text-slate-400">
-                      CNPJ: {(settings as any).cnpj || STORE_TRUST_DATA.cnpj}
-                    </p>
+                    <div className="mt-4 flex items-center gap-2">
+                      <ShieldCheck size={14} className="text-green-600" />
+                      <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Avaliação Verificada</span>
+                    </div>
                   </div>
-              </div>
+
+                  <div className="p-6 bg-slate-900 text-white">
+                      <h3 className="text-[11px] font-black uppercase text-slate-300 tracking-widest flex items-center gap-2 mb-4">
+                        <MapPin size={16} style={{ color: currentTemplate.primaryColor }}/> Onde Estamos
+                      </h3>
+                      <div className="w-full h-32 rounded-xl overflow-hidden border border-slate-700 mb-4 bg-slate-800">
+                        <iframe 
+                          width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen 
+                          src={`https://maps.google.com/maps?q=${encodeURIComponent((settings as any).address || STORE_TRUST_DATA.address)}&output=embed`}
+                        ></iframe>
+                      </div>
+                      <p className="text-[10px] font-bold text-slate-300 mb-2 leading-tight">
+                        {(settings as any).address || STORE_TRUST_DATA.address}
+                      </p>
+                      <p className="text-[10px] font-bold text-slate-400">
+                        CNPJ: {(settings as any).cnpj || STORE_TRUST_DATA.cnpj}
+                      </p>
+                    </div>
+                </div>
+              )}
 
             </main>
 
@@ -604,7 +556,7 @@ export default function CustomerCatalog({
               {storeMode !== 'catalogo' && (
                 <button onClick={() => setIsCartOpen(true)} className="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-800 transition-colors relative w-16">
                   <ShoppingCart className="w-5 h-5" />
-                  <span className="text-[9px] font-bold uppercase tracking-widest">Carrinho</span>
+                  <span className="text-[9px] font-bold uppercase tracking-widest">{storeMode === 'orcamento' ? 'Orçamento' : 'Carrinho'}</span>
                   {cartTotalItems > 0 && (
                     <span className="absolute -top-1 right-2 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold shadow-sm border border-white">
                       {cartTotalItems}
