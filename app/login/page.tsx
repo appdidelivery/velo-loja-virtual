@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/services/firebase';
 import { useRouter } from 'next/navigation';
@@ -9,6 +9,7 @@ import { ShoppingBag, AlertCircle, Loader2, Mail, Lock } from 'lucide-react';
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false); // NOVO: Controle de tela Login vs Cadastro
   const [error, setError] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,26 +45,43 @@ export default function LoginPage() {
   };
 
   // Login Tradicional (E-mail e Senha)
-  const handleEmailLogin = async (e: React.FormEvent) => {
+ // Autenticação Tradicional (Login ou Cadastro Dinâmico)
+  const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return setError('Preencha seu e-mail e senha.');
+    if (password.length < 6) return setError('A senha deve ter pelo menos 6 caracteres.');
     
     setIsLoading(true);
     setError('');
     
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      await handleTenantSetup(result.user); // Roda a trava de criação da loja
+      let result;
+      if (isRegistering) {
+        // Fluxo de criar nova conta
+        result = await createUserWithEmailAndPassword(auth, email, password);
+      } else {
+        // Fluxo de entrar em conta existente
+        result = await signInWithEmailAndPassword(auth, email, password);
+      }
+      
+      await handleTenantSetup(result.user); // Cria ou resgata a loja no Firestore
       router.push('/admin');
     } catch (err: any) {
       console.error(err);
-      setError('E-mail ou senha incorretos. Verifique seus dados.');
+      if (err.code === 'auth/email-already-in-use') {
+        setError('Este e-mail já tem uma loja cadastrada. Volte para Entrar.');
+      } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        setError('E-mail ou senha incorretos.');
+      } else {
+        setError('Erro ao autenticar. Tente novamente.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
+    // ... a função do Google continua igual ...
     setIsLoading(true);
     setError('');
     
@@ -93,7 +111,9 @@ export default function LoginPage() {
             <img src="/velo loja virtual logo.png" alt="Velo Varejo Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-2xl font-black uppercase tracking-tighter text-[#111827]">Velo Loja Virtual</h1>
-          <p className="text-sm font-medium text-slate-500 mt-1">Acesso exclusivo para Lojistas e Equipes</p>
+          <p className="text-sm font-medium text-slate-500 mt-1">
+            {isRegistering ? 'Crie sua loja grátis agora' : 'Acesso para Lojistas e Equipes'}
+          </p>
         </div>
 
         {/* Mensagem de Erro */}
@@ -105,12 +125,12 @@ export default function LoginPage() {
         )}
 
         {/* Formulário de E-mail e Senha */}
-        <form onSubmit={handleEmailLogin} className="space-y-4 mb-6">
+        <form onSubmit={handleEmailAuth} className="space-y-4 mb-6">
           <div className="relative">
             <Mail className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             <input 
               type="email" 
-              placeholder="Seu e-mail de acesso"
+              placeholder={isRegistering ? "Seu melhor e-mail" : "Seu e-mail de acesso"}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 py-4 pl-12 pr-4 rounded-2xl outline-none focus:border-[#111827] transition-all"
@@ -120,7 +140,7 @@ export default function LoginPage() {
             <Lock className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             <input 
               type="password" 
-              placeholder="Sua senha"
+              placeholder={isRegistering ? "Crie uma senha forte" : "Sua senha"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 py-4 pl-12 pr-4 rounded-2xl outline-none focus:border-[#111827] transition-all"
@@ -129,11 +149,25 @@ export default function LoginPage() {
           <button 
             type="submit" 
             disabled={isLoading}
-            className="w-full bg-[#111827] hover:bg-black text-white font-black uppercase tracking-wider text-[11px] py-4 rounded-2xl shadow-lg shadow-black/20 transition-all flex items-center justify-center disabled:opacity-70"
+            className={`w-full text-white font-black uppercase tracking-wider text-[11px] py-4 rounded-2xl shadow-lg transition-all flex items-center justify-center disabled:opacity-70 ${isRegistering ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/30' : 'bg-[#111827] hover:bg-black shadow-black/20'}`}
           >
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Entrar no Painel'}
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (isRegistering ? 'Criar Loja Grátis' : 'Entrar no Painel')}
           </button>
         </form>
+
+        {/* Alternância Login / Cadastro */}
+        <div className="text-center mb-6">
+          <button 
+            type="button"
+            onClick={() => {
+              setIsRegistering(!isRegistering);
+              setError('');
+            }}
+            className="text-[11px] font-bold text-slate-500 hover:text-[#111827] transition-colors"
+          >
+            {isRegistering ? 'Já tem uma loja? Entrar agora' : 'Não tem uma loja? Crie grátis aqui'}
+          </button>
+        </div>
 
         {/* Divisor */}
         <div className="flex items-center gap-3 w-full mb-6">
