@@ -320,33 +320,40 @@ export default function CustomerCatalog({
         <div className="flex justify-center bg-black h-[100dvh] overflow-hidden">
           <div className="w-full max-w-md bg-gray-50 h-full flex flex-col relative shadow-2xl overflow-hidden">
             
-            {/* CABEÇALHO LIMPO */}
-            <header className="bg-white px-5 py-3 flex flex-col z-40 shrink-0 shadow-sm relative">
+            {/* CABEÇALHO NATIVO APP / SACOLA ONLINE */}
+            <header 
+              className={`px-5 py-4 flex flex-col z-40 shrink-0 shadow-sm relative transition-colors duration-300 ${templateId === 'nativo_app' ? 'rounded-b-[2rem]' : 'bg-white'}`}
+              style={templateId === 'nativo_app' ? { backgroundColor: currentTemplate.primaryColor } : {}}
+            >
               <div className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-inner shrink-0 overflow-hidden border border-gray-100">
-                    {storeLogo ? <img src={storeLogo} alt="Logo" className="w-full h-full object-contain p-1" /> : <span style={{ color: currentTemplate.primaryColor }} className="font-black text-lg">{storeName.charAt(0)}</span>}
+                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm shrink-0 overflow-hidden">
+                    {storeLogo ? <img src={storeLogo} alt="Logo" className="w-full h-full object-contain p-1.5" /> : <span style={{ color: currentTemplate.primaryColor }} className="font-black text-xl">{storeName.charAt(0)}</span>}
                   </div>
                   <div className="flex flex-col">
-                    <h1 className="text-sm font-black leading-tight uppercase tracking-widest text-slate-800">{storeName}</h1>
+                    <h1 className={`text-sm font-black leading-tight uppercase tracking-widest ${templateId === 'nativo_app' ? 'text-white' : 'text-slate-800'}`}>{storeName}</h1>
+                    <p className={`text-[10px] font-medium mt-0.5 ${templateId === 'nativo_app' ? 'text-white/90' : 'text-slate-500'}`}>{storeSlogan}</p>
                   </div>
                 </div>
-                <button onClick={() => setIsSearchOpen(!isSearchOpen)} className="p-2.5 bg-gray-50 hover:bg-gray-100 rounded-full text-slate-600 transition-colors">
+                <button 
+                  onClick={() => setIsSearchOpen(!isSearchOpen)} 
+                  className={`p-2.5 rounded-full transition-colors border ${templateId === 'nativo_app' ? 'border-white/30 text-white hover:bg-white/10' : 'bg-gray-50 hover:bg-gray-100 text-slate-600 border-transparent'}`}
+                >
                   <Search className="w-4 h-4" />
                 </button>
               </div>
 
               <AnimatePresence>
                 {isSearchOpen && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden w-full mt-3">
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden w-full mt-4">
                     <div className="relative">
                       <input 
                         type="text" 
                         placeholder="O que você procura?" 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-gray-100 text-slate-800 placeholder:text-slate-400 border-none text-sm font-bold px-4 py-3 rounded-xl outline-none focus:ring-2 transition-all shadow-inner"
-                        style={{ '--tw-ring-color': currentTemplate.primaryColor } as any}
+                        className={`w-full border-none text-sm font-bold px-4 py-3 rounded-xl outline-none focus:ring-2 transition-all shadow-inner ${templateId === 'nativo_app' ? 'bg-white text-slate-800 placeholder:text-slate-400' : 'bg-gray-100 text-slate-800 placeholder:text-slate-400'}`}
+                        style={{ '--tw-ring-color': templateId === 'nativo_app' ? '#00000020' : currentTemplate.primaryColor } as any}
                       />
                       {searchQuery && (
                         <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"><X className="w-4 h-4" /></button>
