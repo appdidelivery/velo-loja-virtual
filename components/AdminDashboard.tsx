@@ -576,9 +576,10 @@ export default function AdminDashboard() {
             </div>
           </nav>
 
-          <div className="p-5 border-t border-gray-100 bg-gray-50/50">
+         <div className="p-5 border-t border-gray-100 bg-gray-50/50">
             <div className="flex items-center justify-center mb-4">
-               <a href={`/${authRole.tenantId}?nocache=${Date.now()}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-[#111827] hover:text-[#0055ff] transition-colors">
+               {/* Removido o Date.now() que causava o erro de Hydration */}
+               <a href={`/${authRole.tenantId}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-[#111827] hover:text-[#0055ff] transition-colors">
                  <ExternalLink className="w-4 h-4"/> VER LOJA ONLINE
                </a>
             </div>
@@ -1342,12 +1343,14 @@ export default function AdminDashboard() {
                       {/* Pré-visualização Real do Site (Iframe) */}
                       <div className="max-w-[340px] mx-auto border-[10px] border-slate-900 rounded-[3rem] h-[650px] overflow-hidden relative shadow-2xl bg-white">
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-900 rounded-b-3xl z-50"></div>
-                        {/* O Iframe aponta para a rota da loja segura e passaremos as configs em tempo real via localStorage */}
-                        <iframe 
-                          src={`/${authRole.tenantId}`} 
-                          title="Preview da Loja" 
-                          className="w-full h-full border-none custom-scrollbar"
-                        />
+                        {/* O Iframe aponta para a rota da loja segura APENAS quando o ID for confirmado */}
+                        {authRole.tenantId !== 'loading' && (
+                          <iframe 
+                            src={`/${authRole.tenantId}`} 
+                            title="Preview da Loja" 
+                            className="w-full h-full border-none custom-scrollbar"
+                          />
+                        )}
                       </div>
                     </div>
 

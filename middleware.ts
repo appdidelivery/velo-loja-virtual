@@ -6,7 +6,11 @@ export function middleware(req: NextRequest) {
   const hostname = req.headers.get('host') || '';
 
   // Domínios do seu SaaS (Que não são de clientes)
-  const isMainPlatform = hostname.includes('localhost:3000') || hostname.includes('velovarejo.vercel.app');
+  const isMainPlatform = 
+    hostname.includes('localhost:3000') || 
+    hostname.includes('velovarejo.vercel.app') || 
+    hostname === 'veloloja.com.br' || 
+    hostname === 'www.veloloja.com.br';
 
   // Libera o acesso ao painel e login normalmente
   if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/login')) {

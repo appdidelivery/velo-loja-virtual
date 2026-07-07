@@ -1,17 +1,22 @@
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../services/firebase'; // Ajuste o caminho se necessário (pode ser '@/services/firebase')
-import CustomerCatalog from '../../components/CustomerCatalog'; // Ajuste o caminho (pode ser '@/components/CustomerCatalog')
+import { db } from '../../services/firebase'; 
+import CustomerCatalog from '../../components/CustomerCatalog'; 
 import { Metadata } from 'next';
 import { TEMPLATES } from '../../data/templatesConfig';
 
+// No Next.js 15, os params são uma Promise. Precisamos tipar corretamente.
 type Props = {
-  params: { loja: string };
+  params: Promise<{ loja: string }>;
 };
 
 // 1. GERAÇÃO DE SEO DINÂMICO NO SERVIDOR (Lê o banco antes de enviar pro Google)
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
-    const docRef = doc(db, 'tenants', params.loja);
+    // Desempacotando a Promise do Next.js 15
+    const resolvedParams = await params;
+    const tenantId = resolvedParams.loja;
+
+    const docRef = doc(db, 'tenants', tenantId);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
@@ -37,9 +42,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 // 2. RENDERIZAÇÃO DA PÁGINA (Injeta os dados na vitrine do cliente)
 export default async function LojaPage({ params }: Props) {
   let tenantData = null;
+  
+  // Desempacotando a Promise do Next.js 15
+  const resolvedParams = await params;
+  const tenantId = resolvedParams.loja;
+
+  // Blindagem: Impede o navegador de procurar uma loja chamada "favicon.ico"
+  if (!tenantId || tenantId === 'favicon.ico') {
+    return null;
+  }
 
   try {
-    const docRef = doc(db, 'tenants', params.loja);
+    const docRef = doc(db, 'tenants', tenantId);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
@@ -51,7 +65,7 @@ export default async function LojaPage({ params }: Props) {
 
   return (
     <CustomerCatalog 
-      tenantId={params.loja} 
+      tenantId={tenantId} 
       initialData={tenantData} 
     />
   );
