@@ -164,9 +164,16 @@ export default function AdminDashboard() {
       return { name: catName, order: 1, isActive: isActive, count: catProducts.length };
   }).sort((a, b) => a.name.localeCompare(b.name));
 
-  const isLegacyClient = authRole.tenantId.includes('mamedes') || authRole.tenantId.includes('sacola');
-  const isVitalicio = (settingsForm as any)?.billingStatus === 'gratis_vitalicio';
-  const showFinanceTab = !isLegacyClient && !isVitalicio;
+  // Oculta a aba Financeira se for Mamedes/Sacola, ou se o status/plano configurado no Dark Ops for gratuito
+  const hideFinance = 
+    authRole.tenantId.includes('mamedes') || 
+    authRole.tenantId.includes('sacola') || 
+    (settingsForm as any)?.billingStatus === 'gratis_vitalicio' || 
+    (settingsForm as any)?.billingStatus === 'cortesia' || 
+    (settingsForm as any)?.billingStatus === 'teste' || 
+    (settingsForm as any)?.plan === 'gratis';
+
+  const showFinanceTab = !hideFinance;
 
   const [selectedChatId, setSelectedChatId] = useState<string>(chats[0]?.id || '');
   const [currentMessageText, setCurrentMessageText] = useState('');
@@ -363,16 +370,64 @@ export default function AdminDashboard() {
     setIsImporting(true);
     try {
       const response = await fetch('/api/import-xml', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ xmlUrl: xmlUrl }) });
-      if (!response.ok) throw new Error("Erro de conexão.");
+      if (!response.ok) throw new Error("Erro de conexão com a API de importação.");
+      
       const xmlText = await response.text();
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+      
       let items = xmlDoc.getElementsByTagName("item");
       if (items.length === 0) items = xmlDoc.getElementsByTagName("entry");
-      if (items.length === 0) throw new Error("Nenhum produto encontrado.");
+      if (items.length === 0) throw new Error("Nenhum produto encontrado no XML.");
       
-      alert(`Sincronização processada com sucesso!`);
+      let importCount = 0;
+
+      for (let i = 0; i < items.length; i++) {
+        const node = items[i];
+
+        // Função para pegar tags normais ou do Google Merchant (ex: g:title)
+        const getText = (tag1: string, tag2: string) => {
+          let el = node.getElementsByTagName(tag1)[0];
+          if (!el) el = node.getElementsByTagName(tag2)[0];
+          return el ? el.textContent || '' : '';
+        };
+
+        const title = getText("g:title", "title");
+        if (!title) continue; // Pula se o item não tiver nome
+
+        const description = getText("g:description", "description");
+        const imageLink = getText("g:image_link", "image_link") || getText("g:link", "link");
+        const category = getText("g:product_type", "category") || 'Importados';
+        const sku = getText("g:id", "id") || `XML-${Date.now()}-${i}`;
+
+        // Tratamento do preço (vem como "12.99 BRL" ou "12,99")
+        const rawPrice = getText("g:price", "price");
+        let price = 0;
+        if (rawPrice) {
+          const numericString = rawPrice.replace(/[^\d.,]/g, '').replace(',', '.');
+          price = parseFloat(numericString) || 0;
+        }
+
+        // Salva o produto real no banco de dados usando a função do hook
+        await addProduct({
+          name: title,
+          description: description.substring(0, 400), // Limita tamanho da desc
+          price: price,
+          imageUrl: imageLink || 'https://cdn-icons-png.flaticon.com/512/8636/8636813.png',
+          category: category,
+          stock: 999, // Estoque padrão
+          sku: sku,
+          isActive: true,
+          tenantId: authRole?.tenantId || 'mamedes',
+          ean: '', ncm: '', weight: 0, seoTitle: '', seoDescription: ''
+        });
+
+        importCount++;
+      }
+      
+      alert(`Sincronização concluída! ${importCount} produtos foram importados e salvos.`);
       setIsXmlModalOpen(false);
+      setXmlUrl('');
     } catch (error: any) {
       alert(`⚠️ Erro ao importar: ${error.message}`);
     } finally {

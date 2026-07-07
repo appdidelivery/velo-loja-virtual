@@ -44,14 +44,18 @@ export default function CustomerCatalog({
   const settings: TenantSettings = INITIAL_SETTINGS;
 
   const tenantId = (() => {
+    // 1. PRIORIDADE MÁXIMA: Se a URL da loja já tem o ID (passado pelo Next.js), respeita ele!
+    if (propTenantId) return propTenantId;
+
+    // 2. FALLBACK: Se acessou apenas o domínio direto, usa a regra do Host
     if (typeof window !== 'undefined') {
       const host = window.location.hostname;
-      if (host === 'app.mamedes.com.br' || host === 'localhost' || host === '127.0.0.1') {
-        return 'mamedes';
-      }
+      if (host === 'app.mamedes.com.br') return 'mamedes';
+      if (host === 'localhost' || host === '127.0.0.1') return 'loja_teste_local';
       return host; 
     }
-    return propTenantId || 'mamedes'; 
+    
+    return 'loja_teste_local'; 
   })();
 
   const { products, loading } = useProducts(tenantId);
