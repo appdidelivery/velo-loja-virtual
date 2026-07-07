@@ -329,6 +329,7 @@ export default function AdminDashboard() {
     try {
       await setDoc(doc(db, 'tenants', authRole.tenantId), {
         businessName: settingsForm.businessName,
+        slug: settingsForm.slug || authRole.tenantId.substring(0,6), // <-- ADICIONADO AQUI
         slogan: settingsForm.slogan,
         logoUrl: settingsForm.logoUrl,
         primaryColor: settingsForm.primaryColor,
@@ -578,8 +579,8 @@ export default function AdminDashboard() {
 
          <div className="p-5 border-t border-gray-100 bg-gray-50/50">
             <div className="flex items-center justify-center mb-4">
-               {/* Removido o Date.now() que causava o erro de Hydration */}
-               <a href={`/${authRole.tenantId}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-[#111827] hover:text-[#0055ff] transition-colors">
+               {/* Agora manda para o Slug (link amigável) personalizado pelo cliente */}
+               <a href={`/${settingsForm.slug || authRole.tenantId}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-[#111827] hover:text-[#0055ff] transition-colors">
                  <ExternalLink className="w-4 h-4"/> VER LOJA ONLINE
                </a>
             </div>
@@ -1516,9 +1517,25 @@ export default function AdminDashboard() {
                         className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-[#0055ff] transition-colors"
                       />
                     </div>
+
+                    {/* NOVO CAMPO: LINK PERSONALIZADO */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Link da Loja (Sua URL)</label>
+                      <div className="flex items-center bg-gray-50 border-2 border-gray-100 rounded-xl overflow-hidden focus-within:border-[#0055ff] transition-colors">
+                        <span className="pl-3.5 py-3.5 text-[11px] font-bold text-slate-400 bg-gray-100">veloloja.com.br/</span>
+                        <input 
+                          type="text" 
+                          value={settingsForm.slug || ''}
+                          onChange={(e) => setSettingsForm({...settingsForm, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')})}
+                          className="w-full bg-transparent text-sm font-bold text-slate-800 p-3.5 outline-none"
+                          placeholder="minha-loja"
+                        />
+                      </div>
+                    </div>
+
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Slogan / Frase de Efeito</label>
-                      <input 
+                       <input 
                         type="text" 
                         value={settingsForm.slogan}
                         onChange={(e) => setSettingsForm({...settingsForm, slogan: e.target.value})}

@@ -22,10 +22,14 @@ export default function LoginPage() {
 
     if (!tenantSnap.exists()) {
       // Se não existe, é um Lojista NOVO! Criamos a loja grátis pra ele na hora.
+      // Cria um link inicial baseado no ID, que o cliente poderá alterar depois
+      const baseSlug = `loja-${user.uid.substring(0, 6).toLowerCase()}`;
+
       await setDoc(tenantRef, {
         ownerId: user.uid,
         ownerEmail: user.email,
         businessName: 'Nova Loja',
+        slug: baseSlug, // <-- ADICIONADO AQUI
         slogan: 'Catálogo Exclusivo',
         storeMode: 'ecommerce',
         templateId: 'nativo_app',
