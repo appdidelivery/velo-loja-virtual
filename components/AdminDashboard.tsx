@@ -6,7 +6,8 @@ import {
   Search, CheckCircle2, DollarSign, Eye, EyeOff, User, Sparkles,
   Layers, AlertCircle, Send, HelpCircle, FileCheck, Percent,
   TrendingUp, X, CreditCard, Sun, Moon, ExternalLink, ChevronDown, List,
-  Megaphone, ChevronLeft, ChevronRight, Filter, RefreshCw, ShieldCheck, LayoutTemplate, Package
+  Megaphone, ChevronLeft, ChevronRight, Filter, RefreshCw, ShieldCheck, LayoutTemplate, Package,
+  Store 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -58,15 +59,43 @@ export default function AdminDashboard() {
     return 'mamedes';
   };
 
-  const [authRole, setAuthRole] = useState({
-    email: `admin@${getInitialTenant().replace('app.', '')}`,
-    role: 'merchant_owner',
-    businessType: 'whatsapp_catalog', 
-    tenantId: getInitialTenant() 
+  // Objeto inicial genérico para o TypeScript não reclamar. Será substituído pelo Firebase.
+  const [authRole, setAuthRole] = useState({ 
+    email: 'carregando...', 
+    role: 'merchant_owner', 
+    businessType: 'ecommerce', 
+    tenantId: 'loading' 
   });
 
-  const { products, addProduct, updateProduct, deleteProduct } = useProducts(authRole.tenantId);
-  const { orders, updateStatus: updateOrderStatus } = useOrders(authRole.tenantId); 
+  // Trava de Segurança Real (Protege a rota /admin)
+  useEffect(() => {
+    const { onAuthStateChanged } = require('firebase/auth');
+    const { auth } = require('../services/firebase');
+    
+    const unsubscribe = onAuthStateChanged(auth, (user: any) => {
+      if (user) {
+        // Usuário logado: O TenantId dele é o próprio UID (conforme criamos no Login)
+        setAuthRole({
+          email: user.email,
+          role: 'merchant_owner',
+          businessType: 'ecommerce', 
+          tenantId: user.uid 
+        });
+      } else {
+        // Ninguém logado? Expulsa para a tela de login imediatamente.
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const tenantForHooks = authRole?.tenantId || 'loading';
+
+  const { products, addProduct, updateProduct, deleteProduct } = useProducts(tenantForHooks);
+  const { orders, updateStatus: updateOrderStatus } = useOrders(tenantForHooks);
   
   const [chats, setChats] = useState<ChatSession[]>(INITIAL_CHATS);
   const [settings, setSettings] = useState<TenantSettings>(INITIAL_SETTINGS);
@@ -101,7 +130,7 @@ export default function AdminDashboard() {
     name: '', description: '', price: 0, imageUrl: '', category: 'Eletrônicos', stock: 10, sku: '', isActive: true, ean: '', ncm: '', weight: 0, seoTitle: '', seoDescription: ''
   });
 
-  const [settingsForm, setSettingsForm] = useState({ 
+  const [settingsForm, setSettingsForm] = useState<any>({ 
     ...settings, 
     templateId: 'nativo_app', 
     primaryColor: '#0ea5e9',
@@ -116,7 +145,10 @@ export default function AdminDashboard() {
     maintenanceMode: false,
     enableAbandonedCart: false,
     abandonedCartDiscount: 5,
-    productLayout: 'list'
+    productLayout: 'list',
+    aboutText: '',
+    faq: [],
+    googleReviewUrl: ''
   });
   
   const [settingsSuccess, setSettingsSuccess] = useState(false);
@@ -195,7 +227,7 @@ export default function AdminDashboard() {
     const savedLayout = localStorage.getItem('velo_store_layout') || 'list';
     const savedTemplateId = localStorage.getItem('velo_store_templateId') || 'nativo_app';
 
-    setSettingsForm(prev => ({
+    setSettingsForm((prev: any) => ({
       ...prev,
       templateId: savedTemplateId,
       primaryColor: savedColor || prev.primaryColor,
@@ -297,7 +329,10 @@ export default function AdminDashboard() {
         storeMode: settingsForm.storeMode,
         maintenanceMode: settingsForm.maintenanceMode,
         productLayout: settingsForm.productLayout,
-        templateId: settingsForm.templateId
+        templateId: settingsForm.templateId,
+        aboutText: settingsForm.aboutText || '',
+        faq: settingsForm.faq || [],
+        googleReviewUrl: settingsForm.googleReviewUrl || ''
       }, { merge: true });
       
       alert("✅ SUCESSO! Dados salvos no Firebase.");
@@ -1482,6 +1517,80 @@ export default function AdminDashboard() {
                       </select>
                     </div>
 
+                    {/* NOVO CAMPO: SOBRE A EMPRESA */}
+                    <div className="space-y-2 md:col-span-2 pt-4 border-t border-gray-100">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                        <Store className="w-3.5 h-3.5 text-purple-500" /> Sobre a Empresa (História / Quem Somos)
+                      </label>
+                      <p className="text-[10px] text-slate-400 font-medium -mt-1">Aparece no rodapé de templates de "Serviços" para gerar confiança.</p>
+                      <textarea
+                        value={(settingsForm as any).aboutText || ''}
+                        onChange={(e) => setSettingsForm({...settingsForm, aboutText: e.target.value} as any)}
+                        className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-purple-500 transition-colors resize-none"
+                        rows={4}
+                        placeholder="Ex: Fundada em 2010, nossa empresa é especialista em resolver os seus problemas..."
+                      />
+                    </div>
+
+                    {/* NOVO CAMPO: FAQ (PERGUNTAS FREQUENTES) */}
+                    <div className="space-y-2 md:col-span-2 pt-4 border-t border-gray-100">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                          <MessageSquare className="w-3.5 h-3.5 text-blue-500" /> Perguntas Frequentes (FAQ)
+                        </label>
+                        <button 
+                          type="button"
+                          onClick={() => setSettingsForm((prev: any) => ({ ...prev, faq: [...(prev.faq || []), { question: '', answer: '' }] }))}
+                          className="text-[10px] font-black uppercase bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
+                        >
+                          + Adicionar Pergunta
+                        </button>
+                      </div>
+                      
+                      <div className="space-y-3 mt-3">
+                        {(!(settingsForm as any).faq || (settingsForm as any).faq.length === 0) && (
+                          <p className="text-xs text-slate-400 font-bold text-center p-4 bg-gray-50 rounded-xl border border-dashed border-gray-200">Nenhuma pergunta cadastrada.</p>
+                        )}
+                        {((settingsForm as any).faq || []).map((faqItem: any, idx: number) => (
+                          <div key={idx} className="bg-gray-50 p-4 rounded-xl border border-gray-200 relative group">
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                const newFaq = [...(settingsForm as any).faq];
+                                newFaq.splice(idx, 1);
+                                setSettingsForm({...settingsForm, faq: newFaq} as any);
+                              }}
+                              className="absolute top-3 right-3 text-red-400 hover:text-red-600 transition-colors p-1"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                            <input 
+                              type="text" 
+                              placeholder="Pergunta (Ex: Como funciona o orçamento?)" 
+                              className="w-full bg-white border border-gray-200 text-xs font-bold text-slate-800 p-2.5 rounded-lg mb-2 outline-none focus:border-blue-500"
+                              value={faqItem.question}
+                              onChange={(e) => {
+                                const newFaq = [...(settingsForm as any).faq];
+                                newFaq[idx].question = e.target.value;
+                                setSettingsForm({...settingsForm, faq: newFaq} as any);
+                              }}
+                            />
+                            <textarea 
+                              placeholder="Resposta..." 
+                              className="w-full bg-white border border-gray-200 text-xs font-medium text-slate-700 p-2.5 rounded-lg outline-none focus:border-blue-500 resize-none"
+                              rows={2}
+                              value={faqItem.answer}
+                              onChange={(e) => {
+                                const newFaq = [...(settingsForm as any).faq];
+                                newFaq[idx].answer = e.target.value;
+                                setSettingsForm({...settingsForm, faq: newFaq} as any);
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                   </div>
                 </div>
               )}
@@ -1632,6 +1741,26 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   </div>
+
+                  {/* NOVO: GOOGLE MEU NEGÓCIO (Reviews) */}
+                  <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-8 shadow-sm">
+                    <h3 className="text-slate-800 font-black uppercase tracking-wider text-sm mb-2 flex items-center gap-2">
+                      <FaGoogle className="text-blue-500" size={20}/> Google Maps & Avaliações
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium mb-6">Cole o link da sua empresa no Google para ativar os depoimentos na vitrine.</p>
+                    
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Link do Google Meu Negócio</label>
+                      <input 
+                        type="url" 
+                        value={(settingsForm as any).googleReviewUrl || ''}
+                        onChange={(e) => setSettingsForm({...settingsForm, googleReviewUrl: e.target.value} as any)}
+                        placeholder="Ex: https://maps.app.goo.gl/..."
+                        className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-blue-500 transition-colors mt-1"
+                      />
+                    </div>
+                  </div>
+
                 </div>
               )}
             </div>

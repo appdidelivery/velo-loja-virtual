@@ -6,10 +6,12 @@ import {
   ShoppingCart, Search, Menu, User, HeadphonesIcon, 
   ChevronDown, Star, ShieldCheck, MapPin, Phone, 
   X, Plus, Minus, Trash2, LayoutGrid, ClipboardList, ShoppingBag,
-  Scissors, Smartphone, Sofa, Wrench, Shirt, Gem, Beer, ChevronRight, Sparkles
+  Scissors, Smartphone, Sofa, Wrench, Shirt, Gem, Beer, ChevronRight, Sparkles,
+  Store, Calendar
 } from 'lucide-react';
 
 import { Product, TenantSettings } from '../types';
+import Reviews from '../components/Reviews';
 import { INITIAL_SETTINGS } from '../data/mokedData';
 import { useProducts } from '../hooks/useProducts';
 import { useOrders } from '../hooks/useOrders'; 
@@ -365,153 +367,8 @@ export default function CustomerCatalog({
             </header>
             <main className="flex-1 overflow-y-auto custom-scrollbar pb-32">
               
-              {/* BANNERS (ESCONDIDOS NO MODO NATIVO APP PARA FICAR IGUAL SACOLA ONLINE) */}
-              {templateId !== 'nativo_app' && (
-                <>
-                  {/* TARJA */}
-                  {currentTemplate.defaultContent.announcementBar && (
-                    <div style={{ backgroundColor: currentTemplate.primaryColor }} className="w-full text-center py-2 px-4 shadow-inner">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-white leading-none flex items-center justify-center gap-2">
-                        <Sparkles size={12}/> {currentTemplate.defaultContent.announcementBar}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* HERO BANNER E MINI BANNERS */}
-                  <div className="p-4 pb-2 bg-white rounded-b-3xl shadow-sm mb-4">
-                    <div className="w-full h-40 md:h-48 rounded-2xl overflow-hidden relative shadow-md group">
-                      <img src={currentTemplate.heroImage} className="w-full h-full object-cover" alt="Banner Principal" />
-                      <div className={`absolute inset-0 ${currentTemplate.category === 'servicos' ? 'bg-black/60' : 'bg-gradient-to-r from-black/80 to-transparent'} flex flex-col justify-center p-6`}>
-                        <h2 className="text-2xl font-black text-white leading-tight shadow-black drop-shadow-md max-w-[80%] uppercase">
-                          {currentTemplate.defaultContent.heroTitle}
-                        </h2>
-                        <p className="text-[10px] font-bold text-gray-200 mt-1 max-w-[70%]">
-                          {currentTemplate.defaultContent.heroSubtitle}
-                        </p>
-                      </div>
-                    </div>
-
-                    {currentTemplate.defaultContent.miniBanners && currentTemplate.defaultContent.miniBanners.length > 0 && (
-                      <div className="mt-4 flex gap-3 overflow-x-auto custom-scrollbar pb-2 snap-x">
-                        {currentTemplate.defaultContent.miniBanners.map((bannerUrl: string, idx: number) => (
-                          <div key={idx} className="w-64 shrink-0 h-24 bg-gray-100 rounded-xl overflow-hidden shadow-sm border border-gray-200 snap-center relative">
-                            <img src={bannerUrl} className="w-full h-full object-cover" alt="Mini Promo" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-2">
-                              <span style={{ backgroundColor: currentTemplate.primaryColor }} className="px-2 py-0.5 rounded text-[8px] font-black uppercase text-white tracking-widest shadow-sm">Oferta</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {/* CATEGORIAS (ESTILO SACOLA ONLINE) */}
-              <div className="px-4 py-2 mt-2">
-                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-4 pt-1 snap-x">
-                  <button 
-                    onClick={() => {setSelectedCategory('Todos'); setSearchQuery('');}}
-                    className={`px-5 py-2.5 rounded-full snap-center shrink-0 border transition-all duration-300 ${selectedCategory === 'Todos' ? 'text-white border-transparent font-bold shadow-md' : 'bg-white text-slate-600 border-slate-200 font-bold hover:bg-slate-100'}`}
-                    style={selectedCategory === 'Todos' ? { backgroundColor: themeColor, color: '#fff', borderColor: themeColor } : {}}
-                  >
-                    <span className="text-xs tracking-tight whitespace-nowrap">Todos</span>
-                  </button>
-
-                  {categories.map(cat => (
-                    <button 
-                        key={cat} 
-                        onClick={() => {setSelectedCategory(cat); setSearchQuery('');}}
-                        className={`px-5 py-2.5 rounded-full snap-center shrink-0 border transition-all duration-300 ${selectedCategory === cat ? 'text-white border-transparent font-bold shadow-md' : 'bg-white text-slate-600 border-slate-200 font-bold hover:bg-slate-100'}`}
-                        style={selectedCategory === cat ? { backgroundColor: themeColor, color: '#fff', borderColor: themeColor } : {}}
-                    >
-                      <span className="text-xs tracking-tight whitespace-nowrap">{cat}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* VITRINE DE PRODUTOS (ESTILO SACOLA ONLINE) */}
-              <div className="px-4 mt-2 mb-8">
-                {loading ? (
-                  <div className="flex flex-col items-center justify-center py-10">
-                    <div style={{ borderTopColor: currentTemplate.primaryColor }} className="w-8 h-8 border-4 border-gray-300 rounded-full animate-spin"></div>
-                  </div>
-                ) : paginatedProducts.length === 0 ? (
-                  <div className="text-center py-10 bg-white rounded-3xl border border-gray-200 p-8 shadow-sm">
-                    <Search size={40} className="mx-auto text-gray-300 mb-4"/>
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Nenhum item localizado.</p>
-                  </div>
-                ) : (
-                  <div className={productLayout === 'grid' ? "grid grid-cols-2 gap-3" : "flex flex-col gap-3"}>
-                    {paginatedProducts.map(product => {
-                      let hasStock = (product.stock && parseInt(product.stock as any) > 0) || !product.stock;
-                      return (
-                        <div 
-                          key={product.id} 
-                          onClick={() => { if(hasStock) { setSelectedVariationIndex(0); setSelectedProduct(product); } }} 
-                          className={`w-full bg-white rounded-[1.5rem] shadow-sm border border-gray-100 p-3 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] flex ${productLayout === 'grid' ? 'flex-col gap-2' : 'flex-row items-center gap-4'} ${!hasStock ? 'opacity-60 grayscale' : ''}`}
-                        >
-                          
-                          {/* Imagem */}
-                          <div className={`${productLayout === 'grid' ? 'w-full aspect-square' : 'w-[88px] h-[88px] flex-shrink-0'} relative rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 p-1 flex items-center justify-center`}>
-                            <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
-                            {(product as any).promotionalPrice > 0 && (
-                              <div className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-br-lg shadow-sm z-10">OFERTA</div>
-                            )}
-                            {!hasStock && <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center font-black text-white text-[10px] uppercase tracking-widest backdrop-blur-sm rounded-xl">Esgotado</div>}
-                          </div>
-                          
-                          {/* Info */}
-                          <div className={`flex-1 flex flex-col justify-start min-w-0 ${productLayout === 'grid' ? 'py-0' : 'py-1'}`}>
-                            <h3 className="font-bold text-slate-800 text-[13px] leading-tight line-clamp-2">{product.name}</h3>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 mb-3 truncate">{product.category}</p>
-                            
-                            <div className="flex items-center justify-between mt-auto">
-                              <div className="flex flex-col">
-                                  {(product as any).promotionalPrice > 0 ? (
-                                      <>
-                                          <span style={{ color: themeColor }} className="font-black text-[14px] leading-none">
-                                              R$ {Number((product as any).promotionalPrice).toFixed(2)}
-                                          </span>
-                                          <span className="text-[9px] font-bold text-slate-400 line-through mt-0.5">R$ {Number(product.price).toFixed(2)}</span>
-                                      </>
-                                  ) : (
-                                      <span style={{ color: themeColor }} className="font-black text-[14px] leading-none">
-                                          R$ {Number(product.price)?.toFixed(2)}
-                                      </span>
-                                  )}
-                              </div>
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); hasStock && handleAddToCart(product); }} 
-                                disabled={!hasStock}
-                                style={hasStock ? { backgroundColor: themeColor } : {}}
-                                className={`w-8 h-8 rounded-full flex items-center justify-center shadow-md active:scale-90 shrink-0 ${hasStock ? 'text-white' : 'bg-slate-300 text-slate-500'}`}
-                              >
-                                  <Plus size={18} strokeWidth={3} />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-
-                    {filteredActiveProducts.length > visibleCount && (
-                      <div className="py-4 flex justify-center">
-                        <button 
-                          onClick={handleLoadMore}
-                          disabled={isLoadingMore}
-                          style={{ backgroundColor: currentTemplate.primaryColor }}
-                          className="px-8 py-4 rounded-2xl text-xs font-black text-white uppercase tracking-widest flex items-center gap-2 hover:opacity-90 transition-opacity shadow-lg"
-                        >
-                          {isLoadingMore ? 'Carregando...' : 'Carregar mais itens'}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-              {templateId !== 'nativo_app' && (
+              {/* Oculta os mocks se não for serviço e se estiver no app nativo */}
+              {templateId !== 'nativo_app' && currentTemplate.category !== 'servicos' && (
                 <div className="mt-12 mb-8 mx-4 bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-sm">
                   <div className="p-6 border-b border-gray-100 bg-gradient-to-br from-gray-50 to-white">
                     <div className="flex items-center gap-2 mb-3">
@@ -532,7 +389,7 @@ export default function CustomerCatalog({
 
                   <div className="p-6 bg-slate-900 text-white">
                       <h3 className="text-[11px] font-black uppercase text-slate-300 tracking-widest flex items-center gap-2 mb-4">
-                        <MapPin size={16} style={{ color: currentTemplate.primaryColor }}/> Onde Estamos
+                        <MapPin size={16} style={{ color: themeColor }}/> Onde Estamos
                       </h3>
                       <div className="w-full h-32 rounded-xl overflow-hidden border border-slate-700 mb-4 bg-slate-800">
                         <iframe 
@@ -547,6 +404,73 @@ export default function CustomerCatalog({
                         CNPJ: {(settings as any).cnpj || STORE_TRUST_DATA.cnpj}
                       </p>
                     </div>
+                </div>
+              )}
+
+              {/* RODAPÉ E PROVA SOCIAL EXCLUSIVO PARA SERVIÇOS */}
+              {currentTemplate.category === 'servicos' && (
+                <div className="mt-8 mb-8 mx-4 flex flex-col gap-6">
+                   
+                   {/* 1. REVIEWS REAIS DO GOOGLE */}
+                   <React.Suspense fallback={<div className="text-center text-xs p-4 font-bold text-slate-400">Sincronizando Google Reviews...</div>}>
+                      <Reviews storeId={tenantId} />
+                   </React.Suspense>
+
+                   {/* 2. FAQ - PERGUNTAS FREQUENTES */}
+                   {(settings as any).faq && (settings as any).faq.length > 0 && (
+                     <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                        <h3 className="text-sm font-black uppercase text-slate-800 mb-4 flex items-center gap-2">
+                           <ClipboardList size={20} style={{ color: themeColor }} /> Dúvidas Frequentes
+                        </h3>
+                        <div className="space-y-3">
+                           {(settings as any).faq.map((item: any, idx: number) => (
+                             <details key={idx} className="group bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden [&_summary::-webkit-details-marker]:hidden">
+                               <summary className="flex items-center justify-between p-4 font-bold text-slate-700 cursor-pointer text-xs">
+                                 {item.question}
+                                 <ChevronDown size={16} className="text-slate-400 group-open:rotate-180 transition-transform flex-shrink-0" />
+                               </summary>
+                               <div className="p-4 pt-0 text-[11px] text-slate-500 font-medium leading-relaxed border-t border-slate-100/50">
+                                 {item.answer}
+                               </div>
+                             </details>
+                           ))}
+                        </div>
+                     </div>
+                   )}
+
+                   {/* 3. MAPA E ENDEREÇO REAIS */}
+                   <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-sm">
+                      <h3 className="text-[11px] font-black uppercase text-slate-300 tracking-widest flex items-center gap-2 mb-4">
+                        <MapPin size={16} style={{ color: themeColor }}/> Onde Estamos
+                      </h3>
+                      <div className="w-full h-32 rounded-xl overflow-hidden border border-slate-700 mb-4 bg-slate-800">
+                        <iframe 
+                          width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen 
+                          src={`https://maps.google.com/maps?q=${encodeURIComponent((settings as any).address || STORE_TRUST_DATA.address)}&output=embed`}
+                        ></iframe>
+                      </div>
+                      <p className="text-[10px] font-bold text-slate-300 mb-2 leading-tight">
+                        {(settings as any).address || STORE_TRUST_DATA.address}
+                      </p>
+                      {((settings as any).cnpj || STORE_TRUST_DATA.cnpj) && (
+                        <p className="text-[10px] font-bold text-slate-400">
+                          CNPJ: {(settings as any).cnpj || STORE_TRUST_DATA.cnpj}
+                        </p>
+                      )}
+                   </div>
+
+                   {/* 4. RODAPÉ LEGAL VELO LOJA VIRTUAL */}
+                   <div className="flex flex-col items-center justify-center text-center mt-4 mb-4">
+                      <div className="flex gap-4 justify-center text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-6">
+                          <a href="/politicas" className="hover:text-slate-600 transition-colors">Privacidade</a>
+                          <a href="/politicas" className="hover:text-slate-600 transition-colors">Termos</a>
+                      </div>
+                      <a href="https://velodelivery.com.br" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center opacity-40 hover:opacity-100 grayscale hover:grayscale-0 transition-all">
+                          {/* Usa a logo da Velo Delivery dinamicamente */}
+                          <img src="/logo retangular Velo Delivery.png" alt="Velo Delivery" className="h-5 w-auto mb-1.5" />
+                          <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Powered by Velo</p>
+                      </a>
+                   </div>
                 </div>
               )}
 

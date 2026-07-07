@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/services/firebase';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '@/services/firebase';
 import { useRouter } from 'next/navigation';
 import { ShoppingBag, AlertCircle, Loader2, Mail, Lock } from 'lucide-react';
 
@@ -12,6 +13,31 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const router = useRouter();
+
+  // --- MOTOR SAAS: VERIFICA OU CRIA A LOJA AUTOMATICAMENTE ---
+  const handleTenantSetup = async (user: any) => {
+    // Usamos o UID do usuário como o ID oficial da loja (Segurança e Performance)
+    const tenantRef = doc(db, 'tenants', user.uid);
+    const tenantSnap = await getDoc(tenantRef);
+
+    if (!tenantSnap.exists()) {
+      // Se não existe, é um Lojista NOVO! Criamos a loja grátis pra ele na hora.
+      await setDoc(tenantRef, {
+        ownerId: user.uid,
+        ownerEmail: user.email,
+        businessName: 'Nova Loja',
+        slogan: 'Catálogo Exclusivo',
+        storeMode: 'ecommerce',
+        templateId: 'nativo_app',
+        productLayout: 'list',
+        plan: 'gratis',
+        createdAt: serverTimestamp()
+      });
+      console.log("🏪 Nova loja criada com sucesso para:", user.email);
+    } else {
+      console.log("🏪 Loja existente carregada para:", user.email);
+    }
+  };
 
   // Login Tradicional (E-mail e Senha)
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -23,7 +49,7 @@ export default function LoginPage() {
     
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
-      console.log("Usuário logado via E-mail:", result.user.email);
+      await handleTenantSetup(result.user); // Roda a trava de criação da loja
       router.push('/admin');
     } catch (err: any) {
       console.error(err);
@@ -39,16 +65,10 @@ export default function LoginPage() {
     
     try {
       const provider = new GoogleAuthProvider();
-      // Força a seleção de conta caso o usuário tenha várias
       provider.setCustomParameters({ prompt: 'select_account' });
       
       const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      
-      console.log("Usuário logado:", user.email);
-
-      // Aqui, futuramente, faremos uma busca no Firestore para ver se esse e-mail 
-      // tem permissão. Por enquanto, se o login der certo, joga para o Admin:
+      await handleTenantSetup(result.user); // Roda a trava de criação da loja
       router.push('/admin');
       
     } catch (err: any) {
