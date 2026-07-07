@@ -5,40 +5,43 @@ export function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const hostname = req.headers.get('host') || '';
 
-  // Domínios do seu SaaS (Que não são de clientes)
+  // 1. Domínios Oficiais da Velo (Plataforma Mãe)
   const isMainPlatform = 
     hostname.includes('localhost:3000') || 
     hostname.includes('velovarejo.vercel.app') || 
     hostname === 'veloloja.com.br' || 
     hostname === 'www.veloloja.com.br';
 
-  // Libera o acesso ao painel e login normalmente
-  if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/login')) {
+  // 2. Libera rotas globais do sistema para funcionarem em QUALQUER domínio
+  if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/login') || url.pathname.startsWith('/api')) {
     return NextResponse.next();
   }
 
-  // === ROTEAMENTO MÁGICO MULTILOJA ===
+  // 3. Roteamento Mágico para Lojas com Domínio Próprio (White-label)
   if (!isMainPlatform) {
-    let tenantId = 'tenant_generico'; // Fallback
-    
-    // Aqui você vai adicionando seus futuros clientes
-    if (hostname === 'app.mamedespapeis.com.br') {
-      tenantId = 'tenant_mamedes123';
-    } 
-    else if (hostname === 'app.lojaexemplo.com.br') {
-      tenantId = 'tenant_exemplo999';
-    }
+    // Se o cliente tentar acessar a raiz do site (Ex: app.mamedes.com.br/)
+    if (url.pathname === '/') {
+      let tenantId = hostname; // Tenta usar o próprio domínio como ID
+      
+      // Mapeamento "Hardcoded" para os seus clientes antigos não caírem
+      if (hostname === 'app.mamedes.com.br') {
+        tenantId = 'mamedes';
+      } 
+      else if (hostname === 'app.sacolaonline.com.br') {
+        tenantId = 'sacolaonline'; // Confirme se o ID da sacola no firebase é esse mesmo
+      }
 
-    // Reescreve a URL por baixo dos panos (O cliente vê o domínio dele, mas o Next.js carrega a pasta /[loja])
-    return NextResponse.rewrite(new URL(`/${tenantId}`, req.url));
+      // Reescreve a URL por baixo dos panos (A URL fica limpa, mas carrega o Catálogo!)
+      return NextResponse.rewrite(new URL(`/${tenantId}`, req.url));
+    }
   }
 
   return NextResponse.next();
 }
 
-// Configura o middleware para rodar em todas as rotas (menos imagens e sistema interno)
+// Configura o middleware para rodar em todas as rotas (menos imagens, arquivos e sistema interno)
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.png|.*\\.svg).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.png|.*\\.jpg|.*\\.svg).*)',
   ],
 };
