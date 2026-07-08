@@ -156,6 +156,7 @@ export default function AdminDashboard() {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
   const [showAllCriticalStock, setShowAllCriticalStock] = useState(false);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
 
   // --- CÁLCULOS GLOBAIS E DE DASHBOARD ---
   const uniqueCategories = Array.from(new Set(products.map(p => p.category))).filter(Boolean).map(catName => {
@@ -240,6 +241,7 @@ export default function AdminDashboard() {
           whatsappNumber: dbData.whatsappNumber || '',
           primaryColor: dbData.primaryColor || '#0ea5e9',
           templateId: dbData.templateId || 'nativo_app',
+          banners: dbData.banners || [], // <-- LÊ OS BANNERS DO BANCO
           storeMode: dbData.storeMode || 'ecommerce',
           slug: dbData.slug || authRole.tenantId.substring(0, 6),
           address: dbData.address || '',
@@ -339,6 +341,7 @@ export default function AdminDashboard() {
         maintenanceMode: settingsForm.maintenanceMode,
         productLayout: settingsForm.productLayout,
         templateId: settingsForm.templateId,
+        banners: settingsForm.banners || [], // <-- SALVA OS BANNERS
         aboutText: settingsForm.aboutText || '',
         address: settingsForm.address || '',
         faq: settingsForm.faq || [],
@@ -1430,6 +1433,75 @@ export default function AdminDashboard() {
                           )}
                         </div>
                         <p className="text-[9px] text-slate-400 font-medium">Sua imagem será enviada diretamente para a nuvem.</p>
+                      </div>
+
+                      {/* NOVO: GERENCIADOR DE BANNERS CARROSSEL */}
+                      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden p-4 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] font-black uppercase text-slate-500">Banners (Até 5 Imagens)</label>
+                          <span className="text-[9px] font-bold text-slate-400">{(settingsForm.banners || []).length}/5</span>
+                        </div>
+                        <p className="text-[9px] text-slate-400 font-bold -mt-2 leading-tight">
+                          Recomendado: <b>1200x400px</b>. Máximo de <b>2MB</b> por imagem para não prejudicar o SEO (velocidade) da sua loja.
+                        </p>
+
+                        <div className="flex gap-2 overflow-x-auto py-2 custom-scrollbar">
+                          {/* Lista de Banners Atuais */}
+                          {(settingsForm.banners || []).map((bannerUrl: string, idx: number) => (
+                            <div key={idx} className="w-24 h-12 bg-gray-100 rounded-lg border border-gray-200 flex-shrink-0 relative group">
+                              <img src={bannerUrl} alt={`Banner ${idx}`} className="w-full h-full object-cover rounded-lg" />
+                              <button 
+                                onClick={() => {
+                                  const newBanners = [...settingsForm.banners];
+                                  newBanners.splice(idx, 1);
+                                  setSettingsForm({...settingsForm, banners: newBanners});
+                                }}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+
+                          {/* Botão de Adicionar (Some se tiver 5) */}
+                          {(settingsForm.banners || []).length < 5 && (
+                            <label className="w-24 h-12 flex-shrink-0 cursor-pointer bg-gray-50 border-2 border-dashed border-gray-200 hover:border-[#0055ff] hover:bg-blue-50 transition-colors rounded-lg flex flex-col items-center justify-center relative">
+                              {isUploadingBanner ? (
+                                <div className="w-4 h-4 border-2 border-[#0055ff] border-t-transparent rounded-full animate-spin"></div>
+                              ) : (
+                                <Plus className="w-5 h-5 text-slate-400" />
+                              )}
+                              <input 
+                                type="file" 
+                                accept="image/jpeg, image/png, image/webp" 
+                                disabled={isUploadingBanner}
+                                className="hidden" 
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  
+                                  // Trava de Otimização SEO (Máx 2MB)
+                                  if (file.size > 2 * 1024 * 1024) {
+                                    return alert("⚠️ Imagem muito pesada! O Google pune sites lentos. Comprima sua imagem para menos de 2MB antes de enviar.");
+                                  }
+
+                                  setIsUploadingBanner(true);
+                                  try {
+                                    const url = await uploadImageToCloudinary(file);
+                                    setSettingsForm((prev: any) => ({
+                                      ...prev,
+                                      banners: [...(prev.banners || []), url]
+                                    }));
+                                  } catch (error) {
+                                    alert("Erro de conexão ao enviar a imagem.");
+                                  } finally {
+                                    setIsUploadingBanner(false);
+                                  }
+                                }}
+                              />
+                            </label>
+                          )}
+                        </div>
                       </div>
 
                       {/* Acordeon Cores Funcional */}

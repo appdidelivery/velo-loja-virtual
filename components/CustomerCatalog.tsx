@@ -407,17 +407,36 @@ export default function CustomerCatalog({
                   )}
 
                   <div className="p-4 pb-2 bg-white rounded-b-3xl shadow-sm mb-4">
-                    <div className="w-full h-40 md:h-48 rounded-2xl overflow-hidden relative shadow-md group">
-                      <img src={currentTemplate.heroImage} className="w-full h-full object-cover" alt="Banner Principal" />
-                      <div className={`absolute inset-0 ${currentTemplate.category === 'servicos' ? 'bg-black/60' : 'bg-gradient-to-r from-black/80 to-transparent'} flex flex-col justify-center p-6`}>
-                        <h2 className="text-2xl font-black text-white leading-tight shadow-black drop-shadow-md max-w-[80%] uppercase">
-                          {currentTemplate.defaultContent.heroTitle}
-                        </h2>
-                        <p className="text-[10px] font-bold text-gray-200 mt-1 max-w-[70%]">
-                          {currentTemplate.defaultContent.heroSubtitle}
-                        </p>
-                      </div>
+                    {/* Carrossel de Banners (Snap Scroll) */}
+                    <div className="w-full h-40 md:h-48 rounded-2xl overflow-hidden relative shadow-md group flex overflow-x-auto snap-x snap-mandatory no-scrollbar">
+                      
+                      {(settings as any).banners && (settings as any).banners.length > 0 ? (
+                        (settings as any).banners.map((bannerUrl: string, idx: number) => (
+                          <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
+                            <img src={bannerUrl} loading={idx === 0 ? "eager" : "lazy"} className="w-full h-full object-cover" alt={`Oferta ${idx + 1} - ${storeName}`} />
+                          </div>
+                        ))
+                      ) : (
+                        <div className="w-full h-full flex-shrink-0 snap-center relative">
+                          <img src={currentTemplate.heroImage} className="w-full h-full object-cover" alt="Banner Principal" />
+                          <div className={`absolute inset-0 ${currentTemplate.category === 'servicos' ? 'bg-black/60' : 'bg-gradient-to-r from-black/80 to-transparent'} flex flex-col justify-center p-6`}>
+                            <h2 className="text-2xl font-black text-white leading-tight shadow-black drop-shadow-md max-w-[80%] uppercase">
+                              {currentTemplate.defaultContent.heroTitle}
+                            </h2>
+                            <p className="text-[10px] font-bold text-gray-200 mt-1 max-w-[70%]">
+                              {currentTemplate.defaultContent.heroSubtitle}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
                     </div>
+                    
+                    {(settings as any).banners && (settings as any).banners.length > 1 && (
+                      <p className="text-[8px] text-center font-bold text-slate-400 mt-1 uppercase tracking-widest animate-pulse">
+                        Arraste para o lado 👉
+                      </p>
+                    )}
                   </div>
                 </>
               )}
