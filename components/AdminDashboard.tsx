@@ -219,43 +219,40 @@ export default function AdminDashboard() {
     return o.status === orderFilter;
   });
 
-  // --- EFEITOS ---
+  // --- EFEITOS (CARREGAMENTO EM TEMPO REAL DO FIREBASE) ---
   useEffect(() => {
-    // 1. CARREGAMENTO REAL DO FIREBASE AO INVES DE LOCALSTORAGE
+    // Trava de segurança: Só busca no banco se já souber quem é o lojista
     if (!authRole || authRole.tenantId === 'loading') return;
 
-    const loadRealSettingsFromDatabase = async () => {
-      try {
-        const { getDoc, doc } = require('firebase/firestore');
-        const { db } = require('../services/firebase');
-        const docRef = doc(db, 'tenants', authRole.tenantId);
-        const docSnap = await getDoc(docRef);
+    const { onSnapshot, doc } = require('firebase/firestore');
+    const { db } = require('../services/firebase');
 
-        if (docSnap.exists()) {
-          const dbData = docSnap.data();
-          
-          setSettings(dbData as any);
-          
-          // Preenche o formulário com o que realmente está salvo no banco
-          setSettingsForm((prev: any) => ({
-            ...prev,
-            ...dbData,
-            // Garante que se o banco não tiver, não quebra os campos essenciais
-            businessName: dbData.businessName || prev.businessName,
-            slogan: dbData.slogan || prev.slogan,
-            whatsappNumber: dbData.whatsappNumber || prev.whatsappNumber,
-            primaryColor: dbData.primaryColor || prev.primaryColor,
-            templateId: dbData.templateId || prev.templateId,
-            storeMode: dbData.storeMode || prev.storeMode,
-            address: dbData.address || ''
-          }));
-        }
-      } catch (error) {
-        console.error("Erro ao carregar configurações reais do banco:", error);
+    // Liga o radar em tempo real. Tudo que estiver no banco reflete na tela na hora!
+    const unsubscribe = onSnapshot(doc(db, 'tenants', authRole.tenantId), (docSnap) => {
+      if (docSnap.exists()) {
+        const dbData = docSnap.data();
+        
+        setSettings(dbData as any);
+        
+        // Sobrescreve o formulário com a verdade absoluta do banco de dados
+        setSettingsForm((prev: any) => ({
+          ...prev,
+          ...dbData,
+          businessName: dbData.businessName || '', // Se não tiver no banco, fica vazio
+          slogan: dbData.slogan || '',
+          whatsappNumber: dbData.whatsappNumber || '',
+          primaryColor: dbData.primaryColor || '#0ea5e9',
+          templateId: dbData.templateId || 'nativo_app',
+          storeMode: dbData.storeMode || 'ecommerce',
+          slug: dbData.slug || authRole.tenantId.substring(0, 6),
+          address: dbData.address || '',
+          aboutText: dbData.aboutText || '',
+          storeNiche: dbData.storeNiche || 'varejo'
+        }));
       }
-    };
+    });
 
-    loadRealSettingsFromDatabase();
+    return () => unsubscribe();
   }, [authRole.tenantId]);
 
   // --- FUNÇÕES DE AÇÃO ---
@@ -1555,7 +1552,7 @@ export default function AdminDashboard() {
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nome da Loja</label>
                       <input 
                         type="text" 
-                        value={settingsForm.businessName}
+                        value={settingsForm.businessName || ''}
                         onChange={(e) => setSettingsForm({...settingsForm, businessName: e.target.value})}
                         className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-[#0055ff] transition-colors"
                       />
@@ -1580,10 +1577,10 @@ export default function AdminDashboard() {
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Slogan / Frase de Efeito</label>
                        <input 
                         type="text" 
-                        value={settingsForm.slogan}
+                        value={settingsForm.slogan || ''}
                         onChange={(e) => setSettingsForm({...settingsForm, slogan: e.target.value})}
                         className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-[#0055ff] transition-colors"
-                        placeholder="Ex: Embalagens para seu negócio"
+                        placeholder="Ex: Seu negócio, sua regra"
                       />
                     </div>
                     
