@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ShoppingBag, Settings, MessageSquare, Plus, Edit2, Trash2, 
-  Search, CheckCircle2, DollarSign, Eye, EyeOff, User, Sparkles,
+  Search, CheckCircle2, DollarSign, Eye, EyeOff, User, Sparkles, MapPin,
   Layers, AlertCircle, Send, HelpCircle, FileCheck, Percent,
   TrendingUp, X, CreditCard, Sun, Moon, ExternalLink, ChevronDown, List,
   Megaphone, ChevronLeft, ChevronRight, Filter, RefreshCw, ShieldCheck, LayoutTemplate, Package,
@@ -221,35 +221,42 @@ export default function AdminDashboard() {
 
   // --- EFEITOS ---
   useEffect(() => {
-    const savedColor = localStorage.getItem('velo_theme_color');
-    const savedLogo = localStorage.getItem('velo_store_logo');
-    const savedName = localStorage.getItem('velo_store_name');
-    const savedSlogan = localStorage.getItem('velo_store_slogan');
-    const savedWhatsapp = localStorage.getItem('velo_store_whatsapp');
-    const savedMpToken = localStorage.getItem('velo_mp_token');
-    const savedMetaPhoneId = localStorage.getItem('velo_meta_phone_id');
-    const savedMetaToken = localStorage.getItem('velo_meta_token');
-    const savedMode = localStorage.getItem('velo_store_mode');
-    const savedMaintenance = localStorage.getItem('velo_store_maintenance') === 'true';
-    const savedLayout = localStorage.getItem('velo_store_layout') || 'list';
-    const savedTemplateId = localStorage.getItem('velo_store_templateId') || 'nativo_app';
+    // 1. CARREGAMENTO REAL DO FIREBASE AO INVES DE LOCALSTORAGE
+    if (!authRole || authRole.tenantId === 'loading') return;
 
-    setSettingsForm((prev: any) => ({
-      ...prev,
-      templateId: savedTemplateId,
-      primaryColor: savedColor || prev.primaryColor,
-      logoUrl: savedLogo || prev.logoUrl,
-      businessName: savedName || prev.businessName,
-      slogan: savedSlogan || prev.slogan,
-      whatsappNumber: savedWhatsapp || prev.whatsappNumber,
-      mpAccessToken: savedMpToken || '',
-      metaPhoneId: savedMetaPhoneId || '',
-      metaApiToken: savedMetaToken || '',
-      storeMode: savedMode || 'orcamento',
-      maintenanceMode: savedMaintenance,
-      productLayout: savedLayout
-    }));
-  }, []);
+    const loadRealSettingsFromDatabase = async () => {
+      try {
+        const { getDoc, doc } = require('firebase/firestore');
+        const { db } = require('../services/firebase');
+        const docRef = doc(db, 'tenants', authRole.tenantId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const dbData = docSnap.data();
+          
+          setSettings(dbData as any);
+          
+          // Preenche o formulário com o que realmente está salvo no banco
+          setSettingsForm((prev: any) => ({
+            ...prev,
+            ...dbData,
+            // Garante que se o banco não tiver, não quebra os campos essenciais
+            businessName: dbData.businessName || prev.businessName,
+            slogan: dbData.slogan || prev.slogan,
+            whatsappNumber: dbData.whatsappNumber || prev.whatsappNumber,
+            primaryColor: dbData.primaryColor || prev.primaryColor,
+            templateId: dbData.templateId || prev.templateId,
+            storeMode: dbData.storeMode || prev.storeMode,
+            address: dbData.address || ''
+          }));
+        }
+      } catch (error) {
+        console.error("Erro ao carregar configurações reais do banco:", error);
+      }
+    };
+
+    loadRealSettingsFromDatabase();
+  }, [authRole.tenantId]);
 
   // --- FUNÇÕES DE AÇÃO ---
   const saveCategory = async (e: React.FormEvent) => {
@@ -339,6 +346,7 @@ export default function AdminDashboard() {
         productLayout: settingsForm.productLayout,
         templateId: settingsForm.templateId,
         aboutText: settingsForm.aboutText || '',
+        address: settingsForm.address || '',
         faq: settingsForm.faq || [],
         googleReviewUrl: settingsForm.googleReviewUrl || ''
       }, { merge: true });
@@ -1590,6 +1598,21 @@ export default function AdminDashboard() {
                             <option value="bebidas">Adega / Distribuidora de Bebidas</option>
                         </optgroup>
                       </select>
+                    </div>
+
+                    {/* NOVO CAMPO: ENDEREÇO FÍSICO (MAPA) */}
+                    <div className="space-y-2 md:col-span-2 pt-4 border-t border-gray-100">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                        <MapPin className="w-3.5 h-3.5 text-red-500" /> Endereço Físico (Para o Mapa na Vitrine)
+                      </label>
+                      <p className="text-[10px] text-slate-400 font-medium -mt-1">Deixe em branco se você atende apenas online. O mapa será ocultado automaticamente da vitrine.</p>
+                      <input 
+                        type="text" 
+                        value={(settingsForm as any).address || ''}
+                        onChange={(e) => setSettingsForm({...settingsForm, address: e.target.value} as any)}
+                        className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-red-500 transition-colors"
+                        placeholder="Ex: Rua das Flores, 123 - Centro, São Paulo - SP"
+                      />
                     </div>
 
                     {/* NOVO CAMPO: SOBRE A EMPRESA */}

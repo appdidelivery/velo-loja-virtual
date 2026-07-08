@@ -115,39 +115,37 @@ export default function CustomerCatalog({
 
   useEffect(() => {
     setMounted(true);
-    
-    const savedColor = localStorage.getItem('velo_theme_color');
-    const savedLogo = localStorage.getItem('velo_store_logo');
-    const savedName = localStorage.getItem('velo_store_name');
-    const savedSlogan = localStorage.getItem('velo_store_slogan');
-    const savedWhatsapp = localStorage.getItem('velo_store_whatsapp');
-    const savedLayout = localStorage.getItem('velo_store_layout');
-    
-    if (savedColor) setThemeColor(savedColor);
-    if (savedLogo) setStoreLogo(savedLogo);
-    if (savedName) setStoreName(savedName);
-    if (savedSlogan) setStoreSlogan(savedSlogan);
-    if (savedWhatsapp) setStoreWhatsapp(savedWhatsapp);
-    if (savedLayout) setProductLayout(savedLayout as 'list' | 'grid');
-
     let unsubscribe = () => {};
 
     const setupFirebase = async () => {
       if (tenantId) {
         const { onSnapshot, doc } = await import('firebase/firestore');
+        
+        // Escuta o Firebase em Tempo Real (Ignora LocalStorage completamente)
         unsubscribe = onSnapshot(
           doc(db, 'tenants', tenantId), 
           (docSnap) => {
             if (docSnap.exists()) {
               const data = docSnap.data();
+              
+              // Atualiza todos os estados baseados ÚNICA E EXCLUSIVAMENTE no banco de dados
               if (data.primaryColor) setThemeColor(data.primaryColor);
-              if (data.logoUrl) setStoreLogo(data.logoUrl);
-              if (data.businessName) setStoreName(data.businessName);
-              if (data.slogan) setStoreSlogan(data.slogan);
-              if (data.whatsappNumber) setStoreWhatsapp(data.whatsappNumber);
-              if (data.productLayout) setProductLayout(data.productLayout as 'list' | 'grid');
-              if (data.templateId) setTemplateId(data.templateId);
-              if (data.storeMode) setStoreMode(data.storeMode);
+              setStoreLogo(data.logoUrl || ''); // Se apagou no admin, apaga aqui
+              setStoreName(data.businessName || settings.businessName);
+              setStoreSlogan(data.slogan || 'Catálogo Exclusivo');
+              setStoreWhatsapp(data.whatsappNumber || settings.whatsappNumber);
+              setProductLayout((data.productLayout as 'list' | 'grid') || 'list');
+              setTemplateId(data.templateId || 'conveniencia_padrao');
+              setStoreMode(data.storeMode || 'ecommerce');
+              
+              // Sincroniza o Endereço para o Mapa (Se existir)
+              if(data.address) {
+                  (settings as any).address = data.address;
+              } else {
+                  (settings as any).address = '';
+              }
+              
+              if(data.cnpj) (settings as any).cnpj = data.cnpj;
             }
           }
         );
@@ -572,23 +570,27 @@ export default function CustomerCatalog({
                     </div>
                   </div>
 
-                  <div className="p-6 bg-slate-900 text-white">
-                      <h3 className="text-[11px] font-black uppercase text-slate-300 tracking-widest flex items-center gap-2 mb-4">
-                        <MapPin size={16} style={{ color: themeColor }}/> Onde Estamos
-                      </h3>
-                      <div className="w-full h-32 rounded-xl overflow-hidden border border-slate-700 mb-4 bg-slate-800">
-                        <iframe 
-                          width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen 
-                          src={`https://maps.google.com/maps?q=${encodeURIComponent((settings as any).address || STORE_TRUST_DATA.address)}&output=embed`}
-                        ></iframe>
+                  {(settings as any).address && (
+                    <div className="p-6 bg-slate-900 text-white">
+                        <h3 className="text-[11px] font-black uppercase text-slate-300 tracking-widest flex items-center gap-2 mb-4">
+                          <MapPin size={16} style={{ color: themeColor }}/> Onde Estamos
+                        </h3>
+                        <div className="w-full h-32 rounded-xl overflow-hidden border border-slate-700 mb-4 bg-slate-800">
+                          <iframe 
+                            width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen 
+                            src={`https://maps.google.com/maps?q=${encodeURIComponent((settings as any).address)}&output=embed`}
+                          ></iframe>
+                        </div>
+                        <p className="text-[10px] font-bold text-slate-300 mb-2 leading-tight">
+                          {(settings as any).address}
+                        </p>
+                        {((settings as any).cnpj || STORE_TRUST_DATA.cnpj) && (
+                          <p className="text-[10px] font-bold text-slate-400">
+                            CNPJ: {(settings as any).cnpj || STORE_TRUST_DATA.cnpj}
+                          </p>
+                        )}
                       </div>
-                      <p className="text-[10px] font-bold text-slate-300 mb-2 leading-tight">
-                        {(settings as any).address || STORE_TRUST_DATA.address}
-                      </p>
-                      <p className="text-[10px] font-bold text-slate-400">
-                        CNPJ: {(settings as any).cnpj || STORE_TRUST_DATA.cnpj}
-                      </p>
-                    </div>
+                  )}
                 </div>
               )}
 
@@ -621,25 +623,27 @@ export default function CustomerCatalog({
                      </div>
                    )}
 
-                   <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-sm">
-                      <h3 className="text-[11px] font-black uppercase text-slate-300 tracking-widest flex items-center gap-2 mb-4">
-                        <MapPin size={16} style={{ color: themeColor }}/> Onde Estamos
-                      </h3>
-                      <div className="w-full h-32 rounded-xl overflow-hidden border border-slate-700 mb-4 bg-slate-800">
-                        <iframe 
-                          width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen 
-                          src={`https://maps.google.com/maps?q=${encodeURIComponent((settings as any).address || STORE_TRUST_DATA.address)}&output=embed`}
-                        ></iframe>
-                      </div>
-                      <p className="text-[10px] font-bold text-slate-300 mb-2 leading-tight">
-                        {(settings as any).address || STORE_TRUST_DATA.address}
-                      </p>
-                      {((settings as any).cnpj || STORE_TRUST_DATA.cnpj) && (
-                        <p className="text-[10px] font-bold text-slate-400">
-                          CNPJ: {(settings as any).cnpj || STORE_TRUST_DATA.cnpj}
+                  {(settings as any).address && (
+                     <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-sm">
+                        <h3 className="text-[11px] font-black uppercase text-slate-300 tracking-widest flex items-center gap-2 mb-4">
+                          <MapPin size={16} style={{ color: themeColor }}/> Onde Estamos
+                        </h3>
+                        <div className="w-full h-32 rounded-xl overflow-hidden border border-slate-700 mb-4 bg-slate-800">
+                          <iframe 
+                            width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen 
+                            src={`https://maps.google.com/maps?q=${encodeURIComponent((settings as any).address)}&output=embed`}
+                          ></iframe>
+                        </div>
+                        <p className="text-[10px] font-bold text-slate-300 mb-2 leading-tight">
+                          {(settings as any).address}
                         </p>
-                      )}
-                   </div>
+                        {((settings as any).cnpj || STORE_TRUST_DATA.cnpj) && (
+                          <p className="text-[10px] font-bold text-slate-400">
+                            CNPJ: {(settings as any).cnpj || STORE_TRUST_DATA.cnpj}
+                          </p>
+                        )}
+                     </div>
+                   )}
 
                    <div className="flex flex-col items-center justify-center text-center mt-4 mb-4">
                       <div className="flex gap-4 justify-center text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-6">
