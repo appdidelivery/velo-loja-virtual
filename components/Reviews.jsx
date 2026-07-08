@@ -53,23 +53,25 @@ export default function Reviews({ storeId }) {
     const handleSyncGoogleReviews = async () => {
         setIsSyncing(true);
         try {
-            // AVISO: Sem uma API real do Google Places ou Outscraper, isso aqui sempre vai falhar.
-            // Troque a URL abaixo por uma API real futuramente.
-            const response = await fetch('/api/sync-google-reviews', { // Rota fictícia interna para evitar crash
+            // Agora ele chama o Backend do seu próprio Next.js
+            const response = await fetch('/api/sync-google-reviews', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ storeId })
-            }).catch(() => null);
+            });
 
-            if (!response || !response.ok) {
-                throw new Error("API de Sincronização não configurada.");
+            if (!response.ok) {
+                throw new Error("Erro de comunicação com o servidor.");
             }
             
-            alert("✅ Avaliações do Google sincronizadas com sucesso!");
-            window.location.reload();
+            const data = await response.json();
+            alert(`✅ Sucesso: ${data.message}`);
+            
+            // Recarrega para mostrar as novas avaliações do banco
+            window.location.reload(); 
         } catch (error) {
             console.error("Erro na sincronização:", error);
-            alert("⚠️ A API do Google ainda não foi conectada pelo desenvolvedor (Falta a Cloud Function).");
+            alert("⚠️ Erro ao buscar avaliações do Google. Verifique a integração.");
         } finally {
             setIsSyncing(false);
         }
