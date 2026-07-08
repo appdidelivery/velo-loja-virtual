@@ -87,6 +87,10 @@ export default function CustomerCatalog({
   const [complement, setComplement] = useState('');
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   
+  const [serviceDate, setServiceDate] = useState('');
+  const [serviceTime, setServiceTime] = useState('');
+  const [serviceAddress, setServiceAddress] = useState('');
+  
   const [layoutMode, setLayoutMode] = useState<'complete' | 'webview'>('webview');
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
 
@@ -237,30 +241,43 @@ export default function CustomerCatalog({
   };
 
   const handleWhatsAppCheckout = () => {
-    if (cart.length === 0 || !customerName.trim() || !customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim()) return;
+    const isService = (TEMPLATES.find((t: any) => t.id === templateId) || TEMPLATES[9]).category === 'servicos';
+    
+    if (cart.length === 0 || !customerName.trim()) return;
+    if (!isService && (!customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim())) return;
+    if (isService && (!serviceDate || !serviceTime || !serviceAddress.trim())) return;
 
-    let message = `🛒 *SOLICITAÇÃO DE ORÇAMENTO - ${storeName}*\n\n`;
+    let message = isService ? `📅 *SOLICITAÇÃO DE AGENDAMENTO - ${storeName}*\n\n` : `🛒 *SOLICITAÇÃO DE ORÇAMENTO - ${storeName}*\n\n`;
     
     message += `*Dados do Cliente:*\n`;
-    message += `👤 Empresa: ${customerName}\n`;
-    message += `📄 CNPJ: ${customerCnpj}\n`;
+    message += `👤 Nome/Empresa: ${customerName}\n`;
+    if (!isService) message += `📄 CNPJ: ${customerCnpj}\n`;
     message += `💳 Pagamento Desejado: ${paymentMethod}\n\n`;
     
-    message += `*Endereço para Cálculo de Frete:*\n`;
-    message += `📍 CEP: ${cep}\n`;
-    message += `📍 Endereço: ${address.street}, ${addressNumber} ${complement ? ' - ' + complement : ''}\n`;
-    message += `📍 Bairro/Cidade: ${address.neighborhood} - ${address.city}/${address.state}\n\n`;
+    if (isService) {
+      message += `*Detalhes do Agendamento:*\n`;
+      message += `🗓️ Data Desejada: ${serviceDate.split('-').reverse().join('/')}\n`;
+      message += `⏰ Horário: ${serviceTime}\n`;
+      message += `📍 Local do Serviço: ${serviceAddress}\n\n`;
+    } else {
+      message += `*Endereço para Cálculo de Frete:*\n`;
+      message += `📍 CEP: ${cep}\n`;
+      message += `📍 Endereço: ${address.street}, ${addressNumber} ${complement ? ' - ' + complement : ''}\n`;
+      message += `📍 Bairro/Cidade: ${address.neighborhood} - ${address.city}/${address.state}\n\n`;
+    }
 
     message += `*Itens Solicitados:*\n\n`;
 
     cart.forEach((item, index) => {
       message += `${index + 1}. *${item.product.name}*\n`;
       message += `   Qtd: ${item.quantity} un\n`;
-      message += `   Subtotal (Base): R$ ${(item.quantity * item.product.price).toFixed(2)}\n\n`;
+      message += `   Subtotal: R$ ${(item.quantity * item.product.price).toFixed(2)}\n\n`;
     });
 
-    message += `💰 *VALOR TOTAL DOS PRODUTOS: R$ ${cartTotalValue.toFixed(2)}*\n\n`;
-    message += `Aguardo o retorno para darmos andamento à negociação e inclusão do valor do frete.`;
+    message += `💰 *VALOR TOTAL PREVISTO: R$ ${cartTotalValue.toFixed(2)}*\n\n`;
+    message += isService 
+      ? `Aguardo o retorno para confirmarmos a disponibilidade da agenda.` 
+      : `Aguardo o retorno para darmos andamento à negociação e inclusão do valor do frete.`;
 
     const encodedMessage = encodeURIComponent(message);
     
@@ -993,11 +1010,47 @@ export default function CustomerCatalog({
                 {cart.length > 0 && (
                   <div className="mb-4 space-y-2 bg-gray-50 p-3 rounded-xl border border-gray-100 max-h-[40vh] overflow-y-auto custom-scrollbar">
                     <p className="text-[10px] font-black uppercase text-gray-500 tracking-wider mb-2">1. Dados Básicos</p>
-                    <input type="text" placeholder="Nome da Empresa / Contato *" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all" />
-                    <div className="grid grid-cols-2 gap-2"><input type="text" placeholder="CNPJ *" value={customerCnpj} onChange={(e) => setCustomerCnpj(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all" /><select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all text-gray-700"><option value="Pix">Pix</option><option value="Boleto">Boleto a prazo</option><option value="Cartão de Crédito">Cartão de Crédito</option></select></div>
-                    <p className="text-[10px] font-black uppercase text-gray-500 tracking-wider mt-4 mb-2">2. Endereço para Frete</p>
-                    <div className="relative"><input type="text" maxLength={8} placeholder="CEP (Apenas números) *" value={cep} onChange={handleCepChange} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all" />{isLoadingCep && <div className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 border-2 border-[#357b64] border-t-transparent rounded-full animate-spin"></div>}</div>
-                    {address.street && (<><input type="text" value={address.street} readOnly className="w-full h-9 px-3 text-xs bg-gray-100 text-gray-500 border border-gray-200 rounded outline-none cursor-not-allowed" placeholder="Rua / Logradouro" /><div className="grid grid-cols-3 gap-2"><input type="text" placeholder="Número *" value={addressNumber} onChange={(e) => setAddressNumber(e.target.value)} className="col-span-1 w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all" /><input type="text" placeholder="Complemento" value={complement} onChange={(e) => setComplement(e.target.value)} className="col-span-2 w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all" /></div><p className="text-[10px] text-gray-400 font-medium px-1 truncate">{address.neighborhood} - {address.city} / {address.state}</p></>)}
+                    <input type="text" placeholder="Nome Completo / Contato *" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all" />
+                    <div className={currentTemplate.category === 'servicos' ? "grid grid-cols-1 gap-2" : "grid grid-cols-2 gap-2"}>
+                      {currentTemplate.category !== 'servicos' && (
+                        <input type="text" placeholder="CNPJ *" value={customerCnpj} onChange={(e) => setCustomerCnpj(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all" />
+                      )}
+                      <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all text-gray-700">
+                        <option value="Pix">Pix</option>
+                        <option value="Cartão de Crédito">Cartão de Crédito</option>
+                        <option value="Dinheiro">Dinheiro no local</option>
+                        {currentTemplate.category !== 'servicos' && <option value="Boleto">Boleto a prazo</option>}
+                      </select>
+                    </div>
+
+                    {currentTemplate.category === 'servicos' ? (
+                      <>
+                        <p className="text-[10px] font-black uppercase text-gray-500 tracking-wider mt-4 mb-2">2. Dados do Agendamento</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input type="date" value={serviceDate} onChange={(e) => setServiceDate(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all text-gray-700" required />
+                          <input type="time" value={serviceTime} onChange={(e) => setServiceTime(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all text-gray-700" required />
+                        </div>
+                        <input type="text" placeholder="Endereço Completo do Serviço *" value={serviceAddress} onChange={(e) => setServiceAddress(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all mt-2" required />
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-[10px] font-black uppercase text-gray-500 tracking-wider mt-4 mb-2">2. Endereço para Frete</p>
+                        <div className="relative">
+                          <input type="text" maxLength={8} placeholder="CEP (Apenas números) *" value={cep} onChange={handleCepChange} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all" />
+                          {isLoadingCep && <div className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 border-2 border-[#357b64] border-t-transparent rounded-full animate-spin"></div>}
+                        </div>
+                        {address.street && (
+                          <>
+                            <input type="text" value={address.street} readOnly className="w-full h-9 px-3 text-xs bg-gray-100 text-gray-500 border border-gray-200 rounded outline-none cursor-not-allowed" placeholder="Rua / Logradouro" />
+                            <div className="grid grid-cols-3 gap-2">
+                              <input type="text" placeholder="Número *" value={addressNumber} onChange={(e) => setAddressNumber(e.target.value)} className="col-span-1 w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all" />
+                              <input type="text" placeholder="Complemento" value={complement} onChange={(e) => setComplement(e.target.value)} className="col-span-2 w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all" />
+                            </div>
+                            <p className="text-[10px] text-gray-400 font-medium px-1 truncate">{address.neighborhood} - {address.city} / {address.state}</p>
+                          </>
+                        )}
+                      </>
+                    )}
                   </div>
                 )}
                 <div className="flex justify-between text-sm text-gray-600 mb-1"><span>Subtotal ({cartTotalItems} itens)</span><span className="font-medium">R$ {cartTotalValue.toFixed(2)}</span></div>
@@ -1005,16 +1058,29 @@ export default function CustomerCatalog({
                 
                 <button 
                   onClick={handleWhatsAppCheckout}
-                  disabled={cart.length === 0 || !customerName.trim() || !customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim()}
-                  style={cart.length > 0 && customerName.trim() && customerCnpj.trim() && cep.length === 8 && addressNumber.trim() ? { backgroundColor: currentTemplate.primaryColor } : {}}
+                  disabled={
+                    cart.length === 0 || !customerName.trim() || 
+                    (currentTemplate.category !== 'servicos' && (!customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim())) ||
+                    (currentTemplate.category === 'servicos' && (!serviceDate || !serviceTime || !serviceAddress.trim()))
+                  }
+                  style={
+                    (cart.length > 0 && customerName.trim() && (
+                      (currentTemplate.category !== 'servicos' && customerCnpj.trim() && cep.length === 8 && addressNumber.trim()) ||
+                      (currentTemplate.category === 'servicos' && serviceDate && serviceTime && serviceAddress.trim())
+                    )) ? { backgroundColor: currentTemplate.primaryColor } : {}
+                  }
                   className={`w-full py-4 font-black rounded-xl text-xs flex items-center justify-center gap-2 transition-all uppercase tracking-widest ${
-                    cart.length === 0 || !customerName.trim() || !customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim()
+                    (cart.length === 0 || !customerName.trim() || 
+                    (currentTemplate.category !== 'servicos' && (!customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim())) ||
+                    (currentTemplate.category === 'servicos' && (!serviceDate || !serviceTime || !serviceAddress.trim())))
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'text-white shadow-xl hover:scale-[0.98]'
                   }`}
                 >
                   <Phone className="w-4 h-4 fill-current" />
-                  {storeMode === 'ecommerce' ? 'Finalizar Pedido (WhatsApp)' : 'Solicitar Orçamento'}
+                  {currentTemplate.category === 'servicos' 
+                    ? 'Agendar Visita/Serviço' 
+                    : (storeMode === 'ecommerce' ? 'Finalizar Pedido (WhatsApp)' : 'Solicitar Orçamento')}
                 </button>
 
               </div>
