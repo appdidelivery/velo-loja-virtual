@@ -23,7 +23,7 @@ import VeloSupportWidget from './VeloSupportWidget';
 import AdminChat from './AdminChat';
 import { useProducts } from '../hooks/useProducts';
 import { useOrders } from '../hooks/useOrders';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import GoogleIntegrationDashboard from './GoogleIntegrationDashboard';
 import { FaGoogle } from 'react-icons/fa6';
@@ -222,13 +222,10 @@ export default function AdminDashboard() {
   // --- EFEITOS (CARREGAMENTO EM TEMPO REAL DO FIREBASE) ---
   useEffect(() => {
     // Trava de segurança: Só busca no banco se já souber quem é o lojista
-    if (!authRole || authRole.tenantId === 'loading') return;
+    if (!authRole || !authRole.tenantId || authRole.tenantId === 'loading') return;
 
-    const { onSnapshot, doc } = require('firebase/firestore');
-    const { db } = require('../services/firebase');
-
-    // Liga o radar em tempo real. Tudo que estiver no banco reflete na tela na hora!
-    const unsubscribe = onSnapshot(doc(db, 'tenants', authRole.tenantId), (docSnap) => {
+    // Usamos a variável global 'db' e adicionamos (docSnap: any) para limpar o erro do TypeScript
+    const unsubscribe = onSnapshot(doc(db, 'tenants', authRole.tenantId), (docSnap: any) => {
       if (docSnap.exists()) {
         const dbData = docSnap.data();
         
@@ -238,7 +235,7 @@ export default function AdminDashboard() {
         setSettingsForm((prev: any) => ({
           ...prev,
           ...dbData,
-          businessName: dbData.businessName || '', // Se não tiver no banco, fica vazio
+          businessName: dbData.businessName || '',
           slogan: dbData.slogan || '',
           whatsappNumber: dbData.whatsappNumber || '',
           primaryColor: dbData.primaryColor || '#0ea5e9',
