@@ -8,57 +8,73 @@ export default function Reviews({ storeId }) {
     const [loading, setLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
     const [newRating, setNewRating] = useState(5);
-    const[comment, setComment] = useState('');
+    const [comment, setComment] = useState('');
     const [orderId, setOrderId] = useState('');
-    const[customerName, setCustomerName] = useState('');
+    const [customerName, setCustomerName] = useState('');
 
     useEffect(() => {
         const fetchReviews = async () => {
+            if (!storeId) {
+                setLoading(false);
+                return;
+            }
+
+            console.log("🔍 Buscando avaliações para a loja ID:", storeId); // LOG PARA DEBUG
+
             try {
-                // Busca as avaliações da loja (sem orderBy para evitar erro de Index no Firebase)
                 const q = query(
                     collection(db, "reviews"),
                     where("storeId", "==", storeId),
-                    limit(100) // Aumentado para gerar uma média mais real
+                    limit(100) 
                 );
                 const snapshot = await getDocs(q);
                 
-                // Mapeia e ordena localmente usando JavaScript (resolve o problema do Firebase)
                 const fetchedReviews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                fetchedReviews.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+                
+                // CORREÇÃO CRÍTICA: Ordenação segura de datas no Firebase
+                fetchedReviews.sort((a, b) => {
+                    const timeA = a.createdAt?.seconds || 0;
+                    const timeB = b.createdAt?.seconds || 0;
+                    return timeB - timeA; // Maior para menor (mais recente primeiro)
+                });
                 
                 setReviews(fetchedReviews);
+                console.log("✅ Avaliações encontradas:", fetchedReviews.length); // LOG PARA DEBUG
             } catch (error) {
-                console.error("Erro ao carregar avaliações:", error);
+                console.error("❌ Erro ao carregar avaliações do Firestore:", error);
             } finally {
-                // Desliga o aviso de carregando, mesmo se der erro
                 setLoading(false);
             }
         };
 
-        if (storeId) fetchReviews();
+        fetchReviews();
     }, [storeId]);
-const handleSyncGoogleReviews = async () => {
+
+    const handleSyncGoogleReviews = async () => {
         setIsSyncing(true);
         try {
-            // Substitua 'SUA_CLOUD_FUNCTION_URL' pela URL da sua Function que chama a API do Google
-            const response = await fetch('SUA_CLOUD_FUNCTION_URL', {
+            // AVISO: Sem uma API real do Google Places ou Outscraper, isso aqui sempre vai falhar.
+            // Troque a URL abaixo por uma API real futuramente.
+            const response = await fetch('/api/sync-google-reviews', { // Rota fictícia interna para evitar crash
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ storeId })
-            });
+            }).catch(() => null);
 
-            if (!response.ok) throw new Error("Falha ao sincronizar");
+            if (!response || !response.ok) {
+                throw new Error("API de Sincronização não configurada.");
+            }
             
-            alert("Avaliações do Google sincronizadas com sucesso!");
+            alert("✅ Avaliações do Google sincronizadas com sucesso!");
             window.location.reload();
         } catch (error) {
             console.error("Erro na sincronização:", error);
-            alert("Erro ao buscar avaliações do Google. Verifique a integração.");
+            alert("⚠️ A API do Google ainda não foi conectada pelo desenvolvedor (Falta a Cloud Function).");
         } finally {
             setIsSyncing(false);
         }
     };
+
     const handleSubmitReview = async (e) => {
         e.preventDefault();
         
@@ -67,34 +83,31 @@ const handleSyncGoogleReviews = async () => {
         }
         
         try {
-            // Salva a avaliação no banco
             await addDoc(collection(db, "reviews"), {
                 storeId,
                 orderId,
                 rating: newRating,
                 comment,
                 customerName,
+                source: 'site', // Adicionado para identificar que veio da loja
                 createdAt: serverTimestamp()
             });
             
-            alert("Avaliação enviada com sucesso! Muito obrigado.");
+            alert("✅ Avaliação enviada com sucesso! Muito obrigado.");
             
-            // Limpa o formulário
             setComment('');
             setOrderId('');
             setCustomerName('');
             setNewRating(5);
             
-            // Opcional: Recarregar a página para ver a avaliação (ou você pode adicionar ao state manualmente)
             window.location.reload();
 
         } catch (error) {
-            console.error("Erro ao salvar:", error);
+            console.error("❌ Erro ao salvar avaliação no banco:", error);
             alert("Erro ao enviar avaliação! Verifique sua conexão e tente novamente.");
         }
     };
 
-    // Cálculos para o SEO e para a nota visual
     const totalReviews = reviews.length;
     const averageRating = totalReviews > 0 
         ? (reviews.reduce((acc, curr) => acc + Number(curr.rating || 5), 0) / totalReviews).toFixed(1) 
@@ -102,8 +115,6 @@ const handleSyncGoogleReviews = async () => {
 
     return (
         <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-slate-100 mt-8 mb-4 relative">
-            
-            {/* Cabeçalho Visual de Avaliações */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                 <div>
                     <h2 className="text-2xl font-black italic uppercase text-slate-800 mb-1">Avaliações da Loja</h2>
@@ -122,7 +133,7 @@ const handleSyncGoogleReviews = async () => {
                     </div>
                 </div>
                 
-                {averageRating >= 4.0 && (
+                {averageRating >= 4.0 && totalReviews > 0 && (
                     <div className="flex flex-col gap-2">
                         <div className="bg-green-100 text-green-700 flex items-center gap-2 px-4 py-2 rounded-2xl border border-green-200 shadow-sm">
                             <ThumbsUp size={20} className="mb-1" />
@@ -132,7 +143,6 @@ const handleSyncGoogleReviews = async () => {
                             </div>
                         </div>
                         
-                        {/* Renderização Condicional Exclusiva para o Administrador */}
                         {window.location.pathname.includes('/admin') && (
                             <button 
                                 onClick={handleSyncGoogleReviews}
@@ -146,12 +156,14 @@ const handleSyncGoogleReviews = async () => {
                 )}
             </div>
             
-            {/* --- LISTAGEM DE AVALIAÇÕES --- */}
             <div className="space-y-4 mb-8 max-h-80 overflow-y-auto custom-scrollbar pr-2">
                 {loading ? (
                     <p className="text-slate-500 font-bold animate-pulse">Buscando avaliações...</p>
                 ) : reviews.length === 0 ? (
-                    <p className="text-slate-400 font-bold">Nenhuma avaliação ainda. Seja o primeiro a avaliar!</p>
+                    <div className="text-center p-6 bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
+                        <p className="text-slate-500 font-bold text-sm">Nenhuma avaliação ainda.</p>
+                        <p className="text-slate-400 font-medium text-xs mt-1">Preencha o formulário abaixo e seja o primeiro a avaliar!</p>
+                    </div>
                 ) : reviews.map(r => (
                     <div key={r.id} className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
                         <div className="flex justify-between items-center mb-3">
@@ -168,30 +180,13 @@ const handleSyncGoogleReviews = async () => {
                             </div>
                         </div>
                         <p className="text-sm text-slate-600 font-medium leading-relaxed">{r.comment}</p>
-                        
-                        {/* Foto da Avaliação (Se houver) */}
-                        {r.imageUrl && (
-                            <div className="mt-3 relative rounded-xl overflow-hidden border border-slate-200 inline-block">
-                                <img src={r.imageUrl} alt={`Foto da avaliação de ${r.customerName}`} className="h-24 w-auto object-cover rounded-xl" loading="lazy" />
-                            </div>
-                        )}
-                        
-                        {/* Resposta do Lojista */}
-                        {r.reply && (
-                            <div className="mt-4 bg-blue-50/60 p-3 rounded-xl border border-blue-100/50 relative ml-4">
-                                <div className="absolute -top-2 left-4 bg-white px-2 text-[8px] font-black text-blue-500 uppercase tracking-widest border border-blue-100 rounded-full shadow-sm">Resposta da Loja</div>
-                                <p className="text-xs text-blue-900 font-bold mt-1 leading-relaxed">{r.reply}</p>
-                            </div>
-                        )}
                     </div>
                 ))}
             </div>
 
-            {/* --- FORMULÁRIO PARA AVALIAR --- */}
             <form onSubmit={handleSubmitReview} className="pt-6 border-t border-slate-100 space-y-4">
                 <h3 className="font-black text-xs text-slate-400 uppercase tracking-widest mb-2">Deixe sua avaliação</h3>
                 
-                {/* Seleção de Estrelas */}
                 <div className="flex gap-2 mb-4">
                     {[1, 2, 3, 4, 5].map(star => (
                         <Star 
@@ -204,7 +199,6 @@ const handleSyncGoogleReviews = async () => {
                     ))}
                 </div>
 
-                {/* Campos do Formulário */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input 
                         type="text" 
