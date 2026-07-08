@@ -839,23 +839,58 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Nome do Produto</label>
-                  <input type="text" required value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 shadow-sm" placeholder="Ex: Cerveja Heineken 330ml" />
+                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Nome do Item / Serviço</label>
+                  <input type="text" required value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 shadow-sm" placeholder="Ex: Limpeza a Seco de Sofá" />
+                  <p className="text-[10px] text-[#0055ff] font-bold mt-1 ml-2 flex items-center gap-1">
+                      <Search size={12} /> Digite exatamente como seu cliente buscaria no Google.
+                  </p>
                 </div>
                 
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Descrição</label>
-                  <textarea rows={2} value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-medium text-sm text-slate-600 border border-gray-200 shadow-sm resize-none" placeholder="Detalhes do produto..."></textarea>
+                  <textarea rows={2} value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-medium text-sm text-slate-600 border border-gray-200 shadow-sm resize-none" placeholder="Detalhes do que está incluso..."></textarea>
+                  
+                  {/* MEDIDOR DE FORÇA DE SEO / IA */}
+                  {(() => {
+                      const desc = productForm.description || '';
+                      const length = desc.length;
+                      const hasKeywords = /(serviço|incluso|garantia|atendimento|especial|profissional|domicílio|qualidade|rápido|técnico|manutenção)/i.test(desc);
+                      
+                      let score = 0;
+                      let color = 'bg-slate-200';
+                      let text = 'Oculto para Buscas (Muito Curto)';
+                      let textColor = 'text-slate-500';
+
+                      if (length > 10) { score = 33; color = 'bg-red-400'; text = 'Fraco (Vitrine Muda)'; textColor = 'text-red-600'; }
+                      if (length > 30) { score = 66; color = 'bg-orange-400'; text = 'Bom (Aceitável)'; textColor = 'text-orange-600'; }
+                      if (length > 50 && hasKeywords) { score = 100; color = 'bg-green-500'; text = 'Excelente (Pronto para IAs)'; textColor = 'text-green-600'; }
+
+                      return (
+                          <div className="mt-2 px-2">
+                              <div className="flex justify-between items-center mb-1">
+                                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1">
+                                      <Sparkles size={10}/> Força para o Google:
+                                  </span>
+                                  <span className={`text-[9px] font-black uppercase ${textColor}`}>
+                                      {text}
+                                  </span>
+                              </div>
+                              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                  <div className={`h-full ${color} transition-all duration-500`} style={{ width: `${score}%` }}></div>
+                              </div>
+                          </div>
+                      );
+                  })()}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Preço (R$)</label>
-                    <input type="number" step="0.01" required value={productForm.price || ''} onChange={e => setProductForm({...productForm, price: Number(e.target.value)})} className="w-full p-4 bg-blue-50 rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-black text-xl text-blue-600 border border-blue-100" />
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Preço Base (R$) - Opcional</label>
+                    <input type="number" step="0.01" value={productForm.price || ''} onChange={e => setProductForm({...productForm, price: Number(e.target.value)})} className="w-full p-4 bg-blue-50 rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-black text-xl text-blue-600 border border-blue-100 placeholder:text-blue-300" placeholder="0.00" />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Estoque Inicial</label>
-                    <input type="number" required value={productForm.stock} onChange={e => setProductForm({...productForm, stock: Number(e.target.value)})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-slate-700 border border-gray-200 shadow-sm" />
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Estoque (Opcional)</label>
+                    <input type="number" value={productForm.stock === 0 ? '' : productForm.stock} onChange={e => setProductForm({...productForm, stock: Number(e.target.value)})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-slate-700 border border-gray-200 shadow-sm placeholder:text-slate-300" placeholder="∞" />
                   </div>
                 </div>
 
@@ -1962,24 +1997,59 @@ export default function AdminDashboard() {
                   <p className="text-[10px] font-bold text-slate-400">Clique na caixa acima para subir a foto.</p>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Nome do Produto</label>
-                  <input type="text" required value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 shadow-sm" placeholder="Ex: Cerveja Heineken 330ml" />
+               <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Nome do Item / Serviço</label>
+                  <input type="text" required value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 shadow-sm" placeholder="Ex: Limpeza a Seco de Sofá" />
+                  <p className="text-[10px] text-[#0055ff] font-bold mt-1 ml-2 flex items-center gap-1">
+                      <Search size={12} /> Digite exatamente como seu cliente buscaria no Google.
+                  </p>
                 </div>
                 
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Descrição</label>
-                  <textarea rows={2} value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-medium text-sm text-slate-600 border border-gray-200 shadow-sm resize-none" placeholder="Detalhes do produto..."></textarea>
+                  <textarea rows={2} value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-medium text-sm text-slate-600 border border-gray-200 shadow-sm resize-none" placeholder="Detalhes do que está incluso..."></textarea>
+                  
+                  {/* MEDIDOR DE FORÇA DE SEO / IA */}
+                  {(() => {
+                      const desc = productForm.description || '';
+                      const length = desc.length;
+                      const hasKeywords = /(serviço|incluso|garantia|atendimento|especial|profissional|domicílio|qualidade|rápido|técnico|manutenção)/i.test(desc);
+                      
+                      let score = 0;
+                      let color = 'bg-slate-200';
+                      let text = 'Oculto para Buscas (Muito Curto)';
+                      let textColor = 'text-slate-500';
+
+                      if (length > 10) { score = 33; color = 'bg-red-400'; text = 'Fraco (Vitrine Muda)'; textColor = 'text-red-600'; }
+                      if (length > 30) { score = 66; color = 'bg-orange-400'; text = 'Bom (Aceitável)'; textColor = 'text-orange-600'; }
+                      if (length > 50 && hasKeywords) { score = 100; color = 'bg-green-500'; text = 'Excelente (Pronto para IAs)'; textColor = 'text-green-600'; }
+
+                      return (
+                          <div className="mt-2 px-2">
+                              <div className="flex justify-between items-center mb-1">
+                                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1">
+                                      <Sparkles size={10}/> Força para o Google:
+                                  </span>
+                                  <span className={`text-[9px] font-black uppercase ${textColor}`}>
+                                      {text}
+                                  </span>
+                              </div>
+                              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                  <div className={`h-full ${color} transition-all duration-500`} style={{ width: `${score}%` }}></div>
+                              </div>
+                          </div>
+                      );
+                  })()}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Preço (R$)</label>
-                    <input type="number" step="0.01" required value={productForm.price || ''} onChange={e => setProductForm({...productForm, price: Number(e.target.value)})} className="w-full p-4 bg-blue-50 rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-black text-xl text-blue-600 border border-blue-100" />
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Preço Base (R$) - Opcional</label>
+                    <input type="number" step="0.01" value={productForm.price || ''} onChange={e => setProductForm({...productForm, price: Number(e.target.value)})} className="w-full p-4 bg-blue-50 rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-black text-xl text-blue-600 border border-blue-100 placeholder:text-blue-300" placeholder="0.00" />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Estoque Inicial</label>
-                    <input type="number" required value={productForm.stock} onChange={e => setProductForm({...productForm, stock: Number(e.target.value)})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-slate-700 border border-gray-200 shadow-sm" />
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Estoque (Opcional)</label>
+                    <input type="number" value={productForm.stock === 0 ? '' : productForm.stock} onChange={e => setProductForm({...productForm, stock: Number(e.target.value)})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-slate-700 border border-gray-200 shadow-sm placeholder:text-slate-300" placeholder="∞" />
                   </div>
                 </div>
 

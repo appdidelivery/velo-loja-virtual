@@ -304,7 +304,14 @@ export default function GoogleIntegrationDashboard({
                 <h2 className="text-4xl font-black text-slate-800 mb-2 uppercase italic">Google Meu Negócio</h2>
                 <p className="text-slate-500 font-bold mb-8 text-sm">Conecte sua loja para sincronizar dados e dominar as buscas locais.</p>
                 <div className="flex gap-4 justify-center">
-                    <button onClick={() => window.location.href = `/api/google-auth?storeId=${storeId}`} className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black uppercase shadow-lg hover:bg-blue-700">
+                    <button 
+                        onClick={() => {
+                            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                            const url = isLocal ? `http://localhost:3000/api/google-auth?storeId=${storeId}` : `https://${window.location.host}/api/google-auth?storeId=${storeId}`;
+                            window.location.href = url;
+                        }} 
+                        className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black uppercase shadow-lg hover:bg-blue-700"
+                    >
                         Conectar Conta Google
                     </button>
                     <a href="https://business.google.com/create" target="_blank" rel="noopener noreferrer" className="bg-slate-100 text-slate-700 px-8 py-4 rounded-2xl font-black uppercase shadow-sm hover:bg-slate-200">

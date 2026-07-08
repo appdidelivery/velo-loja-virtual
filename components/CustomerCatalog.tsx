@@ -1015,17 +1015,17 @@ export default function CustomerCatalog({
                   <div className="mb-4 space-y-2 bg-gray-50 p-3 rounded-xl border border-gray-100 max-h-[40vh] overflow-y-auto custom-scrollbar">
                     <p className="text-[10px] font-black uppercase text-gray-500 tracking-wider mb-2">1. Dados Básicos</p>
                     <input type="text" placeholder="Nome Completo / Contato *" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all" />
-                    <div className={currentTemplate.category === 'servicos' ? "grid grid-cols-1 gap-2" : "grid grid-cols-2 gap-2"}>
-                      {currentTemplate.category !== 'servicos' && (
+                    {currentTemplate.category !== 'servicos' && (
+                      <div className="grid grid-cols-2 gap-2">
                         <input type="text" placeholder="CNPJ *" value={customerCnpj} onChange={(e) => setCustomerCnpj(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all" />
-                      )}
-                      <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all text-gray-700">
-                        <option value="Pix">Pix</option>
-                        <option value="Cartão de Crédito">Cartão de Crédito</option>
-                        <option value="Dinheiro">Dinheiro no local</option>
-                        {currentTemplate.category !== 'servicos' && <option value="Boleto">Boleto a prazo</option>}
-                      </select>
-                    </div>
+                        <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all text-gray-700">
+                          <option value="Pix">Pix</option>
+                          <option value="Cartão de Crédito">Cartão de Crédito</option>
+                          <option value="Dinheiro">Dinheiro no local</option>
+                          <option value="Boleto">Boleto a prazo</option>
+                        </select>
+                      </div>
+                    )}
 
                     {currentTemplate.category === 'servicos' ? (
                       <>
