@@ -1,33 +1,43 @@
 import { NextResponse } from 'next/server';
 import { doc, setDoc } from 'firebase/firestore';
-import { db } from '@/services/firebase'; // Ajuste este import conforme o caminho do seu firebase.ts
+import { db } from '@/services/firebase'; // Ajuste o caminho do seu firebase
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
+    
+    // Pega o ID da loja na ida (storeId) ou na volta do Google (state)
     const storeId = searchParams.get('storeId') || searchParams.get('state');
     const code = searchParams.get('code');
 
-    // Chaves que você configurou no painel do Google Cloud Console (.env.local)
+    // Chaves do Google Cloud Console
     const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
     const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
     
-    // Captura dinâmica da URL base (suporta localhost e produção Vercel)
-    const protocol = request.headers.get('x-forwarded-proto') || 'https';
-    const host = request.headers.get('host');
-    const REDIRECT_URI = `${protocol}://${host}/google-auth`;
+    // Captura dinâmica da URL (localhost ou produção)
+    const host = request.headers.get('host') || new URL(request.url).host;
+    const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+    const protocol = isLocal ? 'http' : 'https';
+    
+    // 🚨 A MÁGICA AQUI: O Redirect URI aponta de volta para ESSE MESMO ARQUIVO!
+    const REDIRECT_URI = `${protocol}://${host}/api/google-auth`;
 
     if (!storeId) {
-        return NextResponse.json({ error: 'Store ID (Tenant ID) é obrigatório para iniciar a integração.' }, { status: 400 });
+        return NextResponse.json({ error: 'Store ID ausente.' }, { status: 400 });
     }
 
-    // PASSO A: Lojista clicou em conectar no painel. Gerar URL e redirecionar para a tela do Google.
+    // ==========================================
+    // PASSO A: IDA (Lojista clicou em Conectar)
+    // ==========================================
     if (!code) {
         const scope = encodeURIComponent('https://www.googleapis.com/auth/business.manage openid profile email');
         const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&state=${storeId}`;
+        
         return NextResponse.redirect(authUrl);
     }
 
-    // PASSO B: Retorno do Google. Trocar o "code" recebido pelos Tokens de Acesso.
+    // ==========================================
+    // PASSO B: VOLTA (Google devolveu o código)
+    // ==========================================
     try {
         const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
             method: 'POST',
@@ -47,13 +57,13 @@ export async function GET(request: Request) {
             throw new Error(tokenData.error_description || 'Erro ao obter tokens da API do Google');
         }
 
-        // PASSO C: Salvar Tokens no documento de Settings do Tenant no Firestore
+        // Salva os Tokens no Firebase da loja correspondente
         const settingsRef = doc(db, 'settings', storeId);
         await setDoc(settingsRef, {
             integrations: {
                 google_my_business: {
                     accessToken: tokenData.access_token,
-                    refreshToken: tokenData.refresh_token || null, // Refresh Token só vem na 1ª vez que o cliente autoriza
+                    refreshToken: tokenData.refresh_token || null,
                     expiresIn: tokenData.expires_in,
                     tokenType: tokenData.token_type,
                     connectedAt: new Date().toISOString(),
@@ -62,11 +72,11 @@ export async function GET(request: Request) {
             }
         }, { merge: true });
 
-        // PASSO D: Redirecionar o lojista de volta para o painel de administração da Velo Loja Virtual
-        return NextResponse.redirect(`${protocol}://${host}/admin?tab=google_business&gmb_status=success`);
+        // Manda o lojista de volta pro painel, na aba do Google!
+        return NextResponse.redirect(`${protocol}://${host}/admin`);
 
     } catch (error: any) {
         console.error('Erro na autenticação OAuth com Google Meu Negócio:', error);
-        return NextResponse.redirect(`${protocol}://${host}/admin?tab=google_business&gmb_status=error`);
+        return NextResponse.redirect(`${protocol}://${host}/admin`);
     }
 }
