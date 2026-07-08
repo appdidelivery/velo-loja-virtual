@@ -1442,7 +1442,7 @@ export default function AdminDashboard() {
                           <span className="text-[9px] font-bold text-slate-400">{(settingsForm.banners || []).length}/5</span>
                         </div>
                         <p className="text-[9px] text-slate-400 font-bold -mt-2 leading-tight">
-                          Recomendado: <b>1200x400px</b>. Máximo de <b>2MB</b> por imagem para não prejudicar o SEO (velocidade) da sua loja.
+                          Recomendado: <b>800x400px</b> (Formato Celular). Máximo de <b>2MB</b> por imagem para não prejudicar a velocidade da sua loja.
                         </p>
 
                         <div className="flex gap-2 overflow-x-auto py-2 custom-scrollbar">
