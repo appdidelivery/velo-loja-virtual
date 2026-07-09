@@ -28,7 +28,7 @@ export function middleware(req: NextRequest) {
         tenantId = 'mamedes';
       } 
       else if (hostname === 'app.sacolaonline.com.br') {
-        tenantId = 'sacolaonline'; // Confirme se o ID da sacola no firebase é esse mesmo
+        tenantId = 'app.sacolaonline.com.br'; // ID EXATO do documento no Firebase
       }
 
       // Reescreve a URL por baixo dos panos (A URL fica limpa, mas carrega o Catálogo!)
