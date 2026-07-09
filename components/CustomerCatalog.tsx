@@ -320,15 +320,15 @@ export default function CustomerCatalog({
     const productSchema = activeProducts.map(p => ({
       "@context": "https://schema.org/",
       "@type": "Product",
-      "name": p.name,
-      "image": [p.imageUrl],
-      "description": p.description,
-      "sku": p.sku,
+      "name": p.name || 'Produto',
+      "image": [p.imageUrl || ''],
+      "description": p.description || '',
+      "sku": p.sku || '',
       "offers": {
         "@type": "Offer",
         "priceCurrency": "BRL",
-        "price": p.price.toString(),
-        "availability": p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        "price": (p.price || 0).toString(),
+        "availability": (p.stock && Number(p.stock) > 0) ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       }
     }));
 
@@ -337,7 +337,14 @@ export default function CustomerCatalog({
 
   if (!mounted) return null;
 
-  const currentTemplate = TEMPLATES.find((t: any) => t.id === templateId) || TEMPLATES[9]; 
+  // PROTEÇÃO SÊNIOR: Evita crash caso o template salvo na loja antiga não exista mais
+  const currentTemplate = TEMPLATES?.find((t: any) => t.id === templateId) || 
+                          TEMPLATES?.[0] || 
+                          { category: 'ecommerce', fontFamily: 'sans-serif', primaryColor: '#357b64', defaultContent: {} };
+
+  // PROTEÇÃO SÊNIOR: Garante que propriedades de string essenciais nunca sejam nulas
+  if (!storeName) setStoreName('Loja Virtual');
+  if (!storeSlogan) setStoreSlogan('Catálogo Exclusivo');
 
   return (
     <div 
