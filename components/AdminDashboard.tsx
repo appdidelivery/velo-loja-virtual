@@ -1110,7 +1110,9 @@ export default function AdminDashboard() {
                           <h3 className={`font-black text-sm md:text-base leading-tight truncate ${p.isActive ? 'text-slate-800' : 'text-slate-400 line-through'}`}>{p.name}</h3>
                         </div>
                         <div className='flex items-center gap-2 mt-1'>
-                          <p className="text-blue-600 font-black text-lg">R$ {Number(p.price)?.toFixed(2)}</p>
+                          <p className="text-blue-600 font-black text-lg">
+                            {Number(p.price) > 0 ? `R$ ${Number(p.price).toFixed(2)}` : 'Sob Consulta'}
+                          </p>
                         </div>
                         <p className="text-[10px] font-bold mt-2 uppercase tracking-widest text-slate-400">Estoque: {p.stock}</p>
                       </div>
@@ -1139,10 +1141,12 @@ export default function AdminDashboard() {
               )}
             </div>
           )}
+
+          {activePanel === 'orders' && (
             <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-8 space-y-6 max-w-6xl mx-auto shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-gray-50 pb-6">
                  <h2 className="text-2xl font-black italic uppercase text-[#111827]">Pedidos</h2>
-              </div>
+                 </div>
               <div className="space-y-4">
                 {filteredOrders.length === 0 ? (
                   <div className="bg-gray-50 py-16 rounded-2xl text-center text-slate-400 font-bold border-2 border-dashed border-gray-200">Nenhum pedido localizado.</div>
