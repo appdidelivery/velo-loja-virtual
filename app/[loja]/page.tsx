@@ -58,7 +58,8 @@ export default async function LojaPage({ params }: Props) {
   const resolvedParams = await params;
   const slugOrId = resolvedParams.loja;
 
-  if (!slugOrId || slugOrId === 'favicon.ico' || slugOrId.includes('.')) return null;
+  // PROTEÇÃO CIRÚRGICA: Permite domínios com ponto, mas bloqueia arquivos de sistema
+  if (!slugOrId || slugOrId === 'favicon.ico' || slugOrId.endsWith('.png') || slugOrId.endsWith('.xml') || slugOrId.endsWith('.txt')) return null;
 
  try {
     const q = query(collection(db, 'tenants'), where('slug', '==', slugOrId));
