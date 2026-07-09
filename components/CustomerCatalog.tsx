@@ -685,11 +685,11 @@ export default function CustomerCatalog({
 
               {/* RODAPÉ GLOBAL (APARECE EM TODOS OS TEMPLATES DO WEBVIEW) */}
               <div className="mt-8 mb-8 mx-4 flex flex-col items-center justify-center text-center border-t border-gray-100 pt-8">
-                  {((settings as any).cnpj || STORE_TRUST_DATA.cnpj) && (
-                      <p className="text-[10px] font-bold text-slate-400 mb-4">CNPJ: {(settings as any).cnpj || STORE_TRUST_DATA.cnpj}</p>
+                  {(storeCnpj || STORE_TRUST_DATA.cnpj) && (
+                      <p className="text-[10px] font-bold text-slate-400 mb-4">CNPJ: {storeCnpj || STORE_TRUST_DATA.cnpj}</p>
                   )}
                   <div className="flex gap-4 justify-center text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-6">
-                      <a href="/politicas" className="hover:text-slate-600 transition-colors">Privacidade</a>
+                       <a href="/politicas" className="hover:text-slate-600 transition-colors">Privacidade</a>
                       <a href="/politicas" className="hover:text-slate-600 transition-colors">Termos</a>
                   </div>
                   <a href="https://veloloja.com.br" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center opacity-40 hover:opacity-100 grayscale hover:grayscale-0 transition-all">
