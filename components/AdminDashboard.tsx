@@ -7,7 +7,7 @@ import {
   Layers, AlertCircle, Send, HelpCircle, FileCheck, Percent,
   TrendingUp, X, CreditCard, Sun, Moon, ExternalLink, ChevronDown, List,
   Megaphone, ChevronLeft, ChevronRight, Filter, RefreshCw, ShieldCheck, LayoutTemplate, Package,
-  Store 
+  Store, UploadCloud
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -130,7 +130,7 @@ export default function AdminDashboard() {
   const [categoryForm, setCategoryForm] = useState({ name: '', order: 1, isActive: true });
 
   const [productForm, setProductForm] = useState({
-    name: '', description: '', price: 0, imageUrl: '', category: 'Eletrônicos', stock: 10, sku: '', isActive: true, ean: '', ncm: '', weight: 0, seoTitle: '', seoDescription: ''
+    name: '', description: '', price: 0, imageUrl: '', videoUrl: '', category: 'Eletrônicos', stock: 10, sku: '', isActive: true, ean: '', ncm: '', weight: 0, seoTitle: '', seoDescription: ''
   });
 
   const [settingsForm, setSettingsForm] = useState<any>({ 
@@ -275,6 +275,7 @@ export default function AdminDashboard() {
       setIsCategoryModalOpen(false);
   };
 
+  // FUNÇÃO RESTAURADA: Faz o upload tanto de Imagens quanto de Vídeos (.mp4)
   const uploadImageToCloudinary = async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -284,14 +285,16 @@ export default function AdminDashboard() {
     if (!uploadPreset || !cloudName) throw new Error("Chaves do Cloudinary ausentes.");
     formData.append('upload_preset', uploadPreset); 
     
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+    // MUDANÇA SÊNIOR: Alterado de /image/upload para /auto/upload para aceitar vídeos!
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
       method: 'POST', body: formData
     });
     const data = await res.json();
     if (data.secure_url) return data.secure_url;
-    throw new Error("Erro no upload da imagem");
+    throw new Error("Erro no upload da imagem/vídeo");
   };
 
+  // REMOVIDA A VARIÁVEL DUPLICADA AQUI. MANTÉM SÓ A FUNÇÃO:
   const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -303,6 +306,24 @@ export default function AdminDashboard() {
       alert("Falha de conexão com a nuvem de imagens.");
     } finally {
       setIsUploadingProductImage(false);
+    }
+  };
+
+  const [isUploadingProductVideo, setIsUploadingProductVideo] = useState(false);
+
+  const handleProductVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingProductVideo(true);
+    try {
+      // O Cloudinary aceita vídeos usando a mesma função genérica
+      const url = await uploadImageToCloudinary(file);
+      setProductForm({ ...productForm, videoUrl: url });
+      alert("✅ Vídeo enviado com sucesso!");
+    } catch (error) {
+      alert("❌ Erro ao subir vídeo. Tente um arquivo menor (até 10MB).");
+    } finally {
+      setIsUploadingProductVideo(false);
     }
   };
 
@@ -460,13 +481,13 @@ export default function AdminDashboard() {
 
   const openNewProductModal = () => {
     setEditingProduct(null);
-    setProductForm({ name: '', description: '', price: 0, imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600', category: 'Geral', stock: 12, sku: `PROD-${Math.floor(Math.random() * 9000 + 1000)}`, isActive: true, ean: '', ncm: '', weight: 0, seoTitle: '', seoDescription: '' });
+    setProductForm({ name: '', description: '', price: 0, imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600', videoUrl: '', category: 'Geral', stock: 12, sku: `PROD-${Math.floor(Math.random() * 9000 + 1000)}`, isActive: true, ean: '', ncm: '', weight: 0, seoTitle: '', seoDescription: '' });
     setIsProductModalOpen(true);
   };
 
   const openEditProductModal = (prod: Product) => {
     setEditingProduct(prod);
-    setProductForm({ name: prod.name, description: prod.description, price: prod.price, imageUrl: prod.imageUrl, category: prod.category, stock: prod.stock, sku: prod.sku, isActive: prod.isActive, ean: prod.ean || '', ncm: prod.ncm || '', weight: prod.weight || 0, seoTitle: prod.seoTitle || '', seoDescription: prod.seoDescription || '' });
+    setProductForm({ name: prod.name, description: prod.description, price: prod.price, imageUrl: prod.imageUrl, videoUrl: (prod as any).videoUrl || '', category: prod.category, stock: prod.stock, sku: prod.sku, isActive: prod.isActive, ean: prod.ean || '', ncm: prod.ncm || '', weight: prod.weight || 0, seoTitle: prod.seoTitle || '', seoDescription: prod.seoDescription || '' });
     setIsProductModalOpen(true);
   };
 
@@ -2032,9 +2053,36 @@ export default function AdminDashboard() {
                   <p className="text-[10px] font-bold text-slate-400">Clique na caixa acima para subir a foto.</p>
                 </div>
 
+                {/* --- UPLOAD DE VÍDEO VERTICAL (REELS/TIKTOK) --- */}
+                <div className="pt-4 mt-2 border-t border-slate-100">
+                    <label className="text-xs font-black text-blue-600 uppercase tracking-widest ml-2 flex items-center gap-2 mb-3">
+                        🎥 Vídeo do Produto (Estilo Reels)
+                    </label>
+                    <div className="space-y-3">
+                        {productForm.videoUrl && (
+                            <div className="relative rounded-2xl overflow-hidden border-2 border-blue-100 aspect-[9/16] w-32 mx-auto bg-slate-900">
+                                <video src={productForm.videoUrl} muted autoPlay loop playsInline className="w-full h-full object-cover opacity-60" />
+                                <button type="button" onClick={() => setProductForm({ ...productForm, videoUrl: '' })} className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 text-white font-black text-[10px] uppercase hover:bg-red-600/80 transition-all">
+                                    <Trash2 size={16} className="mb-1" /> Remover
+                                </button>
+                            </div>
+                        )}
+                        <label className={`w-full p-4 rounded-2xl flex items-center justify-center gap-2 font-bold cursor-pointer transition-all border-2 ${isUploadingProductVideo ? 'bg-blue-50 border-blue-400 text-blue-400 pointer-events-none' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 shadow-sm'}`}>
+                            <input type="file" accept="video/mp4,video/mov,video/webm" onChange={handleProductVideoUpload} className="hidden" />
+                            {isUploadingProductVideo ? (
+                                <> <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div> <span className="text-xs uppercase font-black">Enviando...</span> </>
+                            ) : (
+                                <> <UploadCloud size={20} /> <span className="text-xs uppercase font-black">{productForm.videoUrl ? 'Trocar Arquivo MP4' : 'Subir Vídeo Vertical (MP4)'}</span> </>
+                            )}
+                        </label>
+                        <input type="url" placeholder="Ou cole o link direto (https://...)" className="w-full p-4 bg-slate-50 rounded-2xl outline-none font-bold text-xs border border-slate-200 focus:ring-2 ring-blue-500 transition-all text-slate-600" value={productForm.videoUrl || ''} onChange={e => setProductForm({ ...productForm, videoUrl: e.target.value })} />
+                    </div>
+                </div>
+                {/* ----------------------------------------------- */}
+
                <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Nome do Item / Serviço</label>
-                  <input type="text" required value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 shadow-sm" placeholder="Ex: Limpeza a Seco de Sofá" />
+                   <input type="text" required value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 shadow-sm" placeholder="Ex: Limpeza a Seco de Sofá" />
                   <p className="text-[10px] text-[#0055ff] font-bold mt-1 ml-2 flex items-center gap-1">
                       <Search size={12} /> Digite exatamente como seu cliente buscaria no Google.
                   </p>

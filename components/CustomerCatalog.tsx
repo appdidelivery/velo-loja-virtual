@@ -7,7 +7,7 @@ import {
   ChevronDown, Star, ShieldCheck, MapPin, Phone, 
   X, Plus, Minus, Trash2, LayoutGrid, ClipboardList, ShoppingBag,
   Scissors, Smartphone, Sofa, Wrench, Shirt, Gem, Beer, ChevronRight, Sparkles,
-  Store, Calendar
+  Store, Calendar, UploadCloud
 } from 'lucide-react';
 
 import { Product, TenantSettings } from '../types';
@@ -510,13 +510,32 @@ export default function CustomerCatalog({
                           onClick={() => { if(hasStock) { setSelectedVariationIndex(0); setSelectedProduct(product); } }} 
                           className={`w-full bg-white rounded-[1.5rem] shadow-sm border border-gray-100 p-3 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] flex ${(productLayout === 'grid' || currentTemplate.category === 'servicos') ? 'flex-col gap-2' : 'flex-row items-center gap-4'} ${!hasStock ? 'opacity-60 grayscale' : ''}`}
                         >
-                          <div className={`${(productLayout === 'grid' || currentTemplate.category === 'servicos') ? 'w-full aspect-square' : 'w-[88px] h-[88px] flex-shrink-0'} relative rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 p-1 flex items-center justify-center`}>
-                            <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
-                            {(product as any).promotionalPrice > 0 && (
-                              <div className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-br-lg shadow-sm z-10">OFERTA</div>
-                            )}
-                            {!hasStock && <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center font-black text-white text-[10px] uppercase tracking-widest backdrop-blur-sm rounded-xl">Esgotado</div>}
-                          </div>
+                          {/* LÓGICA DE VÍDEO VERTICAL (TIPO MERCADO LIVRE/REELS) */}
+                          {(product as any).videoUrl ? (
+                            <div className={`${(productLayout === 'grid' || currentTemplate.category === 'servicos') ? 'w-full aspect-[9/16]' : 'w-[88px] h-[156px] flex-shrink-0'} relative rounded-2xl overflow-hidden bg-slate-900 flex items-center justify-center group`}>
+                              <video 
+                                src={(product as any).videoUrl} 
+                                autoPlay loop muted playsInline 
+                                className="absolute inset-0 w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-700" 
+                              />
+                              <div className="absolute top-1.5 left-1.5 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded-md flex items-center gap-1 z-10 shadow-sm">
+                                  <svg width="6" height="6" viewBox="0 0 24 24" fill="white" className="animate-pulse"><path d="M8 5v14l11-7z"/></svg>
+                                  <span className="text-[7px] font-black text-white tracking-widest uppercase">Vídeo</span>
+                              </div>
+                              {(product as any).promotionalPrice > 0 && (
+                                <div className="absolute top-0 right-0 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-bl-lg shadow-sm z-10">OFERTA</div>
+                              )}
+                              {!hasStock && <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center font-black text-white text-[10px] uppercase tracking-widest backdrop-blur-sm z-20">Esgotado</div>}
+                            </div>
+                          ) : (
+                            <div className={`${(productLayout === 'grid' || currentTemplate.category === 'servicos') ? 'w-full aspect-square' : 'w-[88px] h-[88px] flex-shrink-0'} relative rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 p-1 flex items-center justify-center`}>
+                              <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
+                              {(product as any).promotionalPrice > 0 && (
+                                <div className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-br-lg shadow-sm z-10">OFERTA</div>
+                              )}
+                              {!hasStock && <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center font-black text-white text-[10px] uppercase tracking-widest backdrop-blur-sm rounded-xl">Esgotado</div>}
+                            </div>
+                          )}
                           
                          <div className={`flex-1 flex flex-col justify-start min-w-0 ${(productLayout === 'grid' || currentTemplate.category === 'servicos') ? 'py-0' : 'py-1'}`}>
                             <h3 className="font-bold text-slate-800 text-[13px] leading-tight line-clamp-2">{product.name}</h3>
@@ -900,31 +919,58 @@ export default function CustomerCatalog({
                 <X className="w-5 h-5" />
               </button>
 
-              {/* 🔥 NOVA GALERIA DE IMAGENS */}
-              <div className="w-full bg-gray-50 flex flex-col items-center p-6 shrink-0 relative border-b border-gray-100">
-                {/* Foto Principal */}
-                <div className="w-full h-56 sm:h-72 flex items-center justify-center mb-4">
-                  {/* @ts-ignore */}
-                  <img src={(selectedProduct as any).images && (selectedProduct as any).images.length > 0 ? (selectedProduct as any).images[selectedImageIndex] : selectedProduct.imageUrl} alt={selectedProduct.name} className="w-full h-full object-contain mix-blend-multiply transition-opacity duration-300" />
+              {/* 🔥 NOVA GALERIA HÍBRIDA (VÍDEOS E IMAGENS) */}
+              <div className="w-full bg-slate-900 flex flex-col items-center shrink-0 relative border-b border-gray-100 overflow-hidden">
+                {/* Mídia Principal */}
+                <div className="w-full h-[45vh] sm:h-[50vh] flex items-center justify-center relative bg-black">
+                  {(selectedProduct as any).videoUrl && selectedImageIndex === 0 ? (
+                    <video 
+                      src={(selectedProduct as any).videoUrl} 
+                      autoPlay loop muted playsInline controls
+                      className="w-full h-full object-contain" 
+                    />
+                  ) : (
+                    <img 
+                      /* @ts-ignore */
+                      src={(selectedProduct as any).images && (selectedProduct as any).images.length > 0 ? (selectedProduct as any).images[selectedImageIndex] : selectedProduct.imageUrl} 
+                      alt={selectedProduct.name} 
+                      className="w-full h-full object-cover sm:object-contain transition-opacity duration-300 bg-white" 
+                    />
+                  )}
                 </div>
                 
-                {/* Miniaturas (Só aparecem se tiver mais de 1 foto) */}
+                {/* Miniaturas (Só aparecem se tiver imagens adicionais OU vídeo + imagem) */}
                 {/* @ts-ignore */}
-                {(selectedProduct as any).images && (selectedProduct as any).images.length > 1 && (
-                  <div className="flex gap-3 overflow-x-auto max-w-full pb-2 custom-scrollbar">
+                {((selectedProduct as any).images && (selectedProduct as any).images.length > 1) || ((selectedProduct as any).videoUrl && selectedProduct.imageUrl) ? (
+                  <div className="flex gap-3 overflow-x-auto max-w-full pb-3 pt-3 px-4 custom-scrollbar bg-white w-full">
+                    {/* Botão do Vídeo (Se existir) */}
+                    {(selectedProduct as any).videoUrl && (
+                        <button 
+                            onClick={() => setSelectedImageIndex(0)}
+                            className={`w-16 h-16 shrink-0 rounded-xl border-2 p-1 bg-slate-900 overflow-hidden transition-all flex items-center justify-center relative ${selectedImageIndex === 0 ? 'shadow-md scale-105' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                            style={selectedImageIndex === 0 ? { borderColor: themeColor } : {}}
+                        >
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                        </button>
+                    )}
+                    
+                    {/* Botões das Imagens */}
                     {/* @ts-ignore */}
-                    {(selectedProduct as any).images.map((imgUrl: string, idx: number) => (
-                      <button 
-                        key={idx} 
-                        onClick={() => setSelectedImageIndex(idx)}
-                        className={`w-16 h-16 shrink-0 rounded-xl border-2 p-1.5 bg-white overflow-hidden transition-all ${selectedImageIndex === idx ? 'shadow-md scale-105' : 'border-transparent hover:border-gray-300 opacity-60 hover:opacity-100'}`}
-                        style={selectedImageIndex === idx ? { borderColor: themeColor } : {}}
-                      >
-                        <img src={imgUrl} className="w-full h-full object-contain mix-blend-multiply" alt="Thumbnail" />
-                      </button>
-                    ))}
+                    {((selectedProduct as any).images || [selectedProduct.imageUrl]).map((imgUrl: string, idx: number) => {
+                        const actualIdx = (selectedProduct as any).videoUrl ? idx + 1 : idx;
+                        return (
+                          <button 
+                            key={actualIdx} 
+                            onClick={() => setSelectedImageIndex(actualIdx)}
+                            className={`w-16 h-16 shrink-0 rounded-xl border-2 p-1 bg-white overflow-hidden transition-all ${selectedImageIndex === actualIdx ? 'shadow-md scale-105' : 'border-transparent hover:border-gray-300 opacity-60 hover:opacity-100'}`}
+                            style={selectedImageIndex === actualIdx ? { borderColor: themeColor } : {}}
+                          >
+                            <img src={imgUrl} className="w-full h-full object-contain mix-blend-multiply" alt="Thumbnail" />
+                          </button>
+                        );
+                    })}
                   </div>
-                )}
+                ) : null}
               </div>
               {/* FIM DA GALERIA */}
 
