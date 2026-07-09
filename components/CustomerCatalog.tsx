@@ -108,6 +108,11 @@ export default function CustomerCatalog({
   const [storeAbout, setStoreAbout] = useState(initialData?.aboutText || '');
   const [storeFaq, setStoreFaq] = useState(initialData?.faq || []);
   const [storeCnpj, setStoreCnpj] = useState(initialData?.cnpj || '');
+  
+  // PROTEÇÃO SÊNIOR: Estados de SEO e Dados Estruturados
+  const [storeSeoCategory, setStoreSeoCategory] = useState(initialData?.seoCategory || initialData?.storeNiche || 'Store');
+  const [storePriceRange, setStorePriceRange] = useState(initialData?.priceRange || '$$');
+  const [storeSocialLinks, setStoreSocialLinks] = useState<string[]>([]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -149,6 +154,18 @@ export default function CustomerCatalog({
               setStoreAbout(data.aboutText || '');
               setStoreFaq(data.faq || []);
               setStoreCnpj(data.cnpj || '');
+              
+              // Alimenta o motor de SEO
+              setStoreSeoCategory(data.seoCategory || data.storeNiche || 'Store');
+              setStorePriceRange(data.priceRange || '$$');
+              
+              const links = [];
+              if (data.instagramUrl) links.push(data.instagramUrl);
+              if (data.facebookUrl) links.push(data.facebookUrl);
+              if (data.authorityLinks) {
+                  data.authorityLinks.split(',').forEach((l: string) => links.push(l.trim()));
+              }
+              setStoreSocialLinks(links);
             }
           }
         );
@@ -307,35 +324,83 @@ export default function CustomerCatalog({
   };
 
   const generateStructuredData = () => {
-    const organizationSchema = {
+    // 1. Tradutor de Nicho para o Schema.org (Ajuda o Google a te colocar no Maps certo)
+    const getSchemaType = (niche: string) => {
+        const n = String(niche).toLowerCase();
+        if (n.includes('burger') || n.includes('pizza') || n.includes('sushi') || n.includes('restaurant')) return 'Restaurant';
+        if (n.includes('bakery') || n.includes('sweet') || n.includes('doceria')) return 'Bakery';
+        if (n.includes('farmacia')) return 'Pharmacy';
+        if (n.includes('petshop')) return 'PetStore';
+        if (n.includes('florist') || n.includes('floricultura')) return 'Florist';
+        if (n.includes('salao') || n.includes('clinica')) return 'HealthAndBeautyBusiness';
+        if (n.includes('oficina') || n.includes('servicos')) return 'LocalBusiness'; 
+        return 'Store';
+    };
+
+    // 2. Schema Principal da Empresa (LocalBusiness / Store)
+    const businessSchema = {
       "@context": "https://schema.org",
-      "@type": "Store",
-      "name": settings.businessName,
+      "@type": getSchemaType(storeSeoCategory),
+      "name": storeName,
+      "image": storeLogo || "",
+      "description": storeAbout || storeSlogan || "Faça seu pedido online.",
       "url": `https://${tenantId}`,
-      "telephone": settings.whatsappNumber,
-      "address": {
+      "telephone": storeWhatsapp,
+      "priceRange": storePriceRange || "$$",
+      "address": storeAddress ? {
+        "@type": "PostalAddress",
+        "streetAddress": storeAddress,
+        "addressCountry": "BR"
+      } : {
         "@type": "PostalAddress",
         "streetAddress": STORE_TRUST_DATA.address,
         "addressCountry": "BR"
-      }
+      },
+      "sameAs": storeSocialLinks // Injeta Instagram, Facebook e TripAdvisor
     };
 
-    const productSchema = activeProducts.map(p => ({
+    // 3. Schema do Catálogo de Produtos
+    const productSchema = activeProducts.map((p: any) => ({
       "@context": "https://schema.org/",
       "@type": "Product",
       "name": p.name || 'Produto',
       "image": [p.imageUrl || ''],
       "description": p.description || '',
-      "sku": p.sku || '',
+      "sku": p.gtin || p.sku || p.id || '',
+      "brand": {
+          "@type": "Brand",
+          "name": p.brand || storeName
+      },
       "offers": {
         "@type": "Offer",
         "priceCurrency": "BRL",
-        "price": (p.price || 0).toString(),
-        "availability": (p.stock && Number(p.stock) > 0) ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        "price": (p.promotionalPrice && Number(p.promotionalPrice) > 0 ? p.promotionalPrice : (p.price || 0)).toString(),
+        "availability": (p.stock === undefined || p.stock === null || p.stock === '' || Number(p.stock) > 0) ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       }
     }));
 
-    return JSON.stringify([organizationSchema, ...productSchema]);
+    // 4. Schema de FAQ (Se o lojista preencheu perguntas)
+    let faqSchema: any = null;
+    if (storeFaq && storeFaq.length > 0) {
+      faqSchema = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": storeFaq.map((item: any) => ({
+          "@type": "Question",
+          "name": item.question,
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": item.answer
+          }
+        }))
+      };
+    }
+
+    // Compila tudo num JSON poderoso
+    const finalSchemas = [businessSchema, ...productSchema];
+    if (faqSchema) finalSchemas.push(faqSchema);
+
+    return JSON.stringify(finalSchemas);
   };
 
   if (!mounted) return null;

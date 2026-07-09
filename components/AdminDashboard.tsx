@@ -310,7 +310,44 @@ export default function AdminDashboard() {
   };
 
   const [isUploadingProductVideo, setIsUploadingProductVideo] = useState(false);
+const [termoIA, setTermoIA] = useState('');
+  const [isGeneratingCopy, setIsGeneratingCopy] = useState(false);
 
+  const handleGenerateProductCopy = async () => {
+    if (!termoIA) return alert("Digite o nome básico do produto primeiro!");
+    setIsGeneratingCopy(true);
+    
+    try {
+        const res = await fetch('/api/generate-product-copy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                termoRaw: termoIA, 
+                lojaNome: settings.businessName || 'Loja',
+                lojaNicho: (settings as any).storeNiche || 'varejo',
+                lojaLocalizacao: (settings as any).address || ''
+            })
+        });
+
+        const result = await res.json();
+        
+        if (res.ok && result.success) {
+            setProductForm(prev => ({
+                ...prev,
+                name: result.nome || prev.name,
+                description: result.descricao || prev.description
+            }));
+            setTermoIA(''); 
+            alert("✨ Mágica feita! A IA otimizou seu produto.");
+        } else {
+            alert(`Erro na IA: ${result.error || 'Tente novamente.'}`);
+        }
+    } catch (error) {
+        alert("Erro de conexão com o servidor da IA. Verifique a internet.");
+    } finally {
+        setIsGeneratingCopy(false);
+    }
+  };
   const handleProductVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -862,17 +899,39 @@ export default function AdminDashboard() {
                   <p className="text-[10px] font-bold text-slate-400">Clique na caixa acima para subir a foto.</p>
                 </div>
 
+                {/* --- GERADOR DE IA (VELO COPY) --- */}
+                <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-5 rounded-3xl border border-purple-100 mb-4 flex flex-col md:flex-row items-center gap-4 shadow-sm">
+                    <div className="flex-1 w-full">
+                        <label className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-2 flex items-center gap-1">
+                            <Sparkles size={12} /> Velo IA (Auto-Preencher)
+                        </label>
+                        <input 
+                            type="text" 
+                            placeholder="Ex: tenis nike, bolo de pote, sofa impermeabilizado..." 
+                            className="w-full p-4 bg-white rounded-2xl border border-purple-200 outline-none text-sm font-bold focus:ring-2 ring-purple-400 text-slate-700"
+                            value={termoIA}
+                            onChange={(e) => setTermoIA(e.target.value)}
+                        />
+                    </div>
+                    <button 
+                        type="button" 
+                        onClick={handleGenerateProductCopy}
+                        disabled={isGeneratingCopy}
+                        className="w-full md:w-auto mt-2 md:mt-0 px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-purple-200 transition-all disabled:opacity-50 active:scale-95 flex-shrink-0 flex items-center justify-center gap-2"
+                    >
+                        {isGeneratingCopy ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Sparkles size={16} />}
+                        {isGeneratingCopy ? 'Pensando...' : 'Gerar c/ IA'}
+                    </button>
+                </div>
+
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Nome do Item / Serviço</label>
-                  <input type="text" required value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 shadow-sm" placeholder="Ex: Limpeza a Seco de Sofá" />
-                  <p className="text-[10px] text-[#0055ff] font-bold mt-1 ml-2 flex items-center gap-1">
-                      <Search size={12} /> Digite exatamente como seu cliente buscaria no Google.
-                  </p>
+                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Nome Oficial (Catálogo)</label>
+                  <input type="text" required value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 shadow-sm" placeholder="Nome gerado pela IA aparecerá aqui..." />
                 </div>
                 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Descrição</label>
-                  <textarea rows={2} value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-medium text-sm text-slate-600 border border-gray-200 shadow-sm resize-none" placeholder="Detalhes do que está incluso..."></textarea>
+                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Descrição Comercial</label>
+                   <textarea rows={2} value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-medium text-sm text-slate-600 border border-gray-200 shadow-sm resize-none" placeholder="Detalhes do que está incluso..."></textarea>
                   
                   {/* MEDIDOR DE FORÇA DE SEO / IA */}
                   {(() => {
