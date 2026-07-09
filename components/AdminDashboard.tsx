@@ -74,12 +74,15 @@ export default function AdminDashboard() {
     
     const unsubscribe = onAuthStateChanged(auth, (user: any) => {
       if (user) {
-        // Usuário logado: O TenantId dele é o próprio UID (conforme criamos no Login)
+        // PROTEÇÃO SÊNIOR: Verifica se está rodando na máquina local
+        const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+        // Usuário logado: Se for local, usa uma loja de teste. Se for nuvem, usa o UID real.
         setAuthRole({
           email: user.email,
           role: 'merchant_owner',
           businessType: 'ecommerce', 
-          tenantId: user.uid 
+          tenantId: isLocal ? 'loja_teste_local' : user.uid 
         });
       } else {
         // Ninguém logado? Expulsa para a tela de login imediatamente.
@@ -243,7 +246,7 @@ export default function AdminDashboard() {
           templateId: dbData.templateId || 'nativo_app',
           banners: dbData.banners || [], // <-- LÊ OS BANNERS DO BANCO
           storeMode: dbData.storeMode || 'ecommerce',
-          slug: dbData.slug || authRole.tenantId.substring(0, 6),
+          slug: dbData.slug || '', // <-- CORRIGIDO: Se não tem slug, deixa vazio
           address: dbData.address || '',
           aboutText: dbData.aboutText || '',
           storeNiche: dbData.storeNiche || 'varejo'
@@ -332,7 +335,7 @@ export default function AdminDashboard() {
     try {
       await setDoc(doc(db, 'tenants', authRole.tenantId), {
         businessName: settingsForm.businessName,
-        slug: settingsForm.slug || authRole.tenantId.substring(0,6), // <-- ADICIONADO AQUI
+        slug: settingsForm.slug || '', // <-- CORRIGIDO: Salva vazio se o cliente não preencher
         slogan: settingsForm.slogan,
         logoUrl: settingsForm.logoUrl,
         primaryColor: settingsForm.primaryColor,
