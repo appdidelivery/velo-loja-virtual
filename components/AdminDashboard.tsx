@@ -1119,15 +1119,17 @@ export default function AdminDashboard() {
                           )}
                         </div>
                         
-                        <div className='flex items-center gap-2 mt-1'>
+                       <div className='flex items-center gap-2 mt-1'>
                           <p className="text-blue-600 font-black text-lg">
-                            R$ {Number(p.price)?.toFixed(2)}
+                            {Number(p.price) > 0 ? `R$ ${Number(p.price).toFixed(2)}` : 'Sob Consulta'}
                           </p>
                         </div>
                         
-                        <p className={`text-[10px] font-bold mt-2 uppercase tracking-widest ${p.stock <= 5 ? 'text-red-500' : 'text-slate-400'}`}>
-                          Estoque: <span className={p.stock <= 5 ? 'text-red-600' : 'text-slate-500'}>{p.stock !== undefined ? p.stock : 'N/A'}</span>
-                        </p>
+                        {currentTemplate.category !== 'servicos' && p.stock !== 999 && p.stock !== 0 && (
+                          <p className={`text-[10px] font-bold mt-2 uppercase tracking-widest ${Number(p.stock) <= 5 ? 'text-red-500' : 'text-slate-400'}`}>
+                            Estoque: <span className={Number(p.stock) <= 5 ? 'text-red-600' : 'text-slate-500'}>{p.stock} un</span>
+                          </p>
+                        )}
                       </div>
 
                       {/* COLUNA 3: Botões de Ação */}

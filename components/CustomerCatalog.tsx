@@ -308,7 +308,7 @@ export default function CustomerCatalog({
       "@context": "https://schema.org",
       "@type": "Store",
       "name": settings.businessName,
-      "url": "https://www.suastartup.com.br",
+      "url": `https://${tenantId}`,
       "telephone": settings.whatsappNumber,
       "address": {
         "@type": "PostalAddress",
@@ -676,8 +676,8 @@ export default function CustomerCatalog({
                           <a href="/politicas" className="hover:text-slate-600 transition-colors">Privacidade</a>
                           <a href="/politicas" className="hover:text-slate-600 transition-colors">Termos</a>
                       </div>
-                      <a href="https://velodelivery.com.br" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center opacity-40 hover:opacity-100 grayscale hover:grayscale-0 transition-all">
-                          <img src="/velo loja virtual logo.png" alt="Velo Delivery" className="h-5 w-auto mb-1.5" />
+                      <a href="https://veloloja.com.br" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center opacity-40 hover:opacity-100 grayscale hover:grayscale-0 transition-all">
+                          <img src="/velo loja virtual logo.png" alt="Velo Loja Virtual" className="h-5 w-auto mb-1.5" />
                           <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Powered by Velo</p>
                       </a>
                    </div>
@@ -963,11 +963,15 @@ export default function CustomerCatalog({
                   <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                     {/* @ts-ignore */}
-                    {(selectedProduct as any).variations && (selectedProduct as any).variations.length > 0 ? 'A Partir de' : 'Preço Unitário'}
+                    {((selectedProduct as any).variations && (selectedProduct as any).variations.length > 0 ? (selectedProduct as any).variations[selectedVariationIndex].price : selectedProduct.price) > 0 
+                      ? ((selectedProduct as any).variations && (selectedProduct as any).variations.length > 0 ? 'A Partir de' : 'Preço Unitário') 
+                      : ''}
                   </p>
                   <p style={{ color: themeColor }} className="text-2xl sm:text-3xl font-black tracking-tight">
                     {/* @ts-ignore */}
-                    R$ {((selectedProduct as any).variations && (selectedProduct as any).variations.length > 0 ? (selectedProduct as any).variations[selectedVariationIndex].price : selectedProduct.price).toFixed(2)}
+                    {((selectedProduct as any).variations && (selectedProduct as any).variations.length > 0 ? (selectedProduct as any).variations[selectedVariationIndex].price : selectedProduct.price) > 0 
+                      ? `R$ ${((selectedProduct as any).variations && (selectedProduct as any).variations.length > 0 ? (selectedProduct as any).variations[selectedVariationIndex].price : selectedProduct.price).toFixed(2)}` 
+                      : 'Sob Consulta'}
                   </p>
                 </div>
                 
