@@ -102,6 +102,12 @@ export default function CustomerCatalog({
   const [productLayout, setProductLayout] = useState<'list' | 'grid'>(initialData?.productLayout || 'list');
   const [templateId, setTemplateId] = useState(initialData?.templateId || 'conveniencia_padrao');
   const [storeMode, setStoreMode] = useState<'ecommerce' | 'catalogo' | 'orcamento'>(initialData?.storeMode || 'ecommerce');
+  
+  // PROTEÇÃO SÊNIOR: Estados reais para renderização instantânea
+  const [storeAddress, setStoreAddress] = useState(initialData?.address || '');
+  const [storeAbout, setStoreAbout] = useState(initialData?.aboutText || '');
+  const [storeFaq, setStoreFaq] = useState(initialData?.faq || []);
+  const [storeCnpj, setStoreCnpj] = useState(initialData?.cnpj || '');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -138,14 +144,11 @@ export default function CustomerCatalog({
               setTemplateId(data.templateId || 'conveniencia_padrao');
               setStoreMode(data.storeMode || 'ecommerce');
               
-              // Sincroniza o Endereço para o Mapa (Se existir)
-              if(data.address) {
-                  (settings as any).address = data.address;
-              } else {
-                  (settings as any).address = '';
-              }
-              
-              if(data.cnpj) (settings as any).cnpj = data.cnpj;
+              // Alimenta o React da forma correta!
+              setStoreAddress(data.address || '');
+              setStoreAbout(data.aboutText || '');
+              setStoreFaq(data.faq || []);
+              setStoreCnpj(data.cnpj || '');
             }
           }
         );
@@ -449,14 +452,14 @@ export default function CustomerCatalog({
               )}
 
               {/* SOBRE NÓS (APENAS PARA TEMPLATES DE SERVIÇOS) */}
-              {currentTemplate.category === 'servicos' && (settings as any).aboutText && (
+              {currentTemplate.category === 'servicos' && storeAbout && (
                  <div className="px-4 mb-4 animate-in fade-in">
                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
                      <h2 className="text-lg font-black text-slate-800 uppercase italic tracking-tighter mb-2 flex items-center gap-2">
                        <Store className="text-blue-500" size={20}/> Nossa Empresa
                      </h2>
                      <p className="text-xs text-slate-500 font-medium leading-relaxed whitespace-pre-wrap">
-                       {(settings as any).aboutText}
+                       {storeAbout}
                      </p>
                    </div>
                  </div>
@@ -623,18 +626,17 @@ export default function CustomerCatalog({
               {/* RODAPÉ E PROVA SOCIAL EXCLUSIVO PARA SERVIÇOS */}
               {currentTemplate.category === 'servicos' && (
                 <div className="mt-8 mb-8 mx-4 flex flex-col gap-6">
-                   <React.Suspense fallback={<div className="text-center text-xs p-4 font-bold text-slate-400">Sincronizando Google Reviews...</div>}>
-                      {/* @ts-ignore */}
-                      <Reviews storeId={tenantId} />
-                   </React.Suspense>
+                   
+                   {/* @ts-ignore */}
+                   <Reviews storeId={tenantId} />
 
-                   {(settings as any).faq && (settings as any).faq.length > 0 && (
+                   {storeFaq && storeFaq.length > 0 && (
                      <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-                        <h3 className="text-sm font-black uppercase text-slate-800 mb-4 flex items-center gap-2">
+                          <h3 className="text-sm font-black uppercase text-slate-800 mb-4 flex items-center gap-2">
                            <ClipboardList size={20} style={{ color: themeColor }} /> Dúvidas Frequentes
                         </h3>
                         <div className="space-y-3">
-                           {(settings as any).faq.map((item: any, idx: number) => (
+                           {storeFaq.map((item: any, idx: number) => (
                              <details key={idx} className="group bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden [&_summary::-webkit-details-marker]:hidden">
                                <summary className="flex items-center justify-between p-4 font-bold text-slate-700 cursor-pointer text-xs">
                                  {item.question}
@@ -649,7 +651,7 @@ export default function CustomerCatalog({
                      </div>
                    )}
 
-                  {(settings as any).address && (
+                  {storeAddress && (
                      <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-sm">
                         <h3 className="text-[11px] font-black uppercase text-slate-300 tracking-widest flex items-center gap-2 mb-4">
                           <MapPin size={16} style={{ color: themeColor }}/> Onde Estamos
@@ -657,15 +659,15 @@ export default function CustomerCatalog({
                         <div className="w-full h-32 rounded-xl overflow-hidden border border-slate-700 mb-4 bg-slate-800">
                           <iframe 
                             width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen 
-                            src={`https://maps.google.com/maps?q=${encodeURIComponent((settings as any).address)}&output=embed`}
+                            src={`https://maps.google.com/maps?q=${encodeURIComponent(storeAddress)}&output=embed`}
                           ></iframe>
                         </div>
                         <p className="text-[10px] font-bold text-slate-300 mb-2 leading-tight">
-                          {(settings as any).address}
+                          {storeAddress}
                         </p>
-                        {((settings as any).cnpj || STORE_TRUST_DATA.cnpj) && (
+                        {(storeCnpj || STORE_TRUST_DATA.cnpj) && (
                           <p className="text-[10px] font-bold text-slate-400">
-                            CNPJ: {(settings as any).cnpj || STORE_TRUST_DATA.cnpj}
+                            CNPJ: {storeCnpj || STORE_TRUST_DATA.cnpj}
                           </p>
                         )}
                      </div>
