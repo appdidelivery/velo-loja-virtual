@@ -151,7 +151,8 @@ export default function AdminDashboard() {
     productLayout: 'list',
     aboutText: '',
     faq: [],
-    googleReviewUrl: ''
+    googleReviewUrl: '',
+    cnpj: ''
   });
   
   const [settingsSuccess, setSettingsSuccess] = useState(false);
@@ -249,7 +250,8 @@ export default function AdminDashboard() {
           slug: dbData.slug || '', // <-- CORRIGIDO: Se não tem slug, deixa vazio
           address: dbData.address || '',
           aboutText: dbData.aboutText || '',
-          storeNiche: dbData.storeNiche || 'varejo'
+          storeNiche: dbData.storeNiche || 'varejo',
+          cnpj: dbData.cnpj || ''
         }));
       }
     });
@@ -348,7 +350,8 @@ export default function AdminDashboard() {
         aboutText: settingsForm.aboutText || '',
         address: settingsForm.address || '',
         faq: settingsForm.faq || [],
-        googleReviewUrl: settingsForm.googleReviewUrl || ''
+        googleReviewUrl: settingsForm.googleReviewUrl || '',
+        cnpj: settingsForm.cnpj || ''
       }, { merge: true });
       
       alert("✅ SUCESSO! Dados salvos no Firebase.");
@@ -1604,6 +1607,18 @@ export default function AdminDashboard() {
                         onChange={(e) => setSettingsForm({...settingsForm, slogan: e.target.value})}
                         className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-[#0055ff] transition-colors"
                         placeholder="Ex: Seu negócio, sua regra"
+                      />
+                    </div>
+
+                    {/* NOVO CAMPO: CNPJ DA LOJA */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">CNPJ da Empresa</label>
+                      <input 
+                        type="text" 
+                        value={settingsForm.cnpj || ''}
+                        onChange={(e) => setSettingsForm({...settingsForm, cnpj: e.target.value})}
+                        className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-[#0055ff] transition-colors"
+                        placeholder="Ex: 00.000.000/0001-00"
                       />
                     </div>
                     
