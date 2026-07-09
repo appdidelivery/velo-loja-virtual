@@ -1020,7 +1020,7 @@ export default function AdminDashboard() {
             <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-8 space-y-6 max-w-6xl mx-auto shadow-sm">
               <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b-2 border-gray-50 pb-6">
                 
-                {/* NOVO: SUB-Navegação de Catálogo */}
+                {/* SUB-Navegação de Catálogo */}
                 <div className="flex bg-gray-100 p-1 rounded-full w-max shadow-inner">
                     <button 
                         onClick={() => setActivePanel('products')} 
@@ -1073,7 +1073,7 @@ export default function AdminDashboard() {
 
                   <div className="relative">
                     <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input type="text" placeholder="Buscar por SKU ou Nome..." value={productSearch} onChange={(e) => setProductSearch(e.target.value)} className="bg-gray-50 text-sm text-slate-800 pl-10 pr-4 py-2.5 rounded-full border-2 border-gray-100 focus:border-[#ff7b00] outline-none w-[180px] sm:w-[220px] transition-all font-medium" />
+                    <input type="text" placeholder="Buscar..." value={productSearch} onChange={(e) => setProductSearch(e.target.value)} className="bg-gray-50 text-sm text-slate-800 pl-10 pr-4 py-2.5 rounded-full border-2 border-gray-100 focus:border-[#ff7b00] outline-none w-[180px] transition-all font-medium" />
                   </div>
                   
                   <div className="h-8 w-px bg-gray-200 mx-1 hidden lg:block"></div>
@@ -1097,66 +1097,28 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   paginatedProducts.map(p => (
-                    <div key={p.id} className={`bg-white p-5 md:p-6 rounded-[2.5rem] border-2 flex items-stretch gap-4 shadow-sm hover:shadow-md transition-all relative overflow-hidden border-slate-100`}>
+                    <div key={p.id} className="bg-white p-5 md:p-6 rounded-[2.5rem] border-2 flex items-stretch gap-4 shadow-sm hover:shadow-md transition-all relative overflow-hidden border-slate-100">
                       
-                      {/* COLUNA 1: Imagem */}
                       <div className="flex flex-col items-center gap-3 flex-shrink-0 w-16 md:w-20">
                         <div className="w-16 h-16 md:w-20 md:h-20 flex items-center justify-center bg-slate-50 border border-slate-100 rounded-2xl p-1 shadow-sm">
                           <img src={p.imageUrl || "https://cdn-icons-png.flaticon.com/512/8636/8636813.png"} className="max-w-full max-h-full object-contain rounded-xl" alt={p.name} />
                         </div>
                       </div>
 
-                      {/* COLUNA 2: Textos */}
                       <div className="flex-1 min-w-0 flex flex-col justify-center relative z-10">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <h3 className={`font-black text-sm md:text-base leading-tight truncate ${p.isActive ? 'text-slate-800' : 'text-slate-400 line-through'}`} title={p.name}>
-                            {p.name}
-                          </h3>
-                          {!p.isActive && (
-                            <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border border-slate-200 shrink-0">
-                              Pausado
-                            </span>
-                          )}
+                          <h3 className={`font-black text-sm md:text-base leading-tight truncate ${p.isActive ? 'text-slate-800' : 'text-slate-400 line-through'}`}>{p.name}</h3>
                         </div>
-                        
-                       <div className='flex items-center gap-2 mt-1'>
-                          <p className="text-blue-600 font-black text-lg">
-                            {Number(p.price) > 0 ? `R$ ${Number(p.price).toFixed(2)}` : 'Sob Consulta'}
-                          </p>
+                        <div className='flex items-center gap-2 mt-1'>
+                          <p className="text-blue-600 font-black text-lg">R$ {Number(p.price)?.toFixed(2)}</p>
                         </div>
-                        
-                        {currentTemplate.category !== 'servicos' && p.stock !== 999 && p.stock !== 0 && (
-                          <p className={`text-[10px] font-bold mt-2 uppercase tracking-widest ${Number(p.stock) <= 5 ? 'text-red-500' : 'text-slate-400'}`}>
-                            Estoque: <span className={Number(p.stock) <= 5 ? 'text-red-600' : 'text-slate-500'}>{p.stock} un</span>
-                          </p>
-                        )}
+                        <p className="text-[10px] font-bold mt-2 uppercase tracking-widest text-slate-400">Estoque: {p.stock}</p>
                       </div>
 
-                      {/* COLUNA 3: Botões de Ação */}
                       <div className="flex flex-col justify-center gap-2 flex-shrink-0 relative z-10 w-10">
-                        <button 
-                          onClick={async () => await updateProduct(p.id, { isActive: !p.isActive })} 
-                          className={`p-2.5 rounded-xl transition-all shadow-sm border ${!p.isActive ? 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100' : 'bg-green-50 text-green-600 border-green-100 hover:bg-green-100'}`} 
-                          title={!p.isActive ? 'Oculto (Clique para Ativar)' : 'Ativo (Clique para Ocultar)'}
-                        >
-                          {!p.isActive ? <EyeOff size={16} className="mx-auto" /> : <Eye size={16} className="mx-auto" />}
-                        </button>
-                        
-                        <button 
-                          onClick={() => openEditProductModal(p)} 
-                          className="p-2.5 bg-blue-50 rounded-xl text-blue-600 border border-blue-100 hover:bg-blue-100 transition-all shadow-sm" 
-                          title="Editar Produto"
-                        >
-                          <Edit2 size={16} className="mx-auto" />
-                        </button>
-                        
-                        <button 
-                          onClick={() => handleDeleteProduct(p.id)} 
-                          className="p-2.5 bg-slate-50 rounded-xl text-red-500 border border-slate-100 hover:bg-red-100 transition-all shadow-sm"
-                          title="Excluir Produto"
-                        >
-                          <Trash2 size={16} className="mx-auto" />
-                        </button>
+                        <button onClick={() => updateProduct(p.id, { isActive: !p.isActive })} className="p-2.5 rounded-xl transition-all shadow-sm border bg-gray-50"><Eye size={16} className="mx-auto" /></button>
+                        <button onClick={() => openEditProductModal(p)} className="p-2.5 bg-blue-50 rounded-xl text-blue-600 border border-blue-100 shadow-sm"><Edit2 size={16} className="mx-auto" /></button>
+                        <button onClick={() => handleDeleteProduct(p.id)} className="p-2.5 bg-slate-50 rounded-xl text-red-500 border border-slate-100 shadow-sm"><Trash2 size={16} className="mx-auto" /></button>
                       </div>
 
                     </div>
@@ -1167,33 +1129,16 @@ export default function AdminDashboard() {
               {totalProductPages > 1 && (
                 <div className="flex items-center justify-between border-t-2 border-gray-50 pt-4 px-2">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    Mostrando {(productCurrentPage - 1) * productItemsPerPage + 1} até {Math.min(productCurrentPage * productItemsPerPage, filteredProducts.length)} de {filteredProducts.length}
+                    Página {productCurrentPage} de {totalProductPages}
                   </span>
                   <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => setProductCurrentPage(prev => Math.max(prev - 1, 1))}
-                      disabled={productCurrentPage === 1}
-                      className="p-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-600 hover:border-[#0055ff] hover:text-[#0055ff] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                    >
-                      <ChevronLeft size={16} />
-                    </button>
-                    <span className="text-xs font-black text-slate-800 px-2">
-                      {productCurrentPage} de {totalProductPages}
-                    </span>
-                    <button 
-                      onClick={() => setProductCurrentPage(prev => Math.min(prev + 1, totalProductPages))}
-                      disabled={productCurrentPage === totalProductPages}
-                      className="p-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-600 hover:border-[#0055ff] hover:text-[#0055ff] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                    >
-                      <ChevronRight size={16} />
-                    </button>
+                    <button onClick={() => setProductCurrentPage(prev => Math.max(prev - 1, 1))} disabled={productCurrentPage === 1} className="p-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-600 hover:text-[#0055ff] disabled:opacity-50"><ChevronLeft size={16} /></button>
+                    <button onClick={() => setProductCurrentPage(prev => Math.min(prev + 1, totalProductPages))} disabled={productCurrentPage === totalProductPages} className="p-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-600 hover:text-[#0055ff] disabled:opacity-50"><ChevronRight size={16} /></button>
                   </div>
                 </div>
               )}
             </div>
           )}
-
-          {activePanel === 'orders' && (
             <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-8 space-y-6 max-w-6xl mx-auto shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-gray-50 pb-6">
                  <h2 className="text-2xl font-black italic uppercase text-[#111827]">Pedidos</h2>

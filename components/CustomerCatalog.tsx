@@ -518,9 +518,16 @@ export default function CustomerCatalog({
                             {!hasStock && <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center font-black text-white text-[10px] uppercase tracking-widest backdrop-blur-sm rounded-xl">Esgotado</div>}
                           </div>
                           
-                          <div className={`flex-1 flex flex-col justify-start min-w-0 ${(productLayout === 'grid' || currentTemplate.category === 'servicos') ? 'py-0' : 'py-1'}`}>
+                         <div className={`flex-1 flex flex-col justify-start min-w-0 ${(productLayout === 'grid' || currentTemplate.category === 'servicos') ? 'py-0' : 'py-1'}`}>
                             <h3 className="font-bold text-slate-800 text-[13px] leading-tight line-clamp-2">{product.name}</h3>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 mb-3 truncate">{product.category}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 mb-3 truncate">
+                              {product.category}
+                              {currentTemplate.category !== 'servicos' && product.stock !== 999 && product.stock !== 0 && (
+                                <span className={`ml-2 ${Number(product.stock) <= 5 ? 'text-red-500' : 'text-slate-400'}`}>
+                                  • ESTOQUE: {product.stock}
+                                </span>
+                              )}
+                            </p>
                             
                             <div className="flex items-center justify-between mt-auto">
                               <div className="flex flex-col">
@@ -533,7 +540,7 @@ export default function CustomerCatalog({
                                       </>
                                   ) : (
                                       <span style={{ color: themeColor }} className="font-black text-[14px] leading-none">
-                                          R$ {Number(product.price)?.toFixed(2)}
+                                          {Number(product.price) > 0 ? `R$ ${Number(product.price).toFixed(2)}` : 'Sob Consulta'}
                                       </span>
                                   )}
                               </div>
