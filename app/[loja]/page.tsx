@@ -37,17 +37,33 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     if (docSnap && docSnap.exists()) {
       const data = docSnap.data();
+      
+      const storeName = data.businessName || data.nome || 'Catálogo Virtual';
+      const storeDescription = data.slogan || data.description || 'Faça seu pedido online.';
+      const storeLogo = data.logoUrl || '/favicon.ico';
+
       return {
-        title: `${data.businessName || data.nome || 'Loja'} | Velo Loja Virtual`,
-        description: data.slogan || 'Faça seu pedido online.',
-        openGraph: { images: [data.logoUrl || ''] },
+        title: storeName,
+        description: storeDescription,
+        openGraph: { 
+          title: storeName,
+          description: storeDescription,
+          images: [storeLogo] 
+        },
+        icons: {
+          icon: storeLogo,
+          apple: storeLogo,
+        }
       };
     }
   } catch (e) {
     console.error("Erro ao gerar SEO:", e);
   }
 
-  return { title: 'Velo Loja Virtual', description: 'Catálogo de Produtos' };
+  return { 
+    title: 'Catálogo Virtual', 
+    description: 'Faça seu pedido online.' 
+  };
 }
 
 // 2. RENDERIZAÇÃO DA PÁGINA
