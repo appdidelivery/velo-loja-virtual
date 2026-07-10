@@ -4,7 +4,7 @@ import { db } from '../../../services/firebase';
 
 const VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || 'velo_webhook_secret';
 
-// Rota GET: Validação da Meta (Facebook)
+// Rota GET: Validação da Meta (Facebook) e Health Checks
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const mode = searchParams.get('hub.mode');
@@ -16,13 +16,17 @@ export async function GET(request: Request) {
         return new NextResponse(challenge, { status: 200 });
     }
     
-    return new NextResponse('Forbidden', { status: 403 });
+    // CORREÇÃO: Sempre responder 200 para o robô da Meta não achar que o servidor caiu
+    return new NextResponse('OK', { status: 200 });
 }
 
 // Rota POST: Recebe as mensagens e aciona o Google Gemini
 export async function POST(request: Request) {
+    console.log('🔔 UHUUL! CHEGOU UM EVENTO POST DA META AQUI!'); // <-- Alerta para vermos na Vercel
+    
     try {
         const body = await request.json();
+        console.log('📦 Pacote recebido:', JSON.stringify(body));
 
         if (body.object !== 'whatsapp_business_account') {
             return new NextResponse('Not a WhatsApp event', { status: 404 });
@@ -65,7 +69,6 @@ export async function POST(request: Request) {
 
                 const systemPrompt = `Você é a assistente de gestão da loja ${tenantData.businessName || 'Velo'}. Você só tem acesso aos dados do tenantId ${tenantId}. Seja direta, educada e curta. Sua função primária é executar as tarefas de sistema solicitadas pelo administrador da loja. Se ele pedir para cadastrar um produto ou serviço, use a ferramenta disponível.`;
 
-                // Montando o payload do Gemini com a Function "cadastrar_produto"
                 const geminiPayload = {
                     system_instruction: {
                         parts: { text: systemPrompt }
@@ -74,7 +77,6 @@ export async function POST(request: Request) {
                         role: "user",
                         parts: [{ text: messageText }]
                     }],
-                    // SPRINT 4: A Mão da IA (Function Calling no Gemini)
                     tools: [{
                         function_declarations: [{
                             name: "cadastrar_produto",
@@ -82,7 +84,7 @@ export async function POST(request: Request) {
                             parameters: {
                                 type: "OBJECT",
                                 properties: {
-                                    name: { type: "STRING", description: "Nome do produto ou serviço (ex: Cílios Volume Russo)" },
+                                    name: { type: "STRING", description: "Nome do produto/serviço (ex: Cílios Volume Russo)" },
                                     price: { type: "NUMBER", description: "Preço em reais, apenas números (ex: 150)" },
                                     category: { type: "STRING", description: "Categoria do produto/serviço (ex: Estética)" }
                                 },
@@ -92,7 +94,6 @@ export async function POST(request: Request) {
                     }]
                 };
 
-                // Disparando para a API REST do Gemini
                 const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
                 
                 const geminiResponse = await fetch(geminiUrl, {
@@ -102,8 +103,6 @@ export async function POST(request: Request) {
                 });
 
                 const geminiData = await geminiResponse.json();
-                
-                // Analisando a resposta do Gemini
                 const candidate = geminiData.candidates?.[0];
                 const part = candidate?.content?.parts?.[0];
                 let replyText = "Entendido, mas ocorreu um erro ao processar sua solicitação.";
@@ -114,7 +113,6 @@ export async function POST(request: Request) {
                     if (funcCall.name === 'cadastrar_produto') {
                         const args = funcCall.args;
                         
-                        // SPRINT 4: Executando a gravação no Firebase para este Tenant específico
                         await addDoc(collection(db, 'products'), {
                             name: args.name,
                             price: Number(args.price),
@@ -124,17 +122,16 @@ export async function POST(request: Request) {
                             stock: 99,
                             sku: `IA-${Date.now()}`,
                             isActive: true,
-                            tenantId: tenantId // <-- GARANTIA DE ISOLAMENTO DE DADOS
+                            tenantId: tenantId
                         });
 
                         replyText = `✅ Mágica feita! Acabei de cadastrar o serviço/produto "${args.name}" por R$ ${args.price}. Já está online na sua vitrine!`;
                     }
                 } else if (part?.text) {
-                    // Se não for um comando de cadastro, responde como conversa normal
                     replyText = part.text;
                 }
 
-                // SPRINT 4: Retornando a confirmação via WhatsApp usando a Meta API
+                // SPRINT 4: Retornando a confirmação via WhatsApp
                 const metaToken = tenantData.metaApiToken;
                 const metaPhoneId = tenantData.metaPhoneId;
 
@@ -153,8 +150,6 @@ export async function POST(request: Request) {
                         })
                     });
                     console.log(`📤 Resposta enviada com sucesso para ${fromPhone}`);
-                } else {
-                    console.log('⚠️ IA (Gemini) processou com sucesso, mas os tokens da Meta não estão preenchidos no painel da loja para enviar a resposta ao WhatsApp.');
                 }
             }
         }
