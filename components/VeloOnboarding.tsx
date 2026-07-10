@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   CheckCircle2, Building2, Palette, MessageSquare, 
   ShoppingBag, Star, ArrowRight, ArrowLeft, UploadCloud, 
-  MapPin 
+  MapPin, Sparkles, Loader2
 } from 'lucide-react';
 import { FaGoogle as FaGoogleIcon } from 'react-icons/fa6';
 
@@ -17,6 +17,9 @@ interface VeloOnboardingProps {
   handleLogoUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isUploadingLogo: boolean;
   onFinish: () => void;
+  // NOVAS PROPS PARA O PRODUTO
+  addProduct: (product: any) => Promise<void>;
+  uploadImageToCloudinary: (file: File) => Promise<string>;
 }
 
 export default function VeloOnboarding({
@@ -26,16 +29,31 @@ export default function VeloOnboarding({
   setActivePanel,
   handleLogoUpload,
   isUploadingLogo,
-  onFinish
+  onFinish,
+  addProduct,
+  uploadImageToCloudinary
 }: VeloOnboardingProps) {
   const [currentStep, setCurrentStep] = useState(1);
 
+  // ESTADOS DA IA - EMPRESA
+  const [termoSobreIA, setTermoSobreIA] = useState('');
+  const [isGeneratingAbout, setIsGeneratingAbout] = useState(false);
+
+  // ESTADOS DO PRIMEIRO PRODUTO
+  const [productSaved, setProductSaved] = useState(false);
+  const [isUploadingProductImage, setIsUploadingProductImage] = useState(false);
+  const [termoProdutoIA, setTermoProdutoIA] = useState('');
+  const [isGeneratingProduct, setIsGeneratingProduct] = useState(false);
+  const [productForm, setProductForm] = useState({
+    name: '', description: '', price: '', imageUrl: '', category: 'Destaques', stock: 99, isActive: true
+  });
+
   const steps = [
     { id: 1, title: 'Conexão Google', icon: FaGoogleIcon, subtitle: 'Programa Impulso Velo' },
-    { id: 2, title: 'Dados da Empresa', icon: Building2, subtitle: 'Nome, CNPJ e Endereço' },
+    { id: 2, title: 'Dados da Empresa', icon: Building2, subtitle: 'Identidade e História' },
     { id: 3, title: 'Identidade Visual', icon: Palette, subtitle: 'Logo e Cores' },
     { id: 4, title: 'Atendimento', icon: MessageSquare, subtitle: 'WhatsApp da Loja' },
-    { id: 5, title: 'Catálogo', icon: ShoppingBag, subtitle: 'Serviços e Produtos' },
+    { id: 5, title: 'Catálogo', icon: ShoppingBag, subtitle: 'Primeiro Produto' },
     { id: 6, title: 'Prova Social', icon: Star, subtitle: 'Avaliações e Galeria' }
   ];
 
@@ -51,16 +69,113 @@ export default function VeloOnboarding({
 
   const handleComplete = (e: React.MouseEvent) => {
     e.preventDefault();
-    // Simula um evento de formulário para a função saveSettings do painel principal
     saveSettings({ preventDefault: () => {} } as React.FormEvent);
     onFinish();
   };
 
+  // MOTOR DE IA: SOBRE A EMPRESA
+  const handleGenerateAboutCopy = async () => {
+    if (!termoSobreIA) return alert("Digite algumas palavras soltas sobre a sua loja primeiro!");
+    setIsGeneratingAbout(true);
+    
+    try {
+        const res = await fetch('/api/generate-about-copy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                prompt: termoSobreIA, 
+                lojaNome: settingsForm.businessName || 'Minha Loja',
+                lojaNicho: settingsForm.storeNiche || 'varejo'
+            })
+        });
+
+        const result = await res.json();
+        
+        if (res.ok && result.success) {
+            setSettingsForm((prev: any) => ({ ...prev, aboutText: result.aboutText }));
+            setTermoSobreIA(''); 
+        } else {
+            alert(`Erro na IA: ${result.error || 'Tente novamente.'}`);
+        }
+    } catch (error) {
+        alert("Erro de conexão com o servidor da IA. Verifique a internet.");
+    } finally {
+        setIsGeneratingAbout(false);
+    }
+  };
+
+  // MOTOR DE IA: PRODUTO
+  const handleGenerateProductCopy = async () => {
+    if (!termoProdutoIA) return alert("Digite o nome básico do produto primeiro!");
+    setIsGeneratingProduct(true);
+    
+    try {
+        const res = await fetch('/api/generate-product-copy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                termoRaw: termoProdutoIA, 
+                lojaNome: settingsForm.businessName || 'Minha Loja',
+                lojaNicho: settingsForm.storeNiche || 'varejo',
+                lojaLocalizacao: settingsForm.address || ''
+            })
+        });
+
+        const result = await res.json();
+        
+        if (res.ok && result.success) {
+            setProductForm(prev => ({
+                ...prev,
+                name: result.nome || prev.name,
+                description: result.descricao || prev.description
+            }));
+            setTermoProdutoIA(''); 
+        } else {
+            alert(`Erro na IA: ${result.error || 'Tente novamente.'}`);
+        }
+    } catch (error) {
+        alert("Erro de conexão com o servidor da IA. Verifique a internet.");
+    } finally {
+        setIsGeneratingProduct(false);
+    }
+  };
+
+  // UPLOAD DA IMAGEM DO PRODUTO (WIZARD)
+  const handleWizardProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingProductImage(true);
+    try {
+      const url = await uploadImageToCloudinary(file);
+      setProductForm({ ...productForm, imageUrl: url });
+    } catch (error) {
+      alert("Falha de conexão com a nuvem de imagens.");
+    } finally {
+      setIsUploadingProductImage(false);
+    }
+  };
+
+  // SALVAR PRIMEIRO PRODUTO
+  const handleSaveFirstProduct = async () => {
+    if (!productForm.name) return alert("O produto precisa de pelo menos um nome!");
+    try {
+        await addProduct({ 
+            ...productForm, 
+            price: Number(productForm.price) || 0, 
+            stock: Number(productForm.stock) || 99,
+            sku: `PROD-${Date.now()}`
+        });
+        setProductSaved(true);
+    } catch (error) {
+        alert("Erro ao salvar produto no banco de dados.");
+    }
+  };
+
   return (
-    <div className="bg-white border-2 border-gray-100 rounded-[2.5rem] shadow-sm overflow-hidden flex flex-col md:flex-row min-h-[600px]">
+    <div className="bg-white border-2 border-gray-100 rounded-[2.5rem] shadow-sm overflow-hidden flex flex-col md:flex-row min-h-[600px] max-h-[85vh]">
       
       {/* Sidebar do Wizard */}
-      <div className="w-full md:w-80 bg-gray-50 border-r-2 border-gray-100 p-8 flex flex-col">
+      <div className="w-full md:w-80 bg-gray-50 border-r-2 border-gray-100 p-8 flex flex-col shrink-0">
         <div className="mb-8">
           <h2 className="text-2xl font-black italic uppercase text-[#111827] leading-tight">
             Missões<br/><span className="text-[#0055ff]">Velo Setup</span>
@@ -78,7 +193,6 @@ export default function VeloOnboarding({
 
             return (
               <div key={step.id} className="flex items-start gap-4 relative">
-                {/* Linha conectora */}
                 {index < steps.length - 1 && (
                   <div className={`absolute top-8 left-[19px] w-0.5 h-full -ml-px ${isCompleted ? 'bg-[#0055ff]' : 'bg-gray-200'}`} />
                 )}
@@ -100,13 +214,13 @@ export default function VeloOnboarding({
       </div>
 
       {/* Conteúdo Principal */}
-      <div className="flex-1 flex flex-col bg-white relative">
+      <div className="flex-1 flex flex-col bg-white relative overflow-hidden">
         {/* Barra de Progresso no Topo */}
-        <div className="h-1.5 w-full bg-gray-50">
+        <div className="h-1.5 w-full bg-gray-50 shrink-0">
           <div className="h-full bg-gradient-to-r from-[#0055ff] to-[#ff7b00] transition-all duration-500 ease-out" style={{ width: `${progressPercentage}%` }} />
         </div>
 
-        <div className="flex-1 p-8 md:p-12 overflow-y-auto">
+        <div className="flex-1 p-8 md:p-10 overflow-y-auto custom-scrollbar">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}
@@ -114,12 +228,12 @@ export default function VeloOnboarding({
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
-              className="max-w-xl"
+              className="max-w-2xl mx-auto w-full pb-8"
             >
               
               {/* PASSO 1: GOOGLE */}
               {currentStep === 1 && (
-                <div className="space-y-6">
+                <div className="space-y-6 mt-4">
                   <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-6 border border-blue-100">
                     <FaGoogleIcon className="w-8 h-8 text-blue-500" />
                   </div>
@@ -142,40 +256,68 @@ export default function VeloOnboarding({
               {/* PASSO 2: DADOS DA EMPRESA */}
               {currentStep === 2 && (
                 <div className="space-y-6">
-                  <h3 className="text-3xl font-black uppercase italic text-slate-900">Sobre o Negócio</h3>
-                  <div className="space-y-4">
+                  <h3 className="text-3xl font-black uppercase italic text-slate-900 mb-6">Sobre o Negócio</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Nome Oficial da Loja</label>
                       <input 
                         type="text" 
                         value={settingsForm.businessName || ''}
-                        onChange={(e) => setSettingsForm({...settingsForm, businessName: e.target.value})}
+                        onChange={(e) => setSettingsForm((prev: any) => ({...prev, businessName: e.target.value}))}
                         className="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 transition-all" 
                         placeholder="Ex: Velo Express"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">CNPJ (Opcional, gera confiança)</label>
-                      <input 
-                        type="text" 
-                        value={settingsForm.cnpj || ''}
-                        onChange={(e) => setSettingsForm({...settingsForm, cnpj: e.target.value})}
-                        className="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 transition-all" 
-                        placeholder="00.000.000/0001-00"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
                       <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1 flex items-center gap-1">
-                        <MapPin size={12} className="text-red-500"/> Endereço Físico (Aparece no Mapa)
+                        <MapPin size={12} className="text-red-500"/> Endereço Físico (Mapa)
                       </label>
                       <input 
                         type="text" 
                         value={settingsForm.address || ''}
-                        onChange={(e) => setSettingsForm({...settingsForm, address: e.target.value})}
+                        onChange={(e) => setSettingsForm((prev: any) => ({...prev, address: e.target.value}))}
                         className="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 transition-all" 
-                        placeholder="Rua, Número - Bairro, Cidade - Estado"
+                        placeholder="Rua, Número - Bairro"
                       />
                     </div>
+                  </div>
+
+                  {/* BLOCO DE IA: HISTÓRIA DA EMPRESA */}
+                  <div className="pt-4 border-t border-slate-100 mt-6">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1 block mb-3">História da Loja (Relevância Google)</label>
+                    
+                    <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-5 rounded-3xl border border-purple-100 mb-4 flex flex-col gap-3 shadow-sm">
+                        <div className="flex items-center gap-1 text-[10px] font-black text-purple-600 uppercase tracking-widest">
+                            <Sparkles size={12} /> Gerar com Inteligência Artificial
+                        </div>
+                        <div className="flex flex-col md:flex-row gap-3">
+                            <input 
+                                type="text" 
+                                placeholder="Digite palavras soltas (Ex: 5 anos, artesanal, familiar, bairro centro...)" 
+                                className="w-full p-3.5 bg-white rounded-xl border border-purple-200 outline-none text-xs font-bold focus:ring-2 ring-purple-400 text-slate-700"
+                                value={termoSobreIA}
+                                onChange={(e) => setTermoSobreIA(e.target.value)}
+                            />
+                            <button 
+                                type="button" 
+                                onClick={handleGenerateAboutCopy}
+                                disabled={isGeneratingAbout}
+                                className="w-full md:w-auto px-6 py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl shadow-md transition-all disabled:opacity-50 active:scale-95 flex-shrink-0 flex items-center justify-center gap-2"
+                            >
+                                {isGeneratingAbout ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                                {isGeneratingAbout ? 'Pensando...' : 'Criar Texto'}
+                            </button>
+                        </div>
+                    </div>
+
+                    <textarea 
+                        rows={4}
+                        placeholder="A história da sua empresa aparecerá aqui..."
+                        value={settingsForm.aboutText || ''}
+                        onChange={(e) => setSettingsForm((prev: any) => ({...prev, aboutText: e.target.value}))}
+                        className="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-medium text-sm text-slate-700 border border-gray-200 transition-all resize-none custom-scrollbar" 
+                    />
                   </div>
                 </div>
               )}
@@ -183,12 +325,12 @@ export default function VeloOnboarding({
               {/* PASSO 3: IDENTIDADE VISUAL */}
               {currentStep === 3 && (
                 <div className="space-y-6">
-                  <h3 className="text-3xl font-black uppercase italic text-slate-900">A Cara da sua Marca</h3>
+                  <h3 className="text-3xl font-black uppercase italic text-slate-900 mb-6">A Cara da sua Marca</h3>
                   
                   <div className="bg-gray-50 p-6 rounded-3xl border border-gray-200 space-y-4">
                     <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Logomarca (Recomendado PNG transparente)</label>
-                    <div className="flex items-center gap-4">
-                      <label className="flex-1 cursor-pointer bg-white border-2 border-dashed border-gray-300 hover:border-[#0055ff] hover:bg-blue-50 transition-colors p-6 rounded-2xl flex flex-col items-center justify-center gap-2 text-center">
+                    <div className="flex flex-col sm:flex-row items-center gap-4">
+                      <label className="w-full sm:flex-1 cursor-pointer bg-white border-2 border-dashed border-gray-300 hover:border-[#0055ff] hover:bg-blue-50 transition-colors p-6 rounded-2xl flex flex-col items-center justify-center gap-2 text-center">
                         {isUploadingLogo ? (
                           <div className="w-6 h-6 border-2 border-[#0055ff] border-t-transparent rounded-full animate-spin"></div>
                         ) : (
@@ -200,7 +342,7 @@ export default function VeloOnboarding({
                         <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={isUploadingLogo} className="hidden" />
                       </label>
                       {settingsForm.logoUrl && (
-                        <div className="w-24 h-24 bg-white rounded-2xl p-2 border border-gray-200 flex items-center justify-center shrink-0 shadow-sm">
+                        <div className="w-32 h-32 bg-white rounded-2xl p-2 border border-gray-200 flex items-center justify-center shrink-0 shadow-sm">
                           <img src={settingsForm.logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
                         </div>
                       )}
@@ -214,7 +356,7 @@ export default function VeloOnboarding({
                         <input 
                           type="color" 
                           value={settingsForm.primaryColor}
-                          onChange={(e) => setSettingsForm({...settingsForm, primaryColor: e.target.value})}
+                          onChange={(e) => setSettingsForm((prev: any) => ({...prev, primaryColor: e.target.value}))}
                           className="absolute -top-2 -left-2 w-20 h-20 cursor-pointer"
                         />
                       </div>
@@ -223,8 +365,8 @@ export default function VeloOnboarding({
                         <input 
                           type="text" 
                           value={settingsForm.primaryColor}
-                          onChange={(e) => setSettingsForm({...settingsForm, primaryColor: e.target.value})}
-                          className="w-full bg-gray-50 border border-gray-200 text-xs font-bold text-slate-700 p-3 rounded-xl outline-none focus:border-[#0055ff] uppercase"
+                          onChange={(e) => setSettingsForm((prev: any) => ({...prev, primaryColor: e.target.value}))}
+                          className="w-full max-w-[150px] bg-gray-50 border border-gray-200 text-xs font-bold text-slate-700 p-3 rounded-xl outline-none focus:border-[#0055ff] uppercase"
                         />
                       </div>
                     </div>
@@ -245,8 +387,8 @@ export default function VeloOnboarding({
                     </label>
                     <input 
                       type="text" 
-                      value={settingsForm.whatsappNumber}
-                      onChange={(e) => setSettingsForm({...settingsForm, whatsappNumber: e.target.value.replace(/\D/g, '')})}
+                      value={settingsForm.whatsappNumber || ''}
+                      onChange={(e) => setSettingsForm((prev: any) => ({...prev, whatsappNumber: e.target.value.replace(/\D/g, '')}))}
                       className="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 ring-[#25D366] font-black text-lg text-slate-800 border border-gray-200 transition-all placeholder:font-medium" 
                       placeholder="5511999999999"
                       maxLength={13}
@@ -256,25 +398,96 @@ export default function VeloOnboarding({
                 </div>
               )}
 
-              {/* PASSO 5: CATÁLOGO */}
+              {/* PASSO 5: CATÁLOGO COM CRIADOR DE PRODUTOS E IA */}
               {currentStep === 5 && (
                 <div className="space-y-6">
-                  <h3 className="text-3xl font-black uppercase italic text-slate-900">Seu Catálogo</h3>
-                  <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                    Sua loja precisa de produtos ou serviços para existir. Nossa inteligência artificial Velo Copy pode te ajudar a criar descrições persuasivas na tela de cadastro.
-                  </p>
-                  <div className="bg-blue-50 border border-blue-200 p-6 rounded-3xl flex flex-col items-center justify-center text-center gap-4">
-                    <ShoppingBag className="w-10 h-10 text-blue-500" />
-                    <p className="text-sm font-bold text-blue-900">
-                      Você pode adicionar produtos agora ou finalizar o tour primeiro.
-                    </p>
-                    <button 
-                      onClick={() => setActivePanel('products')}
-                      className="px-6 py-3 bg-[#0055ff] hover:bg-blue-700 text-white font-black uppercase tracking-widest text-[11px] rounded-xl shadow-lg transition-all"
-                    >
-                      Ir para Cadastro de Produtos
-                    </button>
+                  <div className="mb-6">
+                      <h3 className="text-3xl font-black uppercase italic text-slate-900 leading-none mb-2">Primeiro Produto</h3>
+                      <p className="text-sm font-medium text-slate-500 leading-relaxed">
+                        Vamos cadastrar o seu primeiro item. Use a IA para criar uma descrição magnética focada em conversão no Google.
+                      </p>
                   </div>
+                  
+                  {productSaved ? (
+                      <div className="bg-green-50 border-2 border-green-200 p-10 rounded-[3rem] text-center flex flex-col items-center">
+                          <div className="w-20 h-20 bg-green-500 text-white rounded-full flex items-center justify-center mb-4">
+                              <CheckCircle2 size={40} />
+                          </div>
+                          <h4 className="text-2xl font-black uppercase italic text-green-800">Produto Salvo!</h4>
+                          <p className="text-sm font-bold text-green-600 mt-2">Você poderá adicionar mais itens depois no painel Catálogo.</p>
+                      </div>
+                  ) : (
+                      <div className="space-y-5 bg-slate-50 p-6 rounded-[2.5rem] border border-slate-200 shadow-inner">
+                          
+                          {/* BLOCO IA DO PRODUTO */}
+                          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-5 rounded-2xl border border-purple-200 shadow-sm">
+                            <label className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-2 flex items-center gap-1">
+                                ✨ Assistente de Vendas IA
+                            </label>
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <input 
+                                    type="text" 
+                                    placeholder="Ex: Tênis Nike Preto, Hambúrguer de Costela..." 
+                                    className="w-full p-3.5 bg-white rounded-xl border border-purple-200 outline-none text-xs font-bold focus:ring-2 ring-purple-400 text-slate-700"
+                                    value={termoProdutoIA}
+                                    onChange={(e) => setTermoProdutoIA(e.target.value)}
+                                />
+                                <button 
+                                    type="button" 
+                                    onClick={handleGenerateProductCopy}
+                                    disabled={isGeneratingProduct}
+                                    className="w-full sm:w-auto px-6 py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl shadow-md transition-all disabled:opacity-50 active:scale-95 shrink-0 flex items-center justify-center gap-2"
+                                >
+                                    {isGeneratingProduct ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                                    Gerar IA
+                                </button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-4">
+                              <input 
+                                  type="text" 
+                                  placeholder="Nome Oficial do Produto *" 
+                                  className="w-full p-4 bg-white rounded-xl outline-none font-bold text-sm text-slate-700 border border-slate-200 focus:ring-2 ring-blue-500 shadow-sm"
+                                  value={productForm.name}
+                                  onChange={e => setProductForm({...productForm, name: e.target.value})}
+                              />
+                              
+                              <textarea 
+                                  rows={3} 
+                                  placeholder="Descrição comercial focada em detalhes..." 
+                                  className="w-full p-4 bg-white rounded-xl outline-none font-medium text-sm text-slate-600 border border-slate-200 focus:ring-2 ring-blue-500 shadow-sm resize-none custom-scrollbar"
+                                  value={productForm.description}
+                                  onChange={e => setProductForm({...productForm, description: e.target.value})}
+                              />
+
+                              <div className="flex flex-col sm:flex-row gap-4">
+                                  <input 
+                                      type="number" step="0.01" 
+                                      placeholder="Preço Base (R$)" 
+                                      className="w-full p-4 bg-white rounded-xl outline-none font-black text-sm text-blue-600 border border-slate-200 focus:ring-2 ring-blue-500 shadow-sm"
+                                      value={productForm.price}
+                                      onChange={e => setProductForm({...productForm, price: e.target.value})}
+                                  />
+                                  <div className="w-full relative">
+                                      <label className="absolute inset-0 bg-white border border-slate-200 rounded-xl flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors shadow-sm text-slate-600 font-bold text-xs uppercase tracking-widest">
+                                          {isUploadingProductImage ? <Loader2 size={16} className="animate-spin"/> : <UploadCloud size={16}/>}
+                                          {productForm.imageUrl ? 'Imagem Anexada ✅' : 'Subir Foto'}
+                                          <input type="file" accept="image/*" className="hidden" onChange={handleWizardProductImageUpload} disabled={isUploadingProductImage}/>
+                                      </label>
+                                  </div>
+                              </div>
+                          </div>
+
+                          <button 
+                              onClick={handleSaveFirstProduct}
+                              disabled={!productForm.name || isUploadingProductImage}
+                              className="w-full bg-slate-900 text-white py-4 rounded-xl font-black uppercase tracking-widest text-xs shadow-xl hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                          >
+                              <Save size={16} /> Salvar Este Produto
+                          </button>
+                      </div>
+                  )}
                 </div>
               )}
 
@@ -293,7 +506,7 @@ export default function VeloOnboarding({
                     <input 
                       type="url" 
                       value={settingsForm.googleReviewUrl || ''}
-                      onChange={(e) => setSettingsForm({...settingsForm, googleReviewUrl: e.target.value})}
+                      onChange={(e) => setSettingsForm((prev: any) => ({...prev, googleReviewUrl: e.target.value}))}
                       className="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 ring-yellow-400 font-bold text-sm text-slate-700 border border-gray-200 transition-all" 
                       placeholder="https://maps.app.goo.gl/..."
                     />
@@ -312,11 +525,11 @@ export default function VeloOnboarding({
           </AnimatePresence>
         </div>
 
-        {/* Rodapé de Ações */}
-        <div className="p-6 md:px-12 border-t-2 border-gray-100 flex items-center justify-between bg-gray-50/50">
+        {/* Rodapé de Ações (Fixo no fundo) */}
+        <div className="p-6 md:px-10 border-t-2 border-gray-100 flex items-center justify-between bg-white shrink-0">
           <button 
             onClick={currentStep === 1 ? onFinish : handlePrev}
-            className="px-6 py-3.5 bg-white border-2 border-gray-200 hover:bg-gray-50 text-slate-600 font-black uppercase tracking-widest text-[11px] rounded-full flex items-center gap-2 transition-all"
+            className="px-6 py-3.5 bg-gray-50 border border-gray-200 hover:bg-gray-100 text-slate-600 font-black uppercase tracking-widest text-[10px] rounded-xl flex items-center gap-2 transition-all shadow-sm"
           >
             {currentStep === 1 ? 'Pular Tour' : <><ArrowLeft className="w-4 h-4" /> Voltar</>}
           </button>
@@ -324,16 +537,16 @@ export default function VeloOnboarding({
           {currentStep < steps.length ? (
             <button 
               onClick={handleNext}
-              className="px-8 py-3.5 bg-[#111827] hover:bg-black text-white font-black uppercase tracking-widest text-[11px] rounded-full flex items-center gap-2 shadow-lg transition-all"
+              className="px-8 py-3.5 bg-[#111827] hover:bg-black text-white font-black uppercase tracking-widest text-[10px] rounded-xl flex items-center gap-2 shadow-lg transition-all active:scale-95"
             >
-              Próximo Passo <ArrowRight className="w-4 h-4" />
+              Próximo <ArrowRight className="w-4 h-4" />
             </button>
           ) : (
             <button 
               onClick={handleComplete}
-              className="px-8 py-3.5 bg-[#0055ff] hover:bg-blue-700 text-white font-black uppercase tracking-widest text-[11px] rounded-full flex items-center gap-2 shadow-lg shadow-blue-500/30 transition-all"
+              className="px-8 py-3.5 bg-[#0055ff] hover:bg-blue-700 text-white font-black uppercase tracking-widest text-[10px] rounded-xl flex items-center gap-2 shadow-lg shadow-blue-500/30 transition-all active:scale-95"
             >
-              <CheckCircle2 className="w-4 h-4" /> Salvar e Concluir
+              <CheckCircle2 className="w-4 h-4" /> Finalizar
             </button>
           )}
         </div>

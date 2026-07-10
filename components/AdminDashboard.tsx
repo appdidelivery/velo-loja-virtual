@@ -684,6 +684,8 @@ const [termoIA, setTermoIA] = useState('');
                     handleLogoUpload={handleLogoUpload}
                     isUploadingLogo={isUploadingLogo}
                     onFinish={() => setShowOnboarding(false)}
+                    addProduct={addProduct}
+                    uploadImageToCloudinary={uploadImageToCloudinary}
                   />
                 </div>
               ) : (
