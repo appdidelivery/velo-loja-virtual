@@ -413,7 +413,9 @@ const [termoIA, setTermoIA] = useState('');
         address: settingsForm.address || '',
         faq: settingsForm.faq || [],
         googleReviewUrl: settingsForm.googleReviewUrl || '',
-        cnpj: settingsForm.cnpj || ''
+        cnpj: settingsForm.cnpj || '',
+        // SPRINT 1: Matriz de Permissões - Salva o número da loja como admin master
+        adminPhones: settingsForm.whatsappNumber ? [settingsForm.whatsappNumber.replace(/\D/g, '')] : []
       }, { merge: true });
       
       alert("✅ SUCESSO! Dados salvos no Firebase.");
