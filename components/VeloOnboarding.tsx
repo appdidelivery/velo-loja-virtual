@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   CheckCircle2, Building2, Palette, MessageSquare, 
   ShoppingBag, Star, ArrowRight, ArrowLeft, UploadCloud, 
-  MapPin, Sparkles, Loader2
+  MapPin, Sparkles, Loader2, Save, Search, EyeOff
 } from 'lucide-react';
 import { FaGoogle as FaGoogleIcon } from 'react-icons/fa6';
 
