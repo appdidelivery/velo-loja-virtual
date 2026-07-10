@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Componentes da Loja
 import PricingTable from './PricingTable';
 import { pricingPlans } from '../data/pricingPlans';
+import VeloOnboarding from './VeloOnboarding';
 import TemplateSelector from './TemplateSelector';
 import { TEMPLATES } from '../data/templatesConfig'; 
 
@@ -30,6 +31,9 @@ import { FaGoogle } from 'react-icons/fa6';
 
 export default function AdminDashboard() {
   const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'categories' | 'orders' | 'chats' | 'settings' | 'google_business' | 'finance'>('dashboard');
+  
+  // Estado que controla se o usuário vê o Wizard ou o Dashboard clássico
+  const [showOnboarding, setShowOnboarding] = useState(true); 
 
   const [isClearingCache, setIsClearingCache] = useState(false);
 
@@ -669,140 +673,161 @@ const [termoIA, setTermoIA] = useState('');
         <main className="flex-1 overflow-y-auto p-6 lg:p-10">
           
           {activePanel === 'dashboard' && (
-            <div className="space-y-8 max-w-[1400px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-              
-              {/* CABEÇALHO */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h1 className="text-4xl font-black italic tracking-tighter uppercase text-[#111827]">Visão Geral</h1>
-                <div className="flex flex-col sm:flex-row items-center gap-3">
-                  <button 
-                    onClick={handleClearCache} 
-                    disabled={isClearingCache} 
-                    className="w-full sm:w-auto bg-white border-2 border-gray-200 text-[#111827] hover:bg-gray-50 px-6 py-3.5 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-sm disabled:opacity-50"
-                  >
-                    {isClearingCache ? <div className="w-4 h-4 border-2 border-[#111827] border-t-transparent rounded-full animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                    Atualizar Vitrine (Cache)
-                  </button>
-                  <button className="w-full sm:w-auto bg-[#111827] hover:bg-black text-white px-8 py-3.5 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95">
-                    Fechar Caixa / Relatório
-                  </button>
+            <>
+              {showOnboarding ? (
+                <div className="max-w-[1200px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <VeloOnboarding 
+                    settingsForm={settingsForm}
+                    setSettingsForm={setSettingsForm}
+                    saveSettings={saveSettings}
+                    setActivePanel={setActivePanel}
+                    handleLogoUpload={handleLogoUpload}
+                    isUploadingLogo={isUploadingLogo}
+                    onFinish={() => setShowOnboarding(false)}
+                  />
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-8 max-w-[1400px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  
+                  {/* CABEÇALHO */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <h1 className="text-4xl font-black italic tracking-tighter uppercase text-[#111827]">Visão Geral</h1>
+                      <button onClick={() => setShowOnboarding(true)} className="bg-blue-50 text-[#0055ff] hover:bg-blue-100 px-4 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest border border-blue-200 transition-colors">
+                        Reabrir Setup
+                      </button>
+                    </div>
+                    <div className="flex flex-col sm:flex-row items-center gap-3">
+                      <button 
+                        onClick={handleClearCache} 
+                        disabled={isClearingCache} 
+                        className="w-full sm:w-auto bg-white border-2 border-gray-200 text-[#111827] hover:bg-gray-50 px-6 py-3.5 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-sm disabled:opacity-50"
+                      >
+                        {isClearingCache ? <div className="w-4 h-4 border-2 border-[#111827] border-t-transparent rounded-full animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                        Atualizar Vitrine (Cache)
+                      </button>
+                      <button className="w-full sm:w-auto bg-[#111827] hover:bg-black text-white px-8 py-3.5 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95">
+                        Fechar Caixa / Relatório
+                      </button>
+                    </div>
+                  </div>
 
-              {/* BANNER IA / SEO (ESCOLA VELO) */}
-              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-[2.5rem] p-6 sm:p-10 shadow-sm relative overflow-hidden flex flex-col md:flex-row gap-6 items-center justify-between">
-                <button className="absolute top-4 right-4 p-2 text-yellow-600/50 hover:bg-yellow-100 rounded-full transition-colors"><X size={16}/></button>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-yellow-800 mb-3 bg-white w-max px-3 py-1 rounded-full shadow-sm border border-yellow-100">
-                    <Sparkles className="w-3.5 h-3.5 text-yellow-500" /> SEO Local & Vendas
+                  {/* BANNER IA / SEO (ESCOLA VELO) */}
+                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-[2.5rem] p-6 sm:p-10 shadow-sm relative overflow-hidden flex flex-col md:flex-row gap-6 items-center justify-between">
+                    <button className="absolute top-4 right-4 p-2 text-yellow-600/50 hover:bg-yellow-100 rounded-full transition-colors"><X size={16}/></button>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-yellow-800 mb-3 bg-white w-max px-3 py-1 rounded-full shadow-sm border border-yellow-100">
+                        <Sparkles className="w-3.5 h-3.5 text-yellow-500" /> SEO Local & Vendas
+                      </div>
+                      <h3 className="text-2xl sm:text-3xl font-black text-yellow-950 uppercase leading-tight mb-3">Crie um combo e apareça em destaque no Google</h3>
+                      <p className="text-sm text-yellow-800/80 font-medium leading-relaxed max-w-2xl">
+                        Clientes adoram ofertas combinadas! Deixe nossa Inteligência Artificial sugerir combos baseados no seu segmento. Em um clique, nós o criamos no seu catálogo e o enviamos direto para a vitrine do seu negócio.
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-3 w-full md:w-64 shrink-0 z-10">
+                      <button className="w-full bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-600 hover:to-orange-500 text-white font-black uppercase tracking-wider text-xs py-4 rounded-xl shadow-lg shadow-orange-500/30 flex items-center justify-center gap-2 transition-transform hover:scale-[0.98]">
+                        <Sparkles className="w-4 h-4" /> Ver Sugestões Mágicas
+                      </button>
+                      <button className="w-full bg-white/60 border-2 border-yellow-200 hover:bg-white hover:border-yellow-300 text-yellow-900 font-black uppercase tracking-wider text-xs py-3.5 rounded-xl transition-all">
+                        Ver Próxima Aula
+                      </button>
+                    </div>
                   </div>
-                  <h3 className="text-2xl sm:text-3xl font-black text-yellow-950 uppercase leading-tight mb-3">Crie um combo e apareça em destaque no Google</h3>
-                  <p className="text-sm text-yellow-800/80 font-medium leading-relaxed max-w-2xl">
-                    Clientes adoram ofertas combinadas! Deixe nossa Inteligência Artificial sugerir combos baseados no seu segmento. Em um clique, nós o criamos no seu catálogo e o enviamos direto para a vitrine do seu negócio.
-                  </p>
-                </div>
-                <div className="flex flex-col gap-3 w-full md:w-64 shrink-0 z-10">
-                  <button className="w-full bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-600 hover:to-orange-500 text-white font-black uppercase tracking-wider text-xs py-4 rounded-xl shadow-lg shadow-orange-500/30 flex items-center justify-center gap-2 transition-transform hover:scale-[0.98]">
-                    <Sparkles className="w-4 h-4" /> Ver Sugestões Mágicas
-                  </button>
-                  <button className="w-full bg-white/60 border-2 border-yellow-200 hover:bg-white hover:border-yellow-300 text-yellow-900 font-black uppercase tracking-wider text-xs py-3.5 rounded-xl transition-all">
-                    Ver Próxima Aula
-                  </button>
-                </div>
-              </div>
 
-              {/* ALERTA DE ESTOQUE CRÍTICO */}
-              {criticalProducts.length > 0 && (
-                <div className="bg-red-50 border border-red-200 p-6 rounded-[2rem]">
-                  <div className="flex justify-between items-center mb-3">
-                      <h3 className="text-red-600 font-black flex items-center gap-2 animate-pulse"><AlertCircle size={20} /> ALERTA: ESTOQUE CRÍTICO ({criticalProducts.length} itens)</h3>
-                      {criticalProducts.length > 5 && (
-                          <button onClick={() => setShowAllCriticalStock(!showAllCriticalStock)} className="text-xs font-black text-red-600 bg-red-100 px-3 py-1.5 rounded-lg hover:bg-red-200 transition-all">
-                              {showAllCriticalStock ? 'Ocultar Lista' : `Ver todos os ${criticalProducts.length}`}
-                          </button>
-                      )}
+                  {/* ALERTA DE ESTOQUE CRÍTICO */}
+                  {criticalProducts.length > 0 && (
+                    <div className="bg-red-50 border border-red-200 p-6 rounded-[2rem]">
+                      <div className="flex justify-between items-center mb-3">
+                          <h3 className="text-red-600 font-black flex items-center gap-2 animate-pulse"><AlertCircle size={20} /> ALERTA: ESTOQUE CRÍTICO ({criticalProducts.length} itens)</h3>
+                          {criticalProducts.length > 5 && (
+                              <button onClick={() => setShowAllCriticalStock(!showAllCriticalStock)} className="text-xs font-black text-red-600 bg-red-100 px-3 py-1.5 rounded-lg hover:bg-red-200 transition-all">
+                                  {showAllCriticalStock ? 'Ocultar Lista' : `Ver todos os ${criticalProducts.length}`}
+                              </button>
+                          )}
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                          {(showAllCriticalStock ? criticalProducts : criticalProducts.slice(0, 5)).map(p => (
+                              <span key={p.id} className="bg-white text-red-600 px-3 py-1 rounded-lg text-xs font-bold border border-red-100 shadow-sm flex items-center gap-1">
+                                  {p.name} <strong className="text-red-800">({p.stock} un)</strong>
+                              </span>
+                          ))}
+                          {!showAllCriticalStock && criticalProducts.length > 5 && (
+                              <span className="bg-red-100 text-red-500 px-3 py-1 rounded-lg text-xs font-bold border border-red-200">
+                                  + {criticalProducts.length - 5} ocultos...
+                              </span>
+                          )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* QUADRO DE MÉTRICAS PRINCIPAL (HOJE) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                      <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-gray-100 relative overflow-hidden">
+                          <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mb-1 z-10 relative">Visitas Hoje</p>
+                          <p className="text-4xl font-black text-indigo-500 italic z-10 relative">24</p>
+                          <div className="absolute -right-4 -bottom-4 text-indigo-50 opacity-30"><ExternalLink size={120}/></div>
+                          <p className="text-[10px] font-bold text-gray-400 mt-2">Conversão Est.: 4.2%</p>
+                      </div>
+                      <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-gray-100 relative overflow-hidden">
+                          <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mb-1 z-10 relative">Faturamento (Hoje)</p>
+                          <p className="text-4xl font-black text-green-500 italic z-10 relative">R$ {todaysRevenue.toFixed(2)}</p>
+                          <div className="absolute -right-4 -bottom-4 text-green-50 opacity-30"><DollarSign size={120}/></div>
+                      </div>
+                      <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-gray-100 relative overflow-hidden">
+                          <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mb-1 z-10 relative">Lucro Est. (Hoje)</p>
+                          <p className="text-4xl font-black text-cyan-500 italic z-10 relative">R$ {todaysProfit.toFixed(2)}</p>
+                          <div className="absolute -right-4 -bottom-4 text-cyan-50 opacity-30"><TrendingUp size={120}/></div>
+                      </div>
+                      <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-gray-100 relative overflow-hidden">
+                          <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mb-1 z-10 relative">Pedidos Hoje</p>
+                          <p className="text-4xl font-black text-blue-600 italic z-10 relative">{todaysOrders.length}</p>
+                          <div className="absolute -right-4 -bottom-4 text-blue-50 opacity-20"><ShoppingBag size={120}/></div>
+                      </div>
                   </div>
-                  <div className="flex gap-2 flex-wrap">
-                      {(showAllCriticalStock ? criticalProducts : criticalProducts.slice(0, 5)).map(p => (
-                          <span key={p.id} className="bg-white text-red-600 px-3 py-1 rounded-lg text-xs font-bold border border-red-100 shadow-sm flex items-center gap-1">
-                              {p.name} <strong className="text-red-800">({p.stock} un)</strong>
-                          </span>
-                      ))}
-                      {!showAllCriticalStock && criticalProducts.length > 5 && (
-                          <span className="bg-red-100 text-red-500 px-3 py-1 rounded-lg text-xs font-bold border border-red-200">
-                              + {criticalProducts.length - 5} ocultos...
-                          </span>
-                      )}
+
+                  {/* BLOCOS DE DADOS GLOBAIS */}
+                  <div className="pt-8 border-t border-gray-100">
+                    <h2 className="text-2xl font-black italic tracking-tighter uppercase mb-6 text-gray-800">Estatísticas Gerais</h2>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+                        <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 text-center flex flex-col justify-center hover:shadow-md transition-shadow">
+                            <div className="flex justify-center mb-2"><Package size={32} className="text-gray-400"/></div>
+                            <p className="text-3xl font-black text-gray-800 italic">{totalProducts}</p>
+                            <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mt-1">Produtos</p>
+                        </div>
+                        
+                        <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 text-center flex flex-col justify-center hover:shadow-md transition-shadow">
+                            <div className="flex justify-center mb-2"><ShoppingBag size={32} className="text-gray-400"/></div>
+                            <p className="text-3xl font-black text-gray-800 italic">{totalOrders}</p>
+                            <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mt-1">Pedidos Totais</p>
+                        </div>
+                        
+                        <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 text-center flex flex-col justify-center hover:shadow-md transition-shadow">
+                            <div className="flex justify-center mb-2"><User size={32} className="text-gray-400"/></div>
+                            <p className="text-3xl font-black text-gray-800 italic">{totalCustomers}</p>
+                            <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mt-1">Clientes Únicos</p>
+                        </div>
+                        
+                        <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 text-center flex flex-col justify-center hover:shadow-md transition-shadow">
+                            <div className="flex justify-center mb-2"><ExternalLink size={32} className="text-green-500"/></div>
+                            <p className="text-3xl font-black text-green-600 italic">{storefrontOrdersCount}</p>
+                            <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mt-1">Pedidos (Loja)</p>
+                        </div>
+                        
+                        <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 text-center flex flex-col justify-center hover:shadow-md transition-shadow">
+                            <div className="flex justify-center mb-2"><Plus size={32} className="text-blue-500"/></div>
+                            <p className="text-3xl font-black text-blue-600 italic">{manualOrdersCount}</p>
+                            <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mt-1">Pedidos (Manual)</p>
+                        </div>
+                    </div>
                   </div>
+
                 </div>
               )}
-
-              {/* QUADRO DE MÉTRICAS PRINCIPAL (HOJE) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-gray-100 relative overflow-hidden">
-                      <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mb-1 z-10 relative">Visitas Hoje</p>
-                      <p className="text-4xl font-black text-indigo-500 italic z-10 relative">24</p>
-                      <div className="absolute -right-4 -bottom-4 text-indigo-50 opacity-30"><ExternalLink size={120}/></div>
-                      <p className="text-[10px] font-bold text-gray-400 mt-2">Conversão Est.: 4.2%</p>
-                  </div>
-                  <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-gray-100 relative overflow-hidden">
-                      <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mb-1 z-10 relative">Faturamento (Hoje)</p>
-                      <p className="text-4xl font-black text-green-500 italic z-10 relative">R$ {todaysRevenue.toFixed(2)}</p>
-                      <div className="absolute -right-4 -bottom-4 text-green-50 opacity-30"><DollarSign size={120}/></div>
-                  </div>
-                  <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-gray-100 relative overflow-hidden">
-                      <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mb-1 z-10 relative">Lucro Est. (Hoje)</p>
-                      <p className="text-4xl font-black text-cyan-500 italic z-10 relative">R$ {todaysProfit.toFixed(2)}</p>
-                      <div className="absolute -right-4 -bottom-4 text-cyan-50 opacity-30"><TrendingUp size={120}/></div>
-                  </div>
-                  <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-gray-100 relative overflow-hidden">
-                      <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mb-1 z-10 relative">Pedidos Hoje</p>
-                      <p className="text-4xl font-black text-blue-600 italic z-10 relative">{todaysOrders.length}</p>
-                      <div className="absolute -right-4 -bottom-4 text-blue-50 opacity-20"><ShoppingBag size={120}/></div>
-                  </div>
-              </div>
-
-              {/* BLOCOS DE DADOS GLOBAIS */}
-              <div className="pt-8 border-t border-gray-100">
-                <h2 className="text-2xl font-black italic tracking-tighter uppercase mb-6 text-gray-800">Estatísticas Gerais</h2>
-                
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-                    <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 text-center flex flex-col justify-center hover:shadow-md transition-shadow">
-                        <div className="flex justify-center mb-2"><Package size={32} className="text-gray-400"/></div>
-                        <p className="text-3xl font-black text-gray-800 italic">{totalProducts}</p>
-                        <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mt-1">Produtos</p>
-                    </div>
-                    
-                    <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 text-center flex flex-col justify-center hover:shadow-md transition-shadow">
-                        <div className="flex justify-center mb-2"><ShoppingBag size={32} className="text-gray-400"/></div>
-                        <p className="text-3xl font-black text-gray-800 italic">{totalOrders}</p>
-                        <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mt-1">Pedidos Totais</p>
-                    </div>
-                    
-                    <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 text-center flex flex-col justify-center hover:shadow-md transition-shadow">
-                        <div className="flex justify-center mb-2"><User size={32} className="text-gray-400"/></div>
-                        <p className="text-3xl font-black text-gray-800 italic">{totalCustomers}</p>
-                        <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mt-1">Clientes Únicos</p>
-                    </div>
-                    
-                    <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 text-center flex flex-col justify-center hover:shadow-md transition-shadow">
-                        <div className="flex justify-center mb-2"><ExternalLink size={32} className="text-green-500"/></div>
-                        <p className="text-3xl font-black text-green-600 italic">{storefrontOrdersCount}</p>
-                        <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mt-1">Pedidos (Loja)</p>
-                    </div>
-                    
-                    <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 text-center flex flex-col justify-center hover:shadow-md transition-shadow">
-                        <div className="flex justify-center mb-2"><Plus size={32} className="text-blue-500"/></div>
-                        <p className="text-3xl font-black text-blue-600 italic">{manualOrdersCount}</p>
-                        <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mt-1">Pedidos (Manual)</p>
-                    </div>
-                </div>
-              </div>
-
-            </div>
+            </>
           )}
 
-{/* --- ADD CATEGORY DIALOG MODAL --- */}
+      {/* --- ADD CATEGORY DIALOG MODAL --- */}
       <AnimatePresence>
         {isCategoryModalOpen && (
           <div className="fixed inset-0 bg-slate-900/60 z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
