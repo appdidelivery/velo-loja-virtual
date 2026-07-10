@@ -255,7 +255,9 @@ export default function AdminDashboard() {
           address: dbData.address || '',
           aboutText: dbData.aboutText || '',
           storeNiche: dbData.storeNiche || 'varejo',
-          cnpj: dbData.cnpj || ''
+          cnpj: dbData.cnpj || '',
+          metaPhoneId: dbData.metaPhoneId || '',
+          metaApiToken: dbData.metaApiToken || ''
         }));
       }
     });
@@ -414,10 +416,8 @@ const [termoIA, setTermoIA] = useState('');
         faq: settingsForm.faq || [],
         googleReviewUrl: settingsForm.googleReviewUrl || '',
         cnpj: settingsForm.cnpj || '',
-        // SPRINT 3: Integração Meta WhatsApp (Tokens)
         metaPhoneId: settingsForm.metaPhoneId || '',
         metaApiToken: settingsForm.metaApiToken || '',
-        // SPRINT 1: Matriz de Permissões - Salva o número da loja como admin master
         adminPhones: settingsForm.whatsappNumber ? [settingsForm.whatsappNumber.replace(/\D/g, '')] : []
       }, { merge: true });
       
