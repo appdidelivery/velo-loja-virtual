@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   CheckCircle2, Building2, Palette, MessageSquare, 
   ShoppingBag, Star, ArrowRight, ArrowLeft, UploadCloud, 
-  MapPin, Sparkles, Loader2, Save, Search, EyeOff
+  MapPin, Sparkles, Loader2, Save, Search, EyeOff, Flame
 } from 'lucide-react';
 import { FaGoogle as FaGoogleIcon } from 'react-icons/fa6';
 
@@ -17,7 +17,6 @@ interface VeloOnboardingProps {
   handleLogoUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isUploadingLogo: boolean;
   onFinish: () => void;
-  // NOVAS PROPS PARA O PRODUTO
   addProduct: (product: any) => Promise<void>;
   uploadImageToCloudinary: (file: File) => Promise<string>;
 }
@@ -414,75 +413,141 @@ export default function VeloOnboarding({
                               <CheckCircle2 size={40} />
                           </div>
                           <h4 className="text-2xl font-black uppercase italic text-green-800">Produto Salvo!</h4>
-                          <p className="text-sm font-bold text-green-600 mt-2">Você poderá adicionar mais itens depois no painel Catálogo.</p>
+                          <p className="text-sm font-bold text-green-600 mt-2">Você poderá adicionar mais itens depois no painel de Catálogo.</p>
                       </div>
                   ) : (
-                      <div className="space-y-5 bg-slate-50 p-6 rounded-[2.5rem] border border-slate-200 shadow-inner">
+                      <div className="space-y-5 bg-slate-50 p-6 md:p-8 rounded-[2.5rem] border border-slate-200 shadow-inner">
                           
-                          {/* BLOCO IA DO PRODUTO */}
-                          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-5 rounded-2xl border border-purple-200 shadow-sm">
-                            <label className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-2 flex items-center gap-1">
-                                ✨ Assistente de Vendas IA
-                            </label>
-                            <div className="flex flex-col sm:flex-row gap-3">
-                                <input 
-                                    type="text" 
-                                    placeholder="Ex: Tênis Nike Preto, Hambúrguer de Costela..." 
-                                    className="w-full p-3.5 bg-white rounded-xl border border-purple-200 outline-none text-xs font-bold focus:ring-2 ring-purple-400 text-slate-700"
-                                    value={termoProdutoIA}
-                                    onChange={(e) => setTermoProdutoIA(e.target.value)}
-                                />
-                                <button 
-                                    type="button" 
-                                    onClick={handleGenerateProductCopy}
-                                    disabled={isGeneratingProduct}
-                                    className="w-full sm:w-auto px-6 py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl shadow-md transition-all disabled:opacity-50 active:scale-95 shrink-0 flex items-center justify-center gap-2"
-                                >
-                                    {isGeneratingProduct ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                                    Gerar IA
-                                </button>
-                            </div>
+                          {/* --- GERADOR DE IA (VELO COPY) --- */}
+                          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-5 rounded-3xl border border-purple-100 flex flex-col md:flex-row items-center gap-4 shadow-sm">
+                              <div className="flex-1 w-full">
+                                  <label className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-2 flex items-center gap-1">
+                                      <Sparkles size={12} /> Velo IA (Auto-Preencher)
+                                  </label>
+                                  <input 
+                                      type="text" 
+                                      placeholder="Ex: Pod Descartável Vapper Elfbar BC Pro..." 
+                                      className="w-full p-4 bg-white rounded-2xl border border-purple-200 outline-none text-sm font-bold focus:ring-2 ring-purple-400 text-slate-700"
+                                      value={termoProdutoIA}
+                                      onChange={(e) => setTermoProdutoIA(e.target.value)}
+                                  />
+                              </div>
+                              <button 
+                                  type="button" 
+                                  onClick={handleGenerateProductCopy}
+                                  disabled={isGeneratingProduct}
+                                  className="w-full md:w-auto mt-2 md:mt-0 px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-purple-200 transition-all disabled:opacity-50 active:scale-95 flex-shrink-0 flex items-center justify-center gap-2"
+                              >
+                                  {isGeneratingProduct ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />}
+                                  {isGeneratingProduct ? 'Pensando...' : 'Gerar c/ IA'}
+                              </button>
                           </div>
 
-                          <div className="space-y-4">
-                              <input 
-                                  type="text" 
-                                  placeholder="Nome Oficial do Produto *" 
-                                  className="w-full p-4 bg-white rounded-xl outline-none font-bold text-sm text-slate-700 border border-slate-200 focus:ring-2 ring-blue-500 shadow-sm"
-                                  value={productForm.name}
-                                  onChange={e => setProductForm({...productForm, name: e.target.value})}
-                              />
-                              
-                              <textarea 
-                                  rows={3} 
-                                  placeholder="Descrição comercial focada em detalhes..." 
-                                  className="w-full p-4 bg-white rounded-xl outline-none font-medium text-sm text-slate-600 border border-slate-200 focus:ring-2 ring-blue-500 shadow-sm resize-none custom-scrollbar"
-                                  value={productForm.description}
-                                  onChange={e => setProductForm({...productForm, description: e.target.value})}
-                              />
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Nome Oficial do Item</label>
+                            <input 
+                                type="text" 
+                                required 
+                                value={productForm.name} 
+                                onChange={e => setProductForm({...productForm, name: e.target.value})} 
+                                className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 shadow-sm" 
+                                placeholder="Ex: Pod Descartável 5000 Puffs" 
+                            />
+                            <p className="text-[10px] text-[#0055ff] font-bold mt-1 ml-2 flex items-center gap-1">
+                                <Search size={12} /> Digite exatamente como seu cliente buscaria no Google.
+                            </p>
+                          </div>
+                          
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Descrição</label>
+                            <textarea 
+                                rows={3} 
+                                value={productForm.description} 
+                                onChange={e => setProductForm({...productForm, description: e.target.value})} 
+                                className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-medium text-sm text-slate-600 border border-gray-200 shadow-sm resize-none" 
+                                placeholder="Detalhes do que está incluso..."
+                            ></textarea>
+                            
+                            {/* MEDIDOR DE FORÇA DE SEO / IA */}
+                            {(() => {
+                                const desc = productForm.description || '';
+                                const length = desc.length;
+                                const hasKeywords = /(serviço|incluso|garantia|atendimento|especial|profissional|domicílio|qualidade|rápido|técnico|manutenção|premium|puro|malte|gelada|artesanal|grelhado)/i.test(desc);
+                                
+                                let score = 0;
+                                let color = 'bg-slate-200';
+                                let text = 'Oculto para Buscas (Muito Curto)';
+                                let textColor = 'text-slate-500';
 
-                              <div className="flex flex-col sm:flex-row gap-4">
+                                if (length > 10) { score = 33; color = 'bg-red-400'; text = 'Fraco (Vitrine Muda)'; textColor = 'text-red-600'; }
+                                if (length > 30) { score = 66; color = 'bg-orange-400'; text = 'Bom (Aceitável)'; textColor = 'text-orange-600'; }
+                                if (length > 50 && hasKeywords) { score = 100; color = 'bg-green-500'; text = 'Excelente (Pronto para IAs)'; textColor = 'text-green-600'; }
+
+                                return (
+                                    <div className="mt-2 px-2">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1">
+                                                <Sparkles size={10}/> Força para o Google/IAs:
+                                            </span>
+                                            <span className={`text-[9px] font-black uppercase ${textColor}`}>
+                                                {text}
+                                            </span>
+                                        </div>
+                                        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                            <div className={`h-full ${color} transition-all duration-500`} style={{ width: `${score}%` }}></div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                          </div>
+
+                          {/* BOX DE EXEMPLO PERFEITO DE SEO */}
+                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-3xl border border-blue-100 shadow-sm mt-4">
+                              <h4 className="text-xs font-black text-blue-800 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                  <Flame size={14} className="text-orange-500" /> O que mais vende no Google
+                              </h4>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="bg-white/60 p-4 rounded-2xl border border-red-100">
+                                      <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-2">❌ Cadastro Ruim (Invisível)</p>
+                                      <p className="text-sm font-bold text-slate-400 line-through decoration-red-400">Heineken</p>
+                                      <p className="text-xs text-slate-400 mt-1 italic">"Cerveja gelada."</p>
+                                  </div>
+                                  
+                                  <div className="bg-white p-4 rounded-2xl border-2 border-green-400 shadow-md relative overflow-hidden">
+                                      <div className="absolute top-0 right-0 bg-green-500 text-white text-[9px] font-black px-2 py-1 rounded-bl-lg uppercase">Ideal</div>
+                                      <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-2">✅ Cadastro Perfeito (Vende muito)</p>
+                                      <p className="text-sm font-black text-slate-800">Cerveja Heineken Long Neck 330ml Gelada</p>
+                                      <p className="text-xs text-slate-600 mt-1 italic font-medium">"Cerveja Premium Puro Malte em garrafa de vidro 330ml. Entregue trincando de gelada na sua porta em minutos."</p>
+                                  </div>
+                              </div>
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row gap-4 pt-2">
+                              <div className="w-full space-y-1">
+                                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Preço Base (R$) - Opcional</label>
                                   <input 
                                       type="number" step="0.01" 
-                                      placeholder="Preço Base (R$)" 
-                                      className="w-full p-4 bg-white rounded-xl outline-none font-black text-sm text-blue-600 border border-slate-200 focus:ring-2 ring-blue-500 shadow-sm"
+                                      placeholder="0.00" 
+                                      className="w-full p-4 bg-blue-50 rounded-xl outline-none font-black text-xl text-blue-600 border border-blue-100 focus:ring-2 ring-blue-500 shadow-sm placeholder:text-blue-300"
                                       value={productForm.price}
                                       onChange={e => setProductForm({...productForm, price: e.target.value})}
                                   />
-                                  <div className="w-full relative">
-                                      <label className="absolute inset-0 bg-white border border-slate-200 rounded-xl flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors shadow-sm text-slate-600 font-bold text-xs uppercase tracking-widest">
-                                          {isUploadingProductImage ? <Loader2 size={16} className="animate-spin"/> : <UploadCloud size={16}/>}
-                                          {productForm.imageUrl ? 'Imagem Anexada ✅' : 'Subir Foto'}
-                                          <input type="file" accept="image/*" className="hidden" onChange={handleWizardProductImageUpload} disabled={isUploadingProductImage}/>
-                                      </label>
-                                  </div>
+                              </div>
+                              <div className="w-full space-y-1">
+                                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Upload da Foto</label>
+                                  <label className="w-full h-[62px] bg-white border border-slate-200 rounded-xl flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors shadow-sm text-slate-600 font-bold text-xs uppercase tracking-widest">
+                                      {isUploadingProductImage ? <Loader2 size={16} className="animate-spin"/> : <UploadCloud size={16}/>}
+                                      {productForm.imageUrl ? 'Imagem Anexada ✅' : 'Subir Foto'}
+                                      <input type="file" accept="image/*" className="hidden" onChange={handleWizardProductImageUpload} disabled={isUploadingProductImage}/>
+                                  </label>
                               </div>
                           </div>
 
                           <button 
                               onClick={handleSaveFirstProduct}
                               disabled={!productForm.name || isUploadingProductImage}
-                              className="w-full bg-slate-900 text-white py-4 rounded-xl font-black uppercase tracking-widest text-xs shadow-xl hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                              className="w-full bg-slate-900 text-white py-4 rounded-xl font-black uppercase tracking-widest text-xs shadow-xl hover:bg-slate-800 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 mt-4"
                           >
                               <Save size={16} /> Salvar Este Produto
                           </button>
