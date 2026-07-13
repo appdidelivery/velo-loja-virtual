@@ -13,7 +13,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-    console.log('--- 🚀 INICIANDO DIAGNÓSTICO PROFUNDO (RADAR ATIVADO) ---');
+    console.log('--- 🚀 INICIANDO DIAGNÓSTICO PROFUNDO ---');
     try {
         const body = await request.json();
 
@@ -36,16 +36,13 @@ export async function POST(request: Request) {
                 
                 const allTenantsSnap = await getDocs(collection(db, 'tenants'));
                 
-                // CORREÇÃO TYPESCRIPT AQUI: Avisando ao corretor que isso pode ser "any" (qualquer coisa)
                 let tenantId: string | null = null;
                 let tenantData: any = null;
 
                 allTenantsSnap.forEach(doc => {
                     const data = doc.data();
                     const phones = data.adminPhones || [];
-                    
                     const matchEncontrado = phones.some((p: string) => p.slice(-8) === last8Incoming);
-                    
                     if (matchEncontrado) {
                         tenantId = doc.id;
                         tenantData = data;
@@ -53,13 +50,14 @@ export async function POST(request: Request) {
                 });
 
                 if (!tenantId || !tenantData) {
-                    console.error(`🚨 ERRO FATAL: Nenhuma loja tem um telefone com final [${last8Incoming}]. O seu painel NÃO ESTÁ SALVANDO no banco de dados!`);
+                    console.error(`🚨 ERRO: Nenhuma loja tem um telefone com final [${last8Incoming}].`);
                     return new NextResponse('EVENT_RECEIVED', { status: 200 });
                 }
 
                 console.log(`✅ 3. Loja Encontrada! ID: ${tenantId}. Acionando Gemini...`);
 
-                const systemPrompt = `Você é a assistente de gestão da loja ${tenantData.businessName || 'Velo'}. Você só tem acesso aos dados do tenantId ${tenantId}. Seja direta, educada e curta. Se ele pedir para cadastrar um produto ou serviço, use a ferramenta disponível.`;
+                // PROMPT REFORÇADO: Obrigando a IA a usar a ferramenta de cadastro
+                const systemPrompt = `Você é a assistente de gestão da loja ${tenantData.businessName || 'Velo'}. Você só tem acesso aos dados do tenantId ${tenantId}. REGRA ABSOLUTA: Se o usuário pedir para "cadastrar", "adicionar" ou "criar" um produto ou serviço, VOCÊ É OBRIGADA a usar a ferramenta 'cadastrar_produto'. NUNCA responda apenas em texto quando pedirem um cadastro.`;
 
                 const geminiPayload = {
                     system_instruction: { parts: [{ text: systemPrompt }] },
@@ -67,7 +65,7 @@ export async function POST(request: Request) {
                     tools: [{
                         function_declarations: [{
                             name: "cadastrar_produto",
-                            description: "Cadastra um novo produto ou serviço.",
+                            description: "Executa o cadastro de um novo produto ou serviço no sistema.",
                             parameters: {
                                 type: "OBJECT",
                                 properties: {
@@ -86,22 +84,29 @@ export async function POST(request: Request) {
                 const geminiData = await geminiResponse.json();
                 
                 const part = geminiData.candidates?.[0]?.content?.parts?.[0];
-                let replyText = "Entendido, mas não identifiquei uma ação de cadastro clara.";
+                let replyText = "Entendido, mas não identifiquei os dados para cadastro (Nome e Preço).";
 
                 if (part?.functionCall?.name === 'cadastrar_produto') {
                     const args = part.functionCall.args;
                     await addDoc(collection(db, 'products'), {
                         name: args.name, price: Number(args.price), category: args.category || 'Serviços',
-                        description: 'Cadastrado via IA', imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600',
+                        description: 'Cadastrado automaticamente via Assistente IA', imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600',
                         stock: 99, sku: `IA-${Date.now()}`, isActive: true, tenantId: tenantId
                     });
-                    replyText = `✅ Cadastrado com sucesso! "${args.name}" por R$ ${args.price}. Vá no painel para conferir!`;
+                    replyText = `✅ Sucesso! Acabei de cadastrar "${args.name}" por R$ ${args.price}. Já está na sua vitrine!`;
                     console.log(`✅ 4. IA processou e cadastrou o produto!`);
                 } else if (part?.text) {
                     replyText = part.text;
                 }
 
-                console.log(`📤 5. Devolvendo resposta para a Meta no número exato: ${fromPhoneRaw}`);
+                // SOLUÇÃO DO PARADOXO DO NONO DÍGITO
+                let recipientPhone = fromPhoneRaw;
+                if (recipientPhone.startsWith('55') && recipientPhone.length === 12) {
+                    recipientPhone = recipientPhone.slice(0, 4) + '9' + recipientPhone.slice(4);
+                }
+
+                console.log(`📤 5. Devolvendo resposta para a Meta no número: ${recipientPhone}`);
+                
                 const metaToken = tenantData.metaApiToken;
                 const metaPhoneId = tenantData.metaPhoneId;
 
@@ -111,7 +116,7 @@ export async function POST(request: Request) {
                         headers: { 'Authorization': `Bearer ${metaToken}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             messaging_product: 'whatsapp',
-                            to: fromPhoneRaw, 
+                            to: recipientPhone, // <-- AGORA VAI COM O DÍGITO 9 PARA A META ACEITAR!
                             type: 'text',
                             text: { body: replyText }
                         })
@@ -122,10 +127,8 @@ export async function POST(request: Request) {
                     if (fbData.error) {
                         console.error('🚨 ERRO DA META:', JSON.stringify(fbData.error));
                     } else {
-                        console.log(`🚀 SUCESSO ABSOLUTO! Mensagem entregue!`);
+                        console.log(`🚀 SUCESSO ABSOLUTO! Mensagem entregue no celular!`);
                     }
-                } else {
-                    console.error('🚨 ERRO: Os tokens da Meta sumiram do banco de dados!');
                 }
             }
         }
