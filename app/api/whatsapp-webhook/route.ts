@@ -13,7 +13,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-    console.log('--- 🚀 INICIANDO DIAGNÓSTICO PROFUNDO ---');
+    console.log('--- 🚀 INICIANDO DIAGNÓSTICO FINAL ---');
     try {
         const body = await request.json();
 
@@ -32,12 +32,12 @@ export async function POST(request: Request) {
                 console.log(`📱 1. WhatsApp enviou: [${fromPhoneRaw}] | Texto: "${messageText}"`);
 
                 const last8Incoming = fromPhoneRaw.slice(-8);
-                console.log('🔍 2. Vasculhando o Banco de Dados...');
                 
                 const allTenantsSnap = await getDocs(collection(db, 'tenants'));
                 
                 let tenantId: string | null = null;
                 let tenantData: any = null;
+                let numeroOficialDoPainel = '';
 
                 allTenantsSnap.forEach(doc => {
                     const data = doc.data();
@@ -46,6 +46,8 @@ export async function POST(request: Request) {
                     if (matchEncontrado) {
                         tenantId = doc.id;
                         tenantData = data;
+                        // Pegamos o número exato que você salvou no painel!
+                        numeroOficialDoPainel = phones[0]; 
                     }
                 });
 
@@ -56,8 +58,7 @@ export async function POST(request: Request) {
 
                 console.log(`✅ 3. Loja Encontrada! ID: ${tenantId}. Acionando Gemini...`);
 
-                // PROMPT REFORÇADO: Obrigando a IA a usar a ferramenta de cadastro
-                const systemPrompt = `Você é a assistente de gestão da loja ${tenantData.businessName || 'Velo'}. Você só tem acesso aos dados do tenantId ${tenantId}. REGRA ABSOLUTA: Se o usuário pedir para "cadastrar", "adicionar" ou "criar" um produto ou serviço, VOCÊ É OBRIGADA a usar a ferramenta 'cadastrar_produto'. NUNCA responda apenas em texto quando pedirem um cadastro.`;
+                const systemPrompt = `Você é a assistente de gestão da loja ${tenantData.businessName || 'Velo'}. Você só tem acesso aos dados do tenantId ${tenantId}. REGRA ABSOLUTA: Se o usuário pedir para "cadastrar", "adicionar" ou "criar" um produto ou serviço, VOCÊ É OBRIGADA a usar a ferramenta 'cadastrar_produto'.`;
 
                 const geminiPayload = {
                     system_instruction: { parts: [{ text: systemPrompt }] },
@@ -93,30 +94,25 @@ export async function POST(request: Request) {
                         description: 'Cadastrado automaticamente via Assistente IA', imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600',
                         stock: 99, sku: `IA-${Date.now()}`, isActive: true, tenantId: tenantId
                     });
-                    replyText = `✅ Sucesso! Acabei de cadastrar "${args.name}" por R$ ${args.price}. Já está na sua vitrine!`;
+                    replyText = `✅ Mágica Feita! Acabei de cadastrar o serviço "${args.name}" por R$ ${args.price}. Já está na sua vitrine!`;
                     console.log(`✅ 4. IA processou e cadastrou o produto!`);
                 } else if (part?.text) {
                     replyText = part.text;
                 }
 
-                // SOLUÇÃO DO PARADOXO DO NONO DÍGITO
-                let recipientPhone = fromPhoneRaw;
-                if (recipientPhone.startsWith('55') && recipientPhone.length === 12) {
-                    recipientPhone = recipientPhone.slice(0, 4) + '9' + recipientPhone.slice(4);
-                }
-
-                console.log(`📤 5. Devolvendo resposta para a Meta no número: ${recipientPhone}`);
+                // O GRANDE TRUQUE AQUI: Usa o número do painel em vez do número bugado do Facebook!
+                console.log(`📤 5. Devolvendo resposta para a Meta no número OFICIAL do painel: ${numeroOficialDoPainel}`);
                 
                 const metaToken = tenantData.metaApiToken;
                 const metaPhoneId = tenantData.metaPhoneId;
 
-                if (metaToken && metaPhoneId) {
+                if (metaToken && metaPhoneId && numeroOficialDoPainel) {
                     const fbResponse = await fetch(`https://graph.facebook.com/v17.0/${metaPhoneId}/messages`, {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${metaToken}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             messaging_product: 'whatsapp',
-                            to: recipientPhone, // <-- AGORA VAI COM O DÍGITO 9 PARA A META ACEITAR!
+                            to: numeroOficialDoPainel, // A GARANTIA DE ENTREGA
                             type: 'text',
                             text: { body: replyText }
                         })
