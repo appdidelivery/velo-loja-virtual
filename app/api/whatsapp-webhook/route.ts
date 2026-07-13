@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
             if (fromPhoneRaw && messageText) {
                 
-                // Pega os últimos 8 dígitos (Ignora 55, DDD e dígito 9) - O MATCH PERFEITO!
+                // Match Seguro (Últimos 8 dígitos)
                 const last8Incoming = fromPhoneRaw.slice(-8);
                 const allTenantsSnap = await getDocs(collection(db, 'tenants'));
                 
@@ -52,56 +52,59 @@ export async function POST(request: Request) {
                     return new NextResponse('EVENT_RECEIVED', { status: 200 });
                 }
 
-                // SPRINT 3: IA Gemini (MODO INDESTRUTÍVEL - JSON PURO)
-                const prompt = `Você é a assistente de gestão da loja ${tenantData.businessName || 'Velo'}.
-Sua única função agora é extrair dados e retornar UM OBJETO JSON PURO.
-NÃO use formatação markdown (sem \`\`\`json).
-Se o usuário pedir para cadastrar, adicionar ou criar um produto/serviço, retorne exatamente este objeto:
-{"acao": "cadastrar", "nome": "Nome do item", "preco": 150.00, "categoria": "Categoria do Item"}
+                // SPRINT 3: IA Gemini (MODO JSON NATIVO OBRIGATÓRIO)
+                const prompt = `Extraia os dados da mensagem e retorne APENAS um objeto JSON válido.
+Regras de Retorno:
+1. Se o usuário pedir para cadastrar, adicionar ou criar um produto/serviço, retorne: {"acao": "cadastrar", "nome": "Nome extraído", "preco": 150.00, "categoria": "Estética"}
+2. Se a mensagem não for de cadastro, retorne: {"acao": "conversar", "resposta": "Sua resposta educada de assistente."}
 
-Se a mensagem não for sobre cadastrar, retorne:
-{"acao": "conversar", "resposta": "Sua resposta educada aqui"}
-
-Mensagem do dono: "${messageText}"`;
+Mensagem do Administrador: "${messageText}"`;
 
                 const geminiPayload = {
-                    contents: [{ role: "user", parts: [{ text: prompt }] }]
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        responseMimeType: "application/json" // <-- O BOTÃO SECRETO! OBRIGA O GOOGLE A RETORNAR JSON PERFEITO!
+                    }
                 };
 
                 const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
                 const geminiResponse = await fetch(geminiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(geminiPayload) });
                 const geminiData = await geminiResponse.json();
                 
+                // RADAR DE VISÃO NOTURNA (Vai imprimir tudo o que o Google devolver)
+                console.log("🤖 DADOS CRUS DA IA:", JSON.stringify(geminiData, null, 2));
+
                 const responseText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
-                let replyText = "Entendido, mas ocorreu um erro ao processar. Tente novamente.";
+                let replyText = "Desculpe, ocorreu um erro no cérebro da IA ao tentar extrair os dados.";
 
-                try {
-                    // Limpa a resposta da IA e transforma em Objeto do Banco de Dados
-                    const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-                    const dados = JSON.parse(cleanedText);
+                if (responseText) {
+                    try {
+                        const dados = JSON.parse(responseText);
 
-                    if (dados.acao === 'cadastrar') {
-                        // GRAVANDO NO FIREBASE!
-                        await addDoc(collection(db, 'products'), {
-                            name: dados.nome, 
-                            price: Number(dados.preco), 
-                            category: dados.categoria || 'Geral',
-                            description: 'Cadastrado automaticamente via WhatsApp (Velo IA)', 
-                            imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600',
-                            stock: 99, 
-                            sku: `IA-${Date.now()}`, 
-                            isActive: true, 
-                            tenantId: tenantId
-                        });
-                        replyText = `✅ Sucesso Total! Acabei de cadastrar "${dados.nome}" por R$ ${dados.preco}. Vá no painel conferir!`;
-                    } else if (dados.acao === 'conversar') {
-                        replyText = dados.resposta;
+                        if (dados.acao === 'cadastrar') {
+                            // GRAVANDO NO FIREBASE!
+                            await addDoc(collection(db, 'products'), {
+                                name: dados.nome, 
+                                price: Number(dados.preco), 
+                                category: dados.categoria || 'Geral',
+                                description: 'Cadastrado automaticamente via WhatsApp (Velo IA)', 
+                                imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600',
+                                stock: 99, 
+                                sku: `IA-${Date.now()}`, 
+                                isActive: true, 
+                                tenantId: tenantId
+                            });
+                            replyText = `✅ Sucesso Total! Acabei de cadastrar "${dados.nome}" por R$ ${dados.preco}. Atualize seu painel e confira a mágica!`;
+                            console.log("🔥 PRODUTO CADASTRADO NO BANCO DE DADOS COM SUCESSO!");
+                        } else if (dados.acao === 'conversar') {
+                            replyText = dados.resposta || "Entendido!";
+                        }
+                    } catch (e) {
+                        console.error("🚨 FALHA AO LER O JSON DA IA. O Google enviou:", responseText);
                     }
-                } catch (e) {
-                    console.error("Erro ao ler dados da IA:", responseText);
                 }
 
-                // SPRINT 4: Envio da Confirmação para o WhatsApp
+                // SPRINT 4: Envio para o WhatsApp
                 const metaToken = tenantData.metaApiToken;
                 const metaPhoneId = tenantData.metaPhoneId;
 
