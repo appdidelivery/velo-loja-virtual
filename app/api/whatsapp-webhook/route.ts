@@ -29,7 +29,6 @@ export async function POST(request: Request) {
 
             if (fromPhoneRaw && messageText) {
                 
-                // Match Seguro (Últimos 8 dígitos)
                 const last8Incoming = fromPhoneRaw.slice(-8);
                 const allTenantsSnap = await getDocs(collection(db, 'tenants'));
                 
@@ -40,71 +39,59 @@ export async function POST(request: Request) {
                 allTenantsSnap.forEach(doc => {
                     const data = doc.data();
                     const phones = data.adminPhones || [];
-                    const matchEncontrado = phones.some((p: string) => p.slice(-8) === last8Incoming);
-                    if (matchEncontrado) {
+                    if (phones.some((p: string) => p.slice(-8) === last8Incoming)) {
                         tenantId = doc.id;
                         tenantData = data;
                         numeroOficialDoPainel = phones[0]; 
                     }
                 });
 
-                if (!tenantId || !tenantData) {
-                    return new NextResponse('EVENT_RECEIVED', { status: 200 });
-                }
+                if (!tenantId || !tenantData) return new NextResponse('OK', { status: 200 });
 
-                // SPRINT 3: IA Gemini (MODO JSON NATIVO OBRIGATÓRIO)
-                const prompt = `Extraia os dados da mensagem e retorne APENAS um objeto JSON válido.
-Regras de Retorno:
-1. Se o usuário pedir para cadastrar, adicionar ou criar um produto/serviço, retorne: {"acao": "cadastrar", "nome": "Nome extraído", "preco": 150.00, "categoria": "Estética"}
-2. Se a mensagem não for de cadastro, retorne: {"acao": "conversar", "resposta": "Sua resposta educada de assistente."}
+                // PROMPT SIMPLES E DIRETO (À prova de falhas na API)
+                const prompt = `Você é um robô extrator de dados. Leia a mensagem abaixo e extraia o nome do produto, o preço e a categoria.
+Responda APENAS com um objeto JSON válido, sem NENHUM texto antes ou depois. Use este formato exato:
+{"acao": "cadastrar", "nome": "nome do item", "preco": 150.00, "categoria": "Estética"}
 
-Mensagem do Administrador: "${messageText}"`;
+Mensagem: "${messageText}"`;
 
                 const geminiPayload = {
-                    contents: [{ role: "user", parts: [{ text: prompt }] }],
-                    generationConfig: {
-                        responseMimeType: "application/json" // <-- O BOTÃO SECRETO! OBRIGA O GOOGLE A RETORNAR JSON PERFEITO!
-                    }
+                    contents: [{ parts: [{ text: prompt }] }]
                 };
 
                 const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
                 const geminiResponse = await fetch(geminiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(geminiPayload) });
                 const geminiData = await geminiResponse.json();
                 
-                // RADAR DE VISÃO NOTURNA (Vai imprimir tudo o que o Google devolver)
-                console.log("🤖 DADOS CRUS DA IA:", JSON.stringify(geminiData, null, 2));
+                let replyText = "";
 
-                const responseText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
-                let replyText = "Desculpe, ocorreu um erro no cérebro da IA ao tentar extrair os dados.";
-
-                if (responseText) {
+                // VERIFICA SE O GOOGLE DEU ERRO DE API (E manda pro seu WhatsApp se der!)
+                if (geminiData.error) {
+                    console.error("🚨 ERRO DO GOOGLE:", geminiData.error);
+                    replyText = `Erro na API do Google: ${geminiData.error.message}`;
+                } else {
+                    const responseText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                    
                     try {
-                        const dados = JSON.parse(responseText);
+                        const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+                        const dados = JSON.parse(cleanedText);
 
                         if (dados.acao === 'cadastrar') {
-                            // GRAVANDO NO FIREBASE!
                             await addDoc(collection(db, 'products'), {
-                                name: dados.nome, 
-                                price: Number(dados.preco), 
-                                category: dados.categoria || 'Geral',
-                                description: 'Cadastrado automaticamente via WhatsApp (Velo IA)', 
-                                imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600',
-                                stock: 99, 
-                                sku: `IA-${Date.now()}`, 
-                                isActive: true, 
-                                tenantId: tenantId
+                                name: dados.nome, price: Number(dados.preco), category: dados.categoria || 'Geral',
+                                description: 'Cadastrado via Velo IA (WhatsApp)', imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600',
+                                stock: 99, sku: `IA-${Date.now()}`, isActive: true, tenantId: tenantId
                             });
-                            replyText = `✅ Sucesso Total! Acabei de cadastrar "${dados.nome}" por R$ ${dados.preco}. Atualize seu painel e confira a mágica!`;
-                            console.log("🔥 PRODUTO CADASTRADO NO BANCO DE DADOS COM SUCESSO!");
-                        } else if (dados.acao === 'conversar') {
-                            replyText = dados.resposta || "Entendido!";
+                            replyText = `✅ Cadastrado com sucesso! Produto: ${dados.nome} | Valor: R$ ${dados.preco}. Atualize seu painel!`;
+                        } else {
+                            replyText = "Não identifiquei uma ordem de cadastro.";
                         }
                     } catch (e) {
-                        console.error("🚨 FALHA AO LER O JSON DA IA. O Google enviou:", responseText);
+                        console.error("Erro ao ler JSON. O Google enviou:", responseText);
+                        replyText = "A IA processou, mas o formato falhou. Tente novamente.";
                     }
                 }
 
-                // SPRINT 4: Envio para o WhatsApp
                 const metaToken = tenantData.metaApiToken;
                 const metaPhoneId = tenantData.metaPhoneId;
 
@@ -122,8 +109,8 @@ Mensagem do Administrador: "${messageText}"`;
                 }
             }
         }
-        return new NextResponse('EVENT_RECEIVED', { status: 200 });
+        return new NextResponse('OK', { status: 200 });
     } catch (error) {
-        return new NextResponse('EVENT_RECEIVED', { status: 200 });
+        return new NextResponse('OK', { status: 200 });
     }
 }
