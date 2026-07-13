@@ -48,7 +48,6 @@ export async function POST(request: Request) {
 
                 if (!tenantId || !tenantData) return new NextResponse('OK', { status: 200 });
 
-                // PROMPT SIMPLES E DIRETO (À prova de falhas na API)
                 const prompt = `Você é um robô extrator de dados. Leia a mensagem abaixo e extraia o nome do produto, o preço e a categoria.
 Responda APENAS com um objeto JSON válido, sem NENHUM texto antes ou depois. Use este formato exato:
 {"acao": "cadastrar", "nome": "nome do item", "preco": 150.00, "categoria": "Estética"}
@@ -59,13 +58,14 @@ Mensagem: "${messageText}"`;
                     contents: [{ parts: [{ text: prompt }] }]
                 };
 
-                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+                // O GRANDE ERRO ESTAVA AQUI! O nome do modelo oficial do Google mudou para "-latest"
+                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
+                
                 const geminiResponse = await fetch(geminiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(geminiPayload) });
                 const geminiData = await geminiResponse.json();
                 
                 let replyText = "";
 
-                // VERIFICA SE O GOOGLE DEU ERRO DE API (E manda pro seu WhatsApp se der!)
                 if (geminiData.error) {
                     console.error("🚨 ERRO DO GOOGLE:", geminiData.error);
                     replyText = `Erro na API do Google: ${geminiData.error.message}`;
