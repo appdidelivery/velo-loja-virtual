@@ -29,15 +29,13 @@ export async function POST(request: Request) {
 
             if (fromPhoneRaw && messageText) {
                 
-                // CORREÇÃO DEFINITIVA DO BRASIL: Adiciona o 9 de volta se a Meta tiver engolido
+                // CORREÇÃO BRASIL: Garante o 9 para bater com o banco de dados e com o Facebook Sandbox
                 let fromPhone = fromPhoneRaw;
                 if (fromPhone.startsWith('55') && fromPhone.length === 12) {
                     fromPhone = fromPhone.slice(0, 4) + '9' + fromPhone.slice(4);
                 }
 
-                console.log(`💬 Mensagem processada do número: ${fromPhone} | Texto: ${messageText}`);
-
-                // SPRINT 2: Verificação usando o número CORRIGIDO (com o 9)
+                // SPRINT 2: Verificação de Segurança
                 const tenantsRef = collection(db, 'tenants');
                 const adminQuery = query(tenantsRef, where('adminPhones', 'array-contains', fromPhone));
                 const querySnapshot = await getDocs(adminQuery);
@@ -81,7 +79,7 @@ export async function POST(request: Request) {
                 const geminiData = await geminiResponse.json();
                 
                 const part = geminiData.candidates?.[0]?.content?.parts?.[0];
-                let replyText = "Não consegui identificar a ação exata.";
+                let replyText = "Entendido, mas não identifiquei uma ação de cadastro clara.";
 
                 if (part?.functionCall?.name === 'cadastrar_produto') {
                     const args = part.functionCall.args;
@@ -90,12 +88,12 @@ export async function POST(request: Request) {
                         description: 'Cadastrado via IA', imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600',
                         stock: 99, sku: `IA-${Date.now()}`, isActive: true, tenantId: tenantId
                     });
-                    replyText = `✅ Cadastrado com sucesso! "${args.name}" por R$ ${args.price}.`;
+                    replyText = `✅ Cadastrado com sucesso! "${args.name}" por R$ ${args.price}. Vá no seu painel para conferir!`;
                 } else if (part?.text) {
                     replyText = part.text;
                 }
 
-                // SPRINT 4: Envio do WhatsApp com RASTREADOR DE ERRO DA META
+                // SPRINT 4: Envio da Resposta pro WhatsApp
                 const metaToken = tenantData.metaApiToken;
                 const metaPhoneId = tenantData.metaPhoneId;
 
@@ -105,7 +103,7 @@ export async function POST(request: Request) {
                         headers: { 'Authorization': `Bearer ${metaToken}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             messaging_product: 'whatsapp',
-                            to: fromPhoneRaw, // Enviamos de volta pro número cru (sem o 9) pq é assim que o FB exige a resposta!
+                            to: fromPhone, // <-- ENVIA PARA O NÚMERO COM O 9 (Para o FB Sandbox não ignorar)
                             type: 'text',
                             text: { body: replyText }
                         })
@@ -113,11 +111,10 @@ export async function POST(request: Request) {
                     
                     const fbData = await fbResponse.json();
                     
-                    // RASTREADOR DEFINITIVO: Se o Facebook bloquear, ele vai gritar o motivo no Log!
                     if (fbData.error) {
-                        console.error('🚨 ERRO FATAL DO FACEBOOK AO ENVIAR MENSAGEM:', JSON.stringify(fbData.error));
+                        console.error('🚨 ERRO DA META:', JSON.stringify(fbData.error));
                     } else {
-                        console.log(`📤 Resposta REALMENTE enviada com sucesso para ${fromPhoneRaw}`);
+                        console.log(`📤 Resposta enviada com sucesso para ${fromPhone}`);
                     }
                 }
             }
