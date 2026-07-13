@@ -4,54 +4,46 @@ import { db } from '../../../services/firebase';
 
 const VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || 'velo_webhook_secret';
 
-// Rota GET: Validação da Meta (Facebook) e Health Checks
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
-    const mode = searchParams.get('hub.mode');
-    const token = searchParams.get('hub.verify_token');
-    const challenge = searchParams.get('hub.challenge');
-
-    if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-        console.log('✅ Webhook verificado pela Meta com sucesso!');
-        return new NextResponse(challenge, { status: 200 });
+    if (searchParams.get('hub.mode') === 'subscribe' && searchParams.get('hub.verify_token') === VERIFY_TOKEN) {
+        return new NextResponse(searchParams.get('hub.challenge'), { status: 200 });
     }
-    
-    // CORREÇÃO: Sempre responder 200 para o robô da Meta não achar que o servidor caiu
     return new NextResponse('OK', { status: 200 });
 }
 
-// Rota POST: Recebe as mensagens e aciona o Google Gemini
 export async function POST(request: Request) {
-    console.log('🔔 UHUUL! CHEGOU UM EVENTO POST DA META AQUI!'); // <-- Alerta para vermos na Vercel
-    
     try {
         const body = await request.json();
-        console.log('📦 Pacote recebido:', JSON.stringify(body));
 
         if (body.object !== 'whatsapp_business_account') {
             return new NextResponse('Not a WhatsApp event', { status: 404 });
         }
 
-        const entry = body.entry?.[0];
-        const changes = entry?.changes?.[0];
-        const value = changes?.value;
-        const messages = value?.messages;
+        const messages = body.entry?.[0]?.changes?.[0]?.value?.messages;
 
         if (messages && messages.length > 0) {
             const message = messages[0];
-            const fromPhone = message.from; 
+            const fromPhoneRaw = message.from; 
             const messageText = message.text?.body;
 
-            if (fromPhone && messageText) {
-                console.log(`💬 Mensagem de ${fromPhone}: ${messageText}`);
+            if (fromPhoneRaw && messageText) {
+                
+                // CORREÇÃO DEFINITIVA DO BRASIL: Adiciona o 9 de volta se a Meta tiver engolido
+                let fromPhone = fromPhoneRaw;
+                if (fromPhone.startsWith('55') && fromPhone.length === 12) {
+                    fromPhone = fromPhone.slice(0, 4) + '9' + fromPhone.slice(4);
+                }
 
-                // SPRINT 2: Verificação de Segurança (Matriz de Permissões)
+                console.log(`💬 Mensagem processada do número: ${fromPhone} | Texto: ${messageText}`);
+
+                // SPRINT 2: Verificação usando o número CORRIGIDO (com o 9)
                 const tenantsRef = collection(db, 'tenants');
                 const adminQuery = query(tenantsRef, where('adminPhones', 'array-contains', fromPhone));
                 const querySnapshot = await getDocs(adminQuery);
 
                 if (querySnapshot.empty) {
-                    console.log(`🔒 Ignorado: ${fromPhone} não é admin.`);
+                    console.log(`🔒 Ignorado: O número ${fromPhone} não é admin.`);
                     return new NextResponse('EVENT_RECEIVED', { status: 200 });
                 }
 
@@ -59,24 +51,14 @@ export async function POST(request: Request) {
                 const tenantId = tenantDoc.id;
                 const tenantData = tenantDoc.data();
 
-                console.log(`✅ Acesso Liberado para o Tenant: ${tenantData.businessName || tenantId}. Acionando Gemini IA...`);
+                console.log(`✅ Acesso Liberado para o Tenant: ${tenantData.businessName || tenantId}`);
 
-                // SPRINT 3: Motor da IA (Google Gemini 1.5 Flash)
-                if (!process.env.GEMINI_API_KEY) {
-                    console.error('❌ GEMINI_API_KEY não configurada no .env.local');
-                    return new NextResponse('EVENT_RECEIVED', { status: 200 });
-                }
-
-                const systemPrompt = `Você é a assistente de gestão da loja ${tenantData.businessName || 'Velo'}. Você só tem acesso aos dados do tenantId ${tenantId}. Seja direta, educada e curta. Sua função primária é executar as tarefas de sistema solicitadas pelo administrador da loja. Se ele pedir para cadastrar um produto ou serviço, use a ferramenta disponível.`;
+                // SPRINT 3: IA Gemini
+                const systemPrompt = `Você é a assistente de gestão da loja ${tenantData.businessName || 'Velo'}. Você só tem acesso aos dados do tenantId ${tenantId}. Seja direta, educada e curta. Se ele pedir para cadastrar um produto ou serviço, use a ferramenta disponível.`;
 
                 const geminiPayload = {
-                    system_instruction: {
-                        parts: { text: systemPrompt }
-                    },
-                    contents: [{
-                        role: "user",
-                        parts: [{ text: messageText }]
-                    }],
+                    system_instruction: { parts: [{ text: systemPrompt }] },
+                    contents: [{ role: "user", parts: [{ text: messageText }] }],
                     tools: [{
                         function_declarations: [{
                             name: "cadastrar_produto",
@@ -84,9 +66,9 @@ export async function POST(request: Request) {
                             parameters: {
                                 type: "OBJECT",
                                 properties: {
-                                    name: { type: "STRING", description: "Nome do produto/serviço (ex: Cílios Volume Russo)" },
-                                    price: { type: "NUMBER", description: "Preço em reais, apenas números (ex: 150)" },
-                                    category: { type: "STRING", description: "Categoria do produto/serviço (ex: Estética)" }
+                                    name: { type: "STRING" },
+                                    price: { type: "NUMBER" },
+                                    category: { type: "STRING" }
                                 },
                                 required: ["name", "price"]
                             }
@@ -95,61 +77,48 @@ export async function POST(request: Request) {
                 };
 
                 const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
-                
-                const geminiResponse = await fetch(geminiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(geminiPayload)
-                });
-
+                const geminiResponse = await fetch(geminiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(geminiPayload) });
                 const geminiData = await geminiResponse.json();
-                const candidate = geminiData.candidates?.[0];
-                const part = candidate?.content?.parts?.[0];
-                let replyText = "Entendido, mas ocorreu um erro ao processar sua solicitação.";
+                
+                const part = geminiData.candidates?.[0]?.content?.parts?.[0];
+                let replyText = "Não consegui identificar a ação exata.";
 
-                if (part?.functionCall) {
-                    const funcCall = part.functionCall;
-                    
-                    if (funcCall.name === 'cadastrar_produto') {
-                        const args = funcCall.args;
-                        
-                        await addDoc(collection(db, 'products'), {
-                            name: args.name,
-                            price: Number(args.price),
-                            category: args.category || 'Serviços',
-                            description: 'Cadastrado rapidamente via Assistente IA (WhatsApp)',
-                            imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600',
-                            stock: 99,
-                            sku: `IA-${Date.now()}`,
-                            isActive: true,
-                            tenantId: tenantId
-                        });
-
-                        replyText = `✅ Mágica feita! Acabei de cadastrar o serviço/produto "${args.name}" por R$ ${args.price}. Já está online na sua vitrine!`;
-                    }
+                if (part?.functionCall?.name === 'cadastrar_produto') {
+                    const args = part.functionCall.args;
+                    await addDoc(collection(db, 'products'), {
+                        name: args.name, price: Number(args.price), category: args.category || 'Serviços',
+                        description: 'Cadastrado via IA', imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600',
+                        stock: 99, sku: `IA-${Date.now()}`, isActive: true, tenantId: tenantId
+                    });
+                    replyText = `✅ Cadastrado com sucesso! "${args.name}" por R$ ${args.price}.`;
                 } else if (part?.text) {
                     replyText = part.text;
                 }
 
-                // SPRINT 4: Retornando a confirmação via WhatsApp
+                // SPRINT 4: Envio do WhatsApp com RASTREADOR DE ERRO DA META
                 const metaToken = tenantData.metaApiToken;
                 const metaPhoneId = tenantData.metaPhoneId;
 
                 if (metaToken && metaPhoneId) {
-                    await fetch(`https://graph.facebook.com/v17.0/${metaPhoneId}/messages`, {
+                    const fbResponse = await fetch(`https://graph.facebook.com/v17.0/${metaPhoneId}/messages`, {
                         method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${metaToken}`,
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Authorization': `Bearer ${metaToken}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             messaging_product: 'whatsapp',
-                            to: fromPhone,
+                            to: fromPhoneRaw, // Enviamos de volta pro número cru (sem o 9) pq é assim que o FB exige a resposta!
                             type: 'text',
                             text: { body: replyText }
                         })
                     });
-                    console.log(`📤 Resposta enviada com sucesso para ${fromPhone}`);
+                    
+                    const fbData = await fbResponse.json();
+                    
+                    // RASTREADOR DEFINITIVO: Se o Facebook bloquear, ele vai gritar o motivo no Log!
+                    if (fbData.error) {
+                        console.error('🚨 ERRO FATAL DO FACEBOOK AO ENVIAR MENSAGEM:', JSON.stringify(fbData.error));
+                    } else {
+                        console.log(`📤 Resposta REALMENTE enviada com sucesso para ${fromPhoneRaw}`);
+                    }
                 }
             }
         }
@@ -157,7 +126,7 @@ export async function POST(request: Request) {
         return new NextResponse('EVENT_RECEIVED', { status: 200 });
 
     } catch (error) {
-        console.error('❌ Erro Crítico no Webhook:', error);
+        console.error('❌ Erro Crítico:', error);
         return new NextResponse('EVENT_RECEIVED', { status: 200 });
     }
 }
