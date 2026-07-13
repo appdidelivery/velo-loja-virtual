@@ -31,21 +31,19 @@ export async function POST(request: Request) {
             if (fromPhoneRaw && messageText) {
                 console.log(`📱 1. WhatsApp enviou: [${fromPhoneRaw}] | Texto: "${messageText}"`);
 
-                // PEGA OS ÚLTIMOS 8 DÍGITOS PARA IGNORAR DDD E NONO DÍGITO (A Prova de Falhas)
                 const last8Incoming = fromPhoneRaw.slice(-8);
-
-                console.log('🔍 2. Vasculhando o Banco de Dados (Lendo todas as lojas)...');
+                console.log('🔍 2. Vasculhando o Banco de Dados...');
+                
                 const allTenantsSnap = await getDocs(collection(db, 'tenants'));
                 
-                let tenantId = null;
-                let tenantData = null;
+                // CORREÇÃO TYPESCRIPT AQUI: Avisando ao corretor que isso pode ser "any" (qualquer coisa)
+                let tenantId: string | null = null;
+                let tenantData: any = null;
 
                 allTenantsSnap.forEach(doc => {
                     const data = doc.data();
                     const phones = data.adminPhones || [];
-                    console.log(`   -> Loja [${doc.id}]: Telefones no BD:`, phones);
                     
-                    // Compara os últimos 8 dígitos (Match perfeito independente de DDI/DDD/9)
                     const matchEncontrado = phones.some((p: string) => p.slice(-8) === last8Incoming);
                     
                     if (matchEncontrado) {
@@ -55,13 +53,12 @@ export async function POST(request: Request) {
                 });
 
                 if (!tenantId || !tenantData) {
-                    console.error(`🚨 ERRO FATAL: Nenhuma loja tem um telefone com final [${last8Incoming}]. Conclusão: O seu painel NÃO ESTÁ SALVANDO no banco de dados!`);
+                    console.error(`🚨 ERRO FATAL: Nenhuma loja tem um telefone com final [${last8Incoming}]. O seu painel NÃO ESTÁ SALVANDO no banco de dados!`);
                     return new NextResponse('EVENT_RECEIVED', { status: 200 });
                 }
 
                 console.log(`✅ 3. Loja Encontrada! ID: ${tenantId}. Acionando Gemini...`);
 
-                // SPRINT 3: IA Gemini
                 const systemPrompt = `Você é a assistente de gestão da loja ${tenantData.businessName || 'Velo'}. Você só tem acesso aos dados do tenantId ${tenantId}. Seja direta, educada e curta. Se ele pedir para cadastrar um produto ou serviço, use a ferramenta disponível.`;
 
                 const geminiPayload = {
@@ -70,7 +67,7 @@ export async function POST(request: Request) {
                     tools: [{
                         function_declarations: [{
                             name: "cadastrar_produto",
-                            description: "Cadastra um novo produto ou serviço no banco de dados da loja.",
+                            description: "Cadastra um novo produto ou serviço.",
                             parameters: {
                                 type: "OBJECT",
                                 properties: {
@@ -98,13 +95,12 @@ export async function POST(request: Request) {
                         description: 'Cadastrado via IA', imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600',
                         stock: 99, sku: `IA-${Date.now()}`, isActive: true, tenantId: tenantId
                     });
-                    replyText = `✅ Cadastrado com sucesso! "${args.name}" por R$ ${args.price}. Vá no seu painel para conferir!`;
-                    console.log(`✅ 4. IA processou e cadastrou o produto no Firebase!`);
+                    replyText = `✅ Cadastrado com sucesso! "${args.name}" por R$ ${args.price}. Vá no painel para conferir!`;
+                    console.log(`✅ 4. IA processou e cadastrou o produto!`);
                 } else if (part?.text) {
                     replyText = part.text;
                 }
 
-                // SPRINT 4: Envio da Resposta pro WhatsApp
                 console.log(`📤 5. Devolvendo resposta para a Meta no número exato: ${fromPhoneRaw}`);
                 const metaToken = tenantData.metaApiToken;
                 const metaPhoneId = tenantData.metaPhoneId;
@@ -126,10 +122,10 @@ export async function POST(request: Request) {
                     if (fbData.error) {
                         console.error('🚨 ERRO DA META:', JSON.stringify(fbData.error));
                     } else {
-                        console.log(`🚀 SUCESSO ABSOLUTO! Mensagem entregue ao WhatsApp do cliente!`);
+                        console.log(`🚀 SUCESSO ABSOLUTO! Mensagem entregue!`);
                     }
                 } else {
-                    console.error('🚨 ERRO: Os tokens da Meta sumiram do banco de dados para esta loja!');
+                    console.error('🚨 ERRO: Os tokens da Meta sumiram do banco de dados!');
                 }
             }
         }
