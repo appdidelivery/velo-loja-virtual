@@ -46,7 +46,6 @@ export async function POST(request: Request) {
                     if (matchEncontrado) {
                         tenantId = doc.id;
                         tenantData = data;
-                        // Pegamos o número exato que você salvou no painel!
                         numeroOficialDoPainel = phones[0]; 
                     }
                 });
@@ -58,15 +57,16 @@ export async function POST(request: Request) {
 
                 console.log(`✅ 3. Loja Encontrada! ID: ${tenantId}. Acionando Gemini...`);
 
-                const systemPrompt = `Você é a assistente de gestão da loja ${tenantData.businessName || 'Velo'}. Você só tem acesso aos dados do tenantId ${tenantId}. REGRA ABSOLUTA: Se o usuário pedir para "cadastrar", "adicionar" ou "criar" um produto ou serviço, VOCÊ É OBRIGADA a usar a ferramenta 'cadastrar_produto'.`;
+                const systemPrompt = `Você é a assistente de gestão da loja ${tenantData.businessName || 'Velo'}. Você tem acesso aos dados da loja. REGRA ABSOLUTA: Se o usuário pedir para "cadastrar", "adicionar" ou "criar" um produto ou serviço, VOCÊ É OBRIGADA a usar a ferramenta 'cadastrar_produto'. NUNCA responda apenas com texto nesse caso.`;
 
+                // CORREÇÃO CRÍTICA AQUI: O Google exige "systemInstruction" e "functionDeclarations" (com letras maiúsculas no meio), se usar underline ele fica cego para as ferramentas!
                 const geminiPayload = {
-                    system_instruction: { parts: [{ text: systemPrompt }] },
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
                     contents: [{ role: "user", parts: [{ text: messageText }] }],
                     tools: [{
-                        function_declarations: [{
+                        functionDeclarations: [{
                             name: "cadastrar_produto",
-                            description: "Executa o cadastro de um novo produto ou serviço no sistema.",
+                            description: "Executa o cadastro de um novo produto ou serviço no sistema. Extraia o nome e o preço da mensagem.",
                             parameters: {
                                 type: "OBJECT",
                                 properties: {
@@ -84,6 +84,8 @@ export async function POST(request: Request) {
                 const geminiResponse = await fetch(geminiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(geminiPayload) });
                 const geminiData = await geminiResponse.json();
                 
+                console.log("🤖 RESPOSTA CRUA DO GEMINI:", JSON.stringify(geminiData, null, 2));
+
                 const part = geminiData.candidates?.[0]?.content?.parts?.[0];
                 let replyText = "Entendido, mas não identifiquei os dados para cadastro (Nome e Preço).";
 
@@ -100,7 +102,6 @@ export async function POST(request: Request) {
                     replyText = part.text;
                 }
 
-                // O GRANDE TRUQUE AQUI: Usa o número do painel em vez do número bugado do Facebook!
                 console.log(`📤 5. Devolvendo resposta para a Meta no número OFICIAL do painel: ${numeroOficialDoPainel}`);
                 
                 const metaToken = tenantData.metaApiToken;
@@ -112,7 +113,7 @@ export async function POST(request: Request) {
                         headers: { 'Authorization': `Bearer ${metaToken}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             messaging_product: 'whatsapp',
-                            to: numeroOficialDoPainel, // A GARANTIA DE ENTREGA
+                            to: numeroOficialDoPainel, 
                             type: 'text',
                             text: { body: replyText }
                         })
