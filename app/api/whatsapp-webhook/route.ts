@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
 import { db } from '../../../services/firebase';
+import { GoogleGenAI } from '@google/genai';
 
 const VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || 'velo_webhook_secret';
 
@@ -48,56 +49,46 @@ export async function POST(request: Request) {
 
                 if (!tenantId || !tenantData) return new NextResponse('OK', { status: 200 });
 
-                // SPRINT 3: IA GEMINI VOLTANDO À CENA
-                const prompt = `Você é um robô extrator de dados da Velo. Leia a mensagem do usuário e extraia o nome do produto, o preço numérico e a categoria.
-Responda APENAS com um objeto JSON válido, sem texto adicional. Formato exato:
-{"acao": "cadastrar", "nome": "nome do item", "preco": 150.00, "categoria": "Estética"}
-
-Mensagem do usuário: "${messageText}"`;
-
-                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
-                
-                const geminiPayload = {
-                    contents: [{ role: "user", parts: [{ text: prompt }] }],
-                    generationConfig: {
-                        responseMimeType: "application/json" // Obriga o Google a responder em formato de máquina
-                    }
-                };
-
-                const aiResponse = await fetch(geminiUrl, { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify(geminiPayload) 
-                });
-                
-                const aiData = await aiResponse.json();
+                // SPRINT 3: IA GEMINI COM O SDK OFICIAL DO GOOGLE!
                 let replyText = "";
 
-                // RASTREADOR DE ERRO DO GOOGLE
-                if (aiData.error) {
-                    console.error("🚨 ERRO DO GEMINI:", aiData.error);
-                    replyText = `Erro na API do Google: ${aiData.error.message}`;
-                } else {
-                    const responseText = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                try {
+                    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
                     
-                    try {
-                        const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-                        const dados = JSON.parse(cleanedText);
+                    const prompt = `Extraia dados. Retorne APENAS JSON.
+Se for cadastro: {"acao": "cadastrar", "nome": "nome", "preco": 150.00, "categoria": "Estética"}
+Se não for: {"acao": "conversar", "resposta": "oi"}
+Mensagem: "${messageText}"`;
 
-                        if (dados.acao === 'cadastrar') {
-                            await addDoc(collection(db, 'products'), {
-                                name: dados.nome, price: Number(dados.preco), category: dados.categoria || 'Geral',
-                                description: 'Cadastrado via Velo IA (Gemini)', imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600',
-                                stock: 99, sku: `IA-${Date.now()}`, isActive: true, tenantId: tenantId
-                            });
-                            replyText = `✅ Cadastrado com sucesso! Produto: ${dados.nome} | Valor: R$ ${dados.preco}. Atualize seu painel!`;
-                        } else {
-                            replyText = "Não identifiquei uma ordem de cadastro exata.";
+                    // Usando o modelo padrão sem complicação de versões!
+                    const response = await ai.models.generateContent({
+                        model: 'gemini-2.0-flash', 
+                        contents: prompt,
+                        config: {
+                            responseMimeType: "application/json",
                         }
-                    } catch (e) {
-                        console.error("Erro ao ler JSON do Gemini:", responseText);
-                        replyText = "A IA processou, mas o formato falhou.";
+                    });
+
+                    const responseText = response.text || "";
+                    console.log("🤖 RESPOSTA SDK GEMINI:", responseText);
+
+                    const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+                    const dados = JSON.parse(cleanedText);
+
+                    if (dados.acao === 'cadastrar') {
+                        await addDoc(collection(db, 'products'), {
+                            name: dados.nome, price: Number(dados.preco), category: dados.categoria || 'Geral',
+                            description: 'Cadastrado via SDK Velo IA (Gemini)', imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600',
+                            stock: 99, sku: `IA-${Date.now()}`, isActive: true, tenantId: tenantId
+                        });
+                        replyText = `✅ Sucesso! "${dados.nome}" por R$ ${dados.preco} foi cadastrado. Confirme no seu painel!`;
+                    } else {
+                        replyText = dados.resposta || "Não entendi o comando.";
                     }
+
+                } catch (e: any) {
+                    console.error("🚨 ERRO SDK DO GOOGLE:", e.message || e);
+                    replyText = `A IA engasgou: ${e.message?.substring(0, 50)}`;
                 }
 
                 // SPRINT 4: ENVIO PARA O WHATSAPP
