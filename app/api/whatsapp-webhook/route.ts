@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc } from 'firebase/firestore';
 import { db } from '../../../services/firebase';
 
 const VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || 'velo_webhook_secret';
@@ -13,6 +13,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+    console.log('--- 🚀 INICIANDO DIAGNÓSTICO PROFUNDO (RADAR ATIVADO) ---');
     try {
         const body = await request.json();
 
@@ -28,28 +29,37 @@ export async function POST(request: Request) {
             const messageText = message.text?.body;
 
             if (fromPhoneRaw && messageText) {
+                console.log(`📱 1. WhatsApp enviou: [${fromPhoneRaw}] | Texto: "${messageText}"`);
+
+                // PEGA OS ÚLTIMOS 8 DÍGITOS PARA IGNORAR DDD E NONO DÍGITO (A Prova de Falhas)
+                const last8Incoming = fromPhoneRaw.slice(-8);
+
+                console.log('🔍 2. Vasculhando o Banco de Dados (Lendo todas as lojas)...');
+                const allTenantsSnap = await getDocs(collection(db, 'tenants'));
                 
-                // CORREÇÃO BRASIL: Garante o 9 para bater com o banco de dados e com o Facebook Sandbox
-                let fromPhone = fromPhoneRaw;
-                if (fromPhone.startsWith('55') && fromPhone.length === 12) {
-                    fromPhone = fromPhone.slice(0, 4) + '9' + fromPhone.slice(4);
-                }
+                let tenantId = null;
+                let tenantData = null;
 
-                // SPRINT 2: Verificação de Segurança
-                const tenantsRef = collection(db, 'tenants');
-                const adminQuery = query(tenantsRef, where('adminPhones', 'array-contains', fromPhone));
-                const querySnapshot = await getDocs(adminQuery);
+                allTenantsSnap.forEach(doc => {
+                    const data = doc.data();
+                    const phones = data.adminPhones || [];
+                    console.log(`   -> Loja [${doc.id}]: Telefones no BD:`, phones);
+                    
+                    // Compara os últimos 8 dígitos (Match perfeito independente de DDI/DDD/9)
+                    const matchEncontrado = phones.some((p: string) => p.slice(-8) === last8Incoming);
+                    
+                    if (matchEncontrado) {
+                        tenantId = doc.id;
+                        tenantData = data;
+                    }
+                });
 
-                if (querySnapshot.empty) {
-                    console.log(`🔒 Ignorado: O número ${fromPhone} não é admin.`);
+                if (!tenantId || !tenantData) {
+                    console.error(`🚨 ERRO FATAL: Nenhuma loja tem um telefone com final [${last8Incoming}]. Conclusão: O seu painel NÃO ESTÁ SALVANDO no banco de dados!`);
                     return new NextResponse('EVENT_RECEIVED', { status: 200 });
                 }
 
-                const tenantDoc = querySnapshot.docs[0];
-                const tenantId = tenantDoc.id;
-                const tenantData = tenantDoc.data();
-
-                console.log(`✅ Acesso Liberado para o Tenant: ${tenantData.businessName || tenantId}`);
+                console.log(`✅ 3. Loja Encontrada! ID: ${tenantId}. Acionando Gemini...`);
 
                 // SPRINT 3: IA Gemini
                 const systemPrompt = `Você é a assistente de gestão da loja ${tenantData.businessName || 'Velo'}. Você só tem acesso aos dados do tenantId ${tenantId}. Seja direta, educada e curta. Se ele pedir para cadastrar um produto ou serviço, use a ferramenta disponível.`;
@@ -89,11 +99,13 @@ export async function POST(request: Request) {
                         stock: 99, sku: `IA-${Date.now()}`, isActive: true, tenantId: tenantId
                     });
                     replyText = `✅ Cadastrado com sucesso! "${args.name}" por R$ ${args.price}. Vá no seu painel para conferir!`;
+                    console.log(`✅ 4. IA processou e cadastrou o produto no Firebase!`);
                 } else if (part?.text) {
                     replyText = part.text;
                 }
 
                 // SPRINT 4: Envio da Resposta pro WhatsApp
+                console.log(`📤 5. Devolvendo resposta para a Meta no número exato: ${fromPhoneRaw}`);
                 const metaToken = tenantData.metaApiToken;
                 const metaPhoneId = tenantData.metaPhoneId;
 
@@ -103,7 +115,7 @@ export async function POST(request: Request) {
                         headers: { 'Authorization': `Bearer ${metaToken}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             messaging_product: 'whatsapp',
-                            to: fromPhone, // <-- ENVIA PARA O NÚMERO COM O 9 (Para o FB Sandbox não ignorar)
+                            to: fromPhoneRaw, 
                             type: 'text',
                             text: { body: replyText }
                         })
@@ -114,8 +126,10 @@ export async function POST(request: Request) {
                     if (fbData.error) {
                         console.error('🚨 ERRO DA META:', JSON.stringify(fbData.error));
                     } else {
-                        console.log(`📤 Resposta enviada com sucesso para ${fromPhone}`);
+                        console.log(`🚀 SUCESSO ABSOLUTO! Mensagem entregue ao WhatsApp do cliente!`);
                     }
+                } else {
+                    console.error('🚨 ERRO: Os tokens da Meta sumiram do banco de dados para esta loja!');
                 }
             }
         }
