@@ -48,38 +48,48 @@ export async function POST(request: Request) {
 
                 if (!tenantId || !tenantData) return new NextResponse('OK', { status: 200 });
 
-                const prompt = `Você é um robô extrator de dados. Leia a mensagem abaixo e extraia o nome do produto, o preço e a categoria.
-Responda APENAS com um objeto JSON válido, sem NENHUM texto antes ou depois. Use este formato exato:
-{"acao": "cadastrar", "nome": "nome do item", "preco": 150.00, "categoria": "Estética"}
+                // SPRINT 3: IA OPENAI (A Prova Real)
+                const prompt = `Você é um robô extrator de dados. Leia a mensagem do usuário e extraia o nome do produto, o preço numérico e a categoria.
+Responda APENAS com um objeto JSON válido, sem texto adicional. Formato:
+{"acao": "cadastrar", "nome": "nome do item", "preco": 150.00, "categoria": "Estética"}`;
 
-Mensagem: "${messageText}"`;
-
-                const geminiPayload = {
-                    contents: [{ parts: [{ text: prompt }] }]
+                const openAiUrl = 'https://api.openai.com/v1/chat/completions';
+                
+                const openAiPayload = {
+                    model: "gpt-4o-mini", // Modelo super rápido e barato da OpenAI
+                    response_format: { type: "json_object" }, // Força retorno em JSON
+                    messages: [
+                        { role: "system", content: prompt },
+                        { role: "user", content: messageText }
+                    ]
                 };
 
-                // SOLUÇÃO DEFINITIVA: Usando o modelo "gemini-pro" clássico, 100% liberado para todas as chaves.
-                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
+                const aiResponse = await fetch(openAiUrl, { 
+                    method: 'POST', 
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+                    }, 
+                    body: JSON.stringify(openAiPayload) 
+                });
                 
-                const geminiResponse = await fetch(geminiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(geminiPayload) });
-                const geminiData = await geminiResponse.json();
+                const aiData = await aiResponse.json();
                 
                 let replyText = "";
 
-                if (geminiData.error) {
-                    console.error("🚨 ERRO DO GOOGLE:", geminiData.error);
-                    replyText = `Erro na API do Google: ${geminiData.error.message}`;
+                if (aiData.error) {
+                    console.error("🚨 ERRO DA OPENAI:", aiData.error);
+                    replyText = `Erro na API OpenAI: ${aiData.error.message}`;
                 } else {
-                    const responseText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                    const responseText = aiData.choices?.[0]?.message?.content || "";
                     
                     try {
-                        const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-                        const dados = JSON.parse(cleanedText);
+                        const dados = JSON.parse(responseText);
 
                         if (dados.acao === 'cadastrar') {
                             await addDoc(collection(db, 'products'), {
                                 name: dados.nome, price: Number(dados.preco), category: dados.categoria || 'Geral',
-                                description: 'Cadastrado via Velo IA (WhatsApp)', imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600',
+                                description: 'Cadastrado via Velo IA (OpenAI)', imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600',
                                 stock: 99, sku: `IA-${Date.now()}`, isActive: true, tenantId: tenantId
                             });
                             replyText = `✅ Cadastrado com sucesso! Produto: ${dados.nome} | Valor: R$ ${dados.preco}. Atualize seu painel!`;
@@ -87,8 +97,8 @@ Mensagem: "${messageText}"`;
                             replyText = "Não identifiquei uma ordem de cadastro.";
                         }
                     } catch (e) {
-                        console.error("Erro ao ler JSON. O Google enviou:", responseText);
-                        replyText = "A IA processou, mas o formato falhou. Tente novamente.";
+                        console.error("Erro ao ler JSON da OpenAI:", responseText);
+                        replyText = "A IA processou, mas o formato falhou.";
                     }
                 }
 
