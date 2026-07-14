@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/services/firebase';
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const GOOGLE_CLIENT_ID = String(process.env.GOOGLE_CLIENT_ID || "");
+const GOOGLE_CLIENT_SECRET = String(process.env.GOOGLE_CLIENT_SECRET || "");
 
 async function getValidGmbTokenAndIds(storeId: string) {
     const docRef = doc(db, 'tenants', storeId); // TRAVA SÊNIOR: Ajustado para a coleção tenants

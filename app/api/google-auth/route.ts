@@ -10,8 +10,8 @@ export async function GET(request: Request) {
     const code = searchParams.get('code');
 
     // Chaves do Google Cloud Console
-    const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-    const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+    const CLIENT_ID = String(process.env.GOOGLE_CLIENT_ID || "");
+    const CLIENT_SECRET = String(process.env.GOOGLE_CLIENT_SECRET || "");
     
     // Captura dinâmica da URL (localhost ou produção)
     const host = request.headers.get('host') || new URL(request.url).host;
