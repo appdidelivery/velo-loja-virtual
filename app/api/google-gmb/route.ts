@@ -110,14 +110,17 @@ export async function GET(request: Request) {
         }
 
         // Lógica super robusta para extrair o ID limpo, não importa o formato que o Google envie
-        let cleanLocationId = '';
+        // MÁGICA DE RESOLUÇÃO: O Google na v1 quer exatamente o que ele enviou na listagem
+        // Na listagem, o name já vem como: "locations/123456789"
+        const locationName = locationId; 
+        
+        // E para as APIs antigas (v4) de Reviews e Mídia, usamos a conta curinga '-'
+        let cleanIdForOldApi = '';
         if (locationId) {
             const parts = locationId.split('/');
-            cleanLocationId = parts[parts.length - 1]; // Pega sempre o último número
+            cleanIdForOldApi = parts[parts.length - 1];
         }
-        
-        const locationName = `locations/${cleanLocationId}`;
-        const accountLocationName = `accounts/-/locations/${cleanLocationId}`;
+        const accountLocationName = `accounts/-/locations/${cleanIdForOldApi}`;
 
         if (action === 'getProfile') {
             const apiRes = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${locationName}?readMask=title,profile,primaryPhone`, {
@@ -179,14 +182,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: "Empresa não selecionada." }, { status: 400 });
         }
 
-        let cleanLocationId = '';
+       const locationName = locationId; 
+        
+        let cleanIdForOldApi = '';
         if (locationId) {
             const parts = locationId.split('/');
-            cleanLocationId = parts[parts.length - 1];
+            cleanIdForOldApi = parts[parts.length - 1];
         }
-        
-        const locationName = `locations/${cleanLocationId}`;
-        const accountLocationName = `accounts/-/locations/${cleanLocationId}`;
+        const accountLocationName = `accounts/-/locations/${cleanIdForOldApi}`;
 
         if (action === 'updateBusinessInfo') {
             const { title, description, phone } = params;
