@@ -1520,10 +1520,17 @@ const [termoIA, setTermoIA] = useState('');
                             <div key={idx} className="w-24 h-12 bg-gray-100 rounded-lg border border-gray-200 flex-shrink-0 relative group">
                               <img src={bannerUrl} alt={`Banner ${idx}`} className="w-full h-full object-cover rounded-lg" />
                               <button 
-                                onClick={() => {
+                                onClick={async () => {
                                   const newBanners = [...settingsForm.banners];
                                   newBanners.splice(idx, 1);
                                   setSettingsForm({...settingsForm, banners: newBanners});
+                                  
+                                  // Salva a exclusão no Firebase na hora
+                                  if (authRole.tenantId && authRole.tenantId !== 'loading') {
+                                    await setDoc(doc(db, 'tenants', authRole.tenantId), {
+                                      banners: newBanners
+                                    }, { merge: true });
+                                  }
                                 }}
                                 className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
                               >
@@ -1549,18 +1556,24 @@ const [termoIA, setTermoIA] = useState('');
                                   const file = e.target.files?.[0];
                                   if (!file) return;
                                   
-                                  // Trava de Otimização SEO (Máx 2MB)
                                   if (file.size > 2 * 1024 * 1024) {
-                                    return alert("⚠️ Imagem muito pesada! O Google pune sites lentos. Comprima sua imagem para menos de 2MB antes de enviar.");
+                                    return alert("⚠️ Imagem muito pesada! Comprima sua imagem para menos de 2MB antes de enviar.");
                                   }
 
                                   setIsUploadingBanner(true);
                                   try {
                                     const url = await uploadImageToCloudinary(file);
-                                    setSettingsForm((prev: any) => ({
-                                      ...prev,
-                                      banners: [...(prev.banners || []), url]
-                                    }));
+                                    const novosBanners = [...(settingsForm.banners || []), url];
+                                    
+                                    // 1. Atualiza o estado da tela para o Admin ver a foto
+                                    setSettingsForm((prev: any) => ({ ...prev, banners: novosBanners }));
+                                    
+                                    // 2. Salva INSTANTANEAMENTE no Firebase para a vitrine ver
+                                    if (authRole.tenantId && authRole.tenantId !== 'loading') {
+                                      await setDoc(doc(db, 'tenants', authRole.tenantId), {
+                                        banners: novosBanners
+                                      }, { merge: true });
+                                    }
                                   } catch (error) {
                                     alert("Erro de conexão ao enviar a imagem.");
                                   } finally {
