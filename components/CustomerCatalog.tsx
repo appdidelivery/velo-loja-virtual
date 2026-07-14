@@ -132,16 +132,15 @@ export default function CustomerCatalog({
       if (tenantId) {
         const { onSnapshot, doc } = await import('firebase/firestore');
         
-        // Escuta o Firebase em Tempo Real (Ignora LocalStorage completamente)
+        // Escuta o Firebase em Tempo Real
         unsubscribe = onSnapshot(
           doc(db, 'tenants', tenantId), 
           (docSnap) => {
             if (docSnap.exists()) {
               const data = docSnap.data();
               
-              // Atualiza todos os estados baseados ÚNICA E EXCLUSIVAMENTE no banco de dados
               if (data.primaryColor) setThemeColor(data.primaryColor);
-              setStoreLogo(data.logoUrl || ''); // Se apagou no admin, apaga aqui
+              setStoreLogo(data.logoUrl || ''); 
               setStoreName(data.businessName || settings.businessName);
               setStoreSlogan(data.slogan || 'Catálogo Exclusivo');
               setStoreWhatsapp(data.whatsappNumber || settings.whatsappNumber);
@@ -149,13 +148,11 @@ export default function CustomerCatalog({
               setTemplateId(data.templateId || 'conveniencia_padrao');
               setStoreMode(data.storeMode || 'ecommerce');
               
-              // Alimenta o React da forma correta!
               setStoreAddress(data.address || '');
               setStoreAbout(data.aboutText || '');
               setStoreFaq(data.faq || []);
               setStoreCnpj(data.cnpj || '');
               
-              // Alimenta o motor de SEO
               setStoreSeoCategory(data.seoCategory || data.storeNiche || 'Store');
               setStorePriceRange(data.priceRange || '$$');
               
@@ -324,7 +321,6 @@ export default function CustomerCatalog({
   };
 
   const generateStructuredData = () => {
-    // 1. Tradutor de Nicho para o Schema.org (Ajuda o Google a te colocar no Maps certo)
     const getSchemaType = (niche: string) => {
         const n = String(niche).toLowerCase();
         if (n.includes('burger') || n.includes('pizza') || n.includes('sushi') || n.includes('restaurant')) return 'Restaurant';
@@ -337,7 +333,6 @@ export default function CustomerCatalog({
         return 'Store';
     };
 
-    // 2. Schema Principal da Empresa (LocalBusiness / Store)
     const businessSchema = {
       "@context": "https://schema.org",
       "@type": getSchemaType(storeSeoCategory),
@@ -356,10 +351,9 @@ export default function CustomerCatalog({
         "streetAddress": STORE_TRUST_DATA.address,
         "addressCountry": "BR"
       },
-      "sameAs": storeSocialLinks // Injeta Instagram, Facebook e TripAdvisor
+      "sameAs": storeSocialLinks 
     };
 
-    // 3. Schema do Catálogo de Produtos
     const productSchema = activeProducts.map((p: any) => ({
       "@context": "https://schema.org/",
       "@type": "Product",
@@ -379,7 +373,6 @@ export default function CustomerCatalog({
       }
     }));
 
-    // 4. Schema de FAQ (Se o lojista preencheu perguntas)
     let faqSchema: any = null;
     if (storeFaq && storeFaq.length > 0) {
       faqSchema = {
@@ -396,7 +389,6 @@ export default function CustomerCatalog({
       };
     }
 
-    // Compila tudo num JSON poderoso
     const finalSchemas = [businessSchema, ...productSchema];
     if (faqSchema) finalSchemas.push(faqSchema);
 
@@ -405,12 +397,10 @@ export default function CustomerCatalog({
 
   if (!mounted) return null;
 
-  // PROTEÇÃO SÊNIOR: Evita crash caso o template salvo na loja antiga não exista mais
   const currentTemplate = TEMPLATES?.find((t: any) => t.id === templateId) || 
                           TEMPLATES?.[0] || 
                           { category: 'ecommerce', fontFamily: 'sans-serif', primaryColor: '#357b64', defaultContent: {} };
 
-  // PROTEÇÃO SÊNIOR: Garante que propriedades de string essenciais nunca sejam nulas
   if (!storeName) setStoreName('Loja Virtual');
   if (!storeSlogan) setStoreSlogan('Catálogo Exclusivo');
 
@@ -423,11 +413,11 @@ export default function CustomerCatalog({
 
       {layoutMode === 'webview' ? (
         <div className="flex justify-center bg-black h-[100dvh] overflow-hidden">
-          <div className="w-full max-w-md bg-gray-50 h-full flex flex-col relative shadow-2xl overflow-hidden">
+          <div className={`w-full max-w-md h-full flex flex-col relative shadow-2xl overflow-hidden ${templateId === 'barbearia_dark' ? 'bg-[#0A0A0A]' : templateId === 'beleza_masonry' ? 'bg-[#fdf8f9]' : 'bg-gray-50'}`}>
             
             {/* CABEÇALHO NATIVO APP / SACOLA ONLINE */}
             <header 
-              className={`px-5 py-4 flex flex-col z-40 shrink-0 shadow-sm relative transition-colors duration-300 ${templateId === 'nativo_app' ? 'rounded-b-[2rem]' : 'bg-white'}`}
+              className={`px-5 py-4 flex flex-col z-40 shrink-0 shadow-sm relative transition-colors duration-300 ${templateId === 'nativo_app' ? 'rounded-b-[2rem]' : templateId === 'barbearia_dark' ? 'bg-black border-b border-white/10' : templateId === 'beleza_masonry' ? 'bg-transparent' : 'bg-white'}`}
               style={templateId === 'nativo_app' ? { backgroundColor: themeColor } : {}}
             >
               <div className="flex items-center justify-between w-full">
@@ -436,13 +426,13 @@ export default function CustomerCatalog({
                     {storeLogo ? <img src={storeLogo} alt="Logo" className="w-full h-full object-contain p-1.5" /> : <span style={{ color: themeColor }} className="font-black text-xl">{storeName.charAt(0)}</span>}
                   </div>
                   <div className="flex flex-col">
-                    <h1 className={`text-sm font-black leading-tight uppercase tracking-widest ${templateId === 'nativo_app' ? 'text-white' : 'text-slate-800'}`}>{storeName}</h1>
-                    <p className={`text-[10px] font-medium mt-0.5 ${templateId === 'nativo_app' ? 'text-white/90' : 'text-slate-500'}`}>{storeSlogan}</p>
+                    <h1 className={`text-sm font-black leading-tight uppercase tracking-widest ${templateId === 'nativo_app' ? 'text-white' : templateId === 'barbearia_dark' ? 'text-white' : 'text-slate-800'}`}>{storeName}</h1>
+                    <p className={`text-[10px] font-medium mt-0.5 ${templateId === 'nativo_app' ? 'text-white/90' : templateId === 'barbearia_dark' ? 'text-gray-400' : 'text-slate-500'}`}>{storeSlogan}</p>
                   </div>
                 </div>
                 <button 
                   onClick={() => setIsSearchOpen(!isSearchOpen)} 
-                  className={`p-2.5 rounded-full transition-colors border ${templateId === 'nativo_app' ? 'border-white/30 text-white hover:bg-white/10' : 'bg-gray-50 hover:bg-gray-100 text-slate-600 border-transparent'}`}
+                  className={`p-2.5 rounded-full transition-colors border ${templateId === 'nativo_app' ? 'border-white/30 text-white hover:bg-white/10' : templateId === 'barbearia_dark' ? 'bg-white/5 text-white border-white/10' : 'bg-gray-50 hover:bg-gray-100 text-slate-600 border-transparent'}`}
                 >
                   <Search className="w-4 h-4" />
                 </button>
@@ -457,7 +447,7 @@ export default function CustomerCatalog({
                         placeholder="O que você procura?" 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className={`w-full border-none text-sm font-bold px-4 py-3 rounded-xl outline-none focus:ring-2 transition-all shadow-inner ${templateId === 'nativo_app' ? 'bg-white text-slate-800 placeholder:text-slate-400' : 'bg-gray-100 text-slate-800 placeholder:text-slate-400'}`}
+                        className={`w-full border-none text-sm font-bold px-4 py-3 rounded-xl outline-none focus:ring-2 transition-all shadow-inner ${templateId === 'nativo_app' ? 'bg-white text-slate-800 placeholder:text-slate-400' : templateId === 'barbearia_dark' ? 'bg-white/10 text-white placeholder:text-gray-400' : 'bg-gray-100 text-slate-800 placeholder:text-slate-400'}`}
                         style={{ '--tw-ring-color': templateId === 'nativo_app' ? '#00000020' : themeColor } as any}
                       />
                       {searchQuery && (
@@ -468,6 +458,7 @@ export default function CustomerCatalog({
                 )}
               </AnimatePresence>
             </header>
+            
             <main className="flex-1 overflow-y-auto custom-scrollbar pb-32">
               
               {/* BANNERS */}
@@ -481,8 +472,7 @@ export default function CustomerCatalog({
                     </div>
                   )}
 
-                  <div className="p-4 pb-2 bg-white rounded-b-3xl shadow-sm mb-4">
-                    {/* Carrossel de Banners (Snap Scroll) */}
+                  <div className={`p-4 pb-2 shadow-sm mb-4 ${templateId === 'barbearia_dark' ? 'bg-black rounded-b-3xl' : templateId === 'beleza_masonry' ? 'bg-transparent' : 'bg-white rounded-b-3xl'}`}>
                     <div className="w-full h-40 md:h-48 rounded-2xl overflow-hidden relative shadow-md group flex overflow-x-auto snap-x snap-mandatory no-scrollbar">
                       
                       {(settings as any).banners && (settings as any).banners.length > 0 ? (
@@ -519,11 +509,11 @@ export default function CustomerCatalog({
               {/* SOBRE NÓS (APENAS PARA TEMPLATES DE SERVIÇOS) */}
               {currentTemplate.category === 'servicos' && storeAbout && (
                  <div className="px-4 mb-4 animate-in fade-in">
-                   <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-                     <h2 className="text-lg font-black text-slate-800 uppercase italic tracking-tighter mb-2 flex items-center gap-2">
+                   <div className={`p-6 rounded-3xl shadow-sm border ${templateId === 'barbearia_dark' ? 'bg-[#1A1A1A] border-white/10 text-gray-300' : 'bg-white border-gray-100'}`}>
+                     <h2 className={`text-lg font-black uppercase italic tracking-tighter mb-2 flex items-center gap-2 ${templateId === 'barbearia_dark' ? 'text-white' : 'text-slate-800'}`}>
                        <Store className="text-blue-500" size={20}/> Nossa Empresa
                      </h2>
-                     <p className="text-xs text-slate-500 font-medium leading-relaxed whitespace-pre-wrap">
+                     <p className={`text-xs font-medium leading-relaxed whitespace-pre-wrap ${templateId === 'barbearia_dark' ? 'text-gray-400' : 'text-slate-500'}`}>
                        {storeAbout}
                      </p>
                    </div>
@@ -531,28 +521,48 @@ export default function CustomerCatalog({
               )}
 
               {/* CATEGORIAS */}
-              <div className="px-4 py-2 mt-2">
-                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-4 pt-1 snap-x">
-                  <button 
-                    onClick={() => {setSelectedCategory('Todos'); setSearchQuery('');}}
-                    className={`px-5 py-2.5 rounded-full snap-center shrink-0 border transition-all duration-300 ${selectedCategory === 'Todos' ? 'text-white border-transparent font-bold shadow-md' : 'bg-white text-slate-600 border-slate-200 font-bold hover:bg-slate-100'}`}
-                    style={selectedCategory === 'Todos' ? { backgroundColor: themeColor, color: '#fff', borderColor: themeColor } : {}}
-                  >
-                    <span className="text-xs tracking-tight whitespace-nowrap">Todos</span>
-                  </button>
-
-                  {categories.map(cat => (
-                    <button 
-                        key={cat} 
+              {templateId === 'oficina_step' ? (
+                <div className="px-4 mt-6">
+                  <h3 className="text-slate-800 font-black text-sm mb-3">Categorias</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {categories.slice(0, 4).map((cat, idx) => (
+                      <button 
+                        key={cat}
                         onClick={() => {setSelectedCategory(cat); setSearchQuery('');}}
-                        className={`px-5 py-2.5 rounded-full snap-center shrink-0 border transition-all duration-300 ${selectedCategory === cat ? 'text-white border-transparent font-bold shadow-md' : 'bg-white text-slate-600 border-slate-200 font-bold hover:bg-slate-100'}`}
-                        style={selectedCategory === cat ? { backgroundColor: themeColor, color: '#fff', borderColor: themeColor } : {}}
-                    >
-                      <span className="text-xs tracking-tight whitespace-nowrap">{cat}</span>
-                    </button>
-                  ))}
+                        className={`rounded-[1.5rem] p-4 flex flex-col items-center justify-center gap-2 shadow-sm border transition-all ${selectedCategory === cat ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-100 hover:border-blue-100'}`}
+                      >
+                        <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                          {idx === 0 ? <Wrench size={24} /> : idx === 1 ? <ShieldCheck size={24} /> : <Sparkles size={24} />}
+                        </div>
+                        <span className={`text-xs font-bold ${selectedCategory === cat ? 'text-blue-700' : 'text-slate-600'}`}>{cat}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="px-4 py-2 mt-2">
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar pb-4 pt-1 snap-x">
+                    <button 
+                      onClick={() => {setSelectedCategory('Todos'); setSearchQuery('');}}
+                      className={`px-5 py-2.5 rounded-full snap-center shrink-0 border transition-all duration-300 ${selectedCategory === 'Todos' ? 'text-white border-transparent font-bold shadow-md' : templateId === 'barbearia_dark' ? 'bg-[#1A1A1A] text-gray-400 border-white/10' : 'bg-white text-slate-600 border-slate-200 font-bold hover:bg-slate-100'}`}
+                      style={selectedCategory === 'Todos' ? { backgroundColor: themeColor, color: templateId === 'barbearia_dark' ? '#000' : '#fff', borderColor: themeColor } : {}}
+                    >
+                      <span className="text-xs tracking-tight whitespace-nowrap">Todos</span>
+                    </button>
+
+                    {categories.map(cat => (
+                      <button 
+                          key={cat} 
+                          onClick={() => {setSelectedCategory(cat); setSearchQuery('');}}
+                          className={`px-5 py-2.5 rounded-full snap-center shrink-0 border transition-all duration-300 ${selectedCategory === cat ? 'text-white border-transparent font-bold shadow-md' : templateId === 'barbearia_dark' ? 'bg-[#1A1A1A] text-gray-400 border-white/10' : 'bg-white text-slate-600 border-slate-200 font-bold hover:bg-slate-100'}`}
+                          style={selectedCategory === cat ? { backgroundColor: themeColor, color: templateId === 'barbearia_dark' ? '#000' : '#fff', borderColor: themeColor } : {}}
+                      >
+                        <span className="text-xs tracking-tight whitespace-nowrap">{cat}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* PRODUTOS */}
               <div className="px-4 mt-2 mb-8">
@@ -561,97 +571,142 @@ export default function CustomerCatalog({
                     <div style={{ borderTopColor: themeColor }} className="w-8 h-8 border-4 border-gray-300 rounded-full animate-spin"></div>
                   </div>
                 ) : paginatedProducts.length === 0 ? (
-                  <div className="text-center py-10 bg-white rounded-3xl border border-gray-200 p-8 shadow-sm">
-                    <Search size={40} className="mx-auto text-gray-300 mb-4"/>
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Nenhum item localizado.</p>
+                  <div className={`text-center py-10 rounded-3xl border p-8 shadow-sm ${templateId === 'barbearia_dark' ? 'bg-[#1A1A1A] border-white/10' : 'bg-white border-gray-200'}`}>
+                    <Search size={40} className={`mx-auto mb-4 ${templateId === 'barbearia_dark' ? 'text-gray-600' : 'text-gray-300'}`}/>
+                    <p className={`text-xs font-bold uppercase tracking-widest ${templateId === 'barbearia_dark' ? 'text-gray-500' : 'text-gray-500'}`}>Nenhum item localizado.</p>
                   </div>
                 ) : (
-                  <div className={(productLayout === 'grid' || currentTemplate.category === 'servicos') ? "grid grid-cols-2 gap-3" : "flex flex-col gap-3"}>
+                  <div className={
+                    templateId === 'beleza_masonry' ? "columns-2 gap-3 space-y-3" : 
+                    (productLayout === 'grid' || currentTemplate.category === 'servicos') ? "grid grid-cols-2 gap-3" : 
+                    "flex flex-col gap-3"
+                  }>
                     {paginatedProducts.map(product => {
                       let hasStock = (product.stock && parseInt(product.stock as any) > 0) || !product.stock;
                       return (
-                        <div 
-                          key={product.id} 
-                          onClick={() => { if(hasStock) { setSelectedVariationIndex(0); setSelectedProduct(product); } }} 
-                          className={`w-full bg-white rounded-[1.5rem] shadow-sm border border-gray-100 p-3 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] flex ${(productLayout === 'grid' || currentTemplate.category === 'servicos') ? 'flex-col gap-2' : 'flex-row items-center gap-4'} ${!hasStock ? 'opacity-60 grayscale' : ''}`}
-                        >
-                          {/* LÓGICA DE VÍDEO VERTICAL (TIPO MERCADO LIVRE/REELS) */}
-                          {(product as any).videoUrl ? (
-                            <div className={`${(productLayout === 'grid' || currentTemplate.category === 'servicos') ? 'w-full aspect-[9/16]' : 'w-[88px] h-[156px] flex-shrink-0'} relative rounded-2xl overflow-hidden bg-slate-900 flex items-center justify-center group`}>
-                              <video 
-                                src={(product as any).videoUrl} 
-                                autoPlay loop muted playsInline 
-                                className="absolute inset-0 w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-700" 
-                              />
-                              <div className="absolute top-1.5 left-1.5 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded-md flex items-center gap-1 z-10 shadow-sm">
-                                  <svg width="6" height="6" viewBox="0 0 24 24" fill="white" className="animate-pulse"><path d="M8 5v14l11-7z"/></svg>
-                                  <span className="text-[7px] font-black text-white tracking-widest uppercase">Vídeo</span>
+                        <React.Fragment key={product.id}>
+                          {/* TEMPLATE: BELEZA MASONRY (Pinterest Style) */}
+                          {templateId === 'beleza_masonry' && (
+                            <div 
+                              onClick={() => { if(hasStock) { setSelectedVariationIndex(0); setSelectedProduct(product); } }} 
+                              className={`break-inside-avoid relative group cursor-pointer mb-3 rounded-[2rem] overflow-hidden bg-white shadow-sm border border-pink-50 ${!hasStock ? 'opacity-60 grayscale' : ''}`}
+                            >
+                              <img src={product.imageUrl} className="w-full object-cover" style={{ minHeight: '140px' }} alt={product.name}/>
+                              <div className="p-3 bg-white/90 backdrop-blur-sm absolute bottom-0 w-full border-t border-white/50">
+                                <h3 className="text-[11px] font-bold text-slate-800 leading-tight line-clamp-2">{product.name}</h3>
+                                <p style={{ color: themeColor }} className="font-black text-sm mt-1">R$ {Number(product.price).toFixed(2)}</p>
                               </div>
-                              {(product as any).promotionalPrice > 0 && (
-                                <div className="absolute top-0 right-0 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-bl-lg shadow-sm z-10">OFERTA</div>
-                              )}
-                              {!hasStock && <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center font-black text-white text-[10px] uppercase tracking-widest backdrop-blur-sm z-20">Esgotado</div>}
-                            </div>
-                          ) : (
-                            <div className={`${(productLayout === 'grid' || currentTemplate.category === 'servicos') ? 'w-full aspect-square' : 'w-[88px] h-[88px] flex-shrink-0'} relative rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 p-1 flex items-center justify-center`}>
-                              <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
-                              {(product as any).promotionalPrice > 0 && (
-                                <div className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-br-lg shadow-sm z-10">OFERTA</div>
-                              )}
-                              {!hasStock && <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center font-black text-white text-[10px] uppercase tracking-widest backdrop-blur-sm rounded-xl">Esgotado</div>}
                             </div>
                           )}
-                          
-                         <div className={`flex-1 flex flex-col justify-start min-w-0 ${(productLayout === 'grid' || currentTemplate.category === 'servicos') ? 'py-0' : 'py-1'}`}>
-                            <h3 className="font-bold text-slate-800 text-[13px] leading-tight line-clamp-2">{product.name}</h3>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 mb-3 truncate">
-                              {product.category}
-                              {currentTemplate.category !== 'servicos' && product.stock !== 999 && product.stock !== 0 && (
-                                <span className={`ml-2 ${Number(product.stock) <= 5 ? 'text-red-500' : 'text-slate-400'}`}>
-                                  • ESTOQUE: {product.stock}
-                                </span>
-                              )}
-                            </p>
 
-                            <div className="flex items-center justify-between mt-auto">
-                              <div className="flex flex-col">
-                                  {(product as any).promotionalPrice > 0 ? (
-                                      <>
-                                          <span style={{ color: themeColor }} className="font-black text-[14px] leading-none">
-                                              R$ {Number((product as any).promotionalPrice).toFixed(2)}
-                                          </span>
-                                          <span className="text-[9px] font-bold text-slate-400 line-through mt-0.5">R$ {Number(product.price).toFixed(2)}</span>
-                                      </>
-                                  ) : (
-                                      <span style={{ color: themeColor }} className="font-black text-[14px] leading-none">
-                                          {Number(product.price) > 0 ? `R$ ${Number(product.price).toFixed(2)}` : 'Sob Consulta'}
-                                      </span>
-                                  )}
+                          {/* TEMPLATE: BARBEARIA DARK */}
+                          {templateId === 'barbearia_dark' && (
+                            <div 
+                              onClick={() => { if(hasStock) { setSelectedVariationIndex(0); setSelectedProduct(product); } }} 
+                              className={`w-full bg-[#1A1A1A] border border-white/10 rounded-[2rem] p-3 cursor-pointer flex flex-col gap-2 relative ${!hasStock ? 'opacity-60 grayscale' : ''}`}
+                            >
+                              <div className="absolute top-5 left-5 bg-black/80 backdrop-blur-md px-2 py-1 rounded-lg flex items-center gap-1 z-10">
+                                <Star className="text-yellow-400 w-3 h-3 fill-current" />
+                                <span className="text-white text-[10px] font-bold">5.0</span>
                               </div>
-                              
-                              {currentTemplate.category === 'servicos' ? (
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); hasStock && handleAddToCart(product); }} 
-                                  disabled={!hasStock}
-                                  style={hasStock ? { backgroundColor: themeColor } : {}}
-                                  className={`px-3 py-1.5 rounded-lg flex items-center justify-center gap-1 shadow-md active:scale-95 shrink-0 ${hasStock ? 'text-white' : 'bg-slate-300 text-slate-500'}`}
-                                >
-                                    <span className="text-[9px] font-black uppercase tracking-widest">Agendar</span>
-                                </button>
-                              ) : (
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); hasStock && handleAddToCart(product); }} 
-                                  disabled={!hasStock}
-                                  style={hasStock ? { backgroundColor: themeColor } : {}}
-                                  className={`w-8 h-8 rounded-full flex items-center justify-center shadow-md active:scale-90 shrink-0 ${hasStock ? 'text-white' : 'bg-slate-300 text-slate-500'}`}
-                                >
-                                    <Plus size={18} strokeWidth={3} />
-                                </button>
-                              )}
+                              <img src={product.imageUrl} className="w-full h-36 object-cover rounded-[1.5rem]" alt={product.name}/>
+                              <div className="px-1 mt-1">
+                                <h3 className="font-black text-white text-sm uppercase tracking-tight">{product.name}</h3>
+                                <p className="text-gray-400 text-[10px] uppercase font-bold mt-1">R$ {Number(product.price).toFixed(2)}</p>
+                              </div>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); hasStock && handleAddToCart(product); }}
+                                className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-black uppercase text-[10px] tracking-widest py-3 rounded-xl mt-auto transition-colors"
+                              >
+                                Agendar
+                              </button>
                             </div>
-                          </div>
-                        </div>
-                      )
+                          )}
+
+                          {/* TEMPLATE: PADRÃO E OFICINA */}
+                          {templateId !== 'beleza_masonry' && templateId !== 'barbearia_dark' && (
+                            <div 
+                              onClick={() => { if(hasStock) { setSelectedVariationIndex(0); setSelectedProduct(product); } }} 
+                              className={`w-full bg-white rounded-[1.5rem] shadow-sm border border-gray-100 p-3 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] flex ${(productLayout === 'grid' || currentTemplate.category === 'servicos') ? 'flex-col gap-2' : 'flex-row items-center gap-4'} ${!hasStock ? 'opacity-60 grayscale' : ''}`}
+                            >
+                              {(product as any).videoUrl ? (
+                                <div className={`${(productLayout === 'grid' || currentTemplate.category === 'servicos') ? 'w-full aspect-[9/16]' : 'w-[88px] h-[156px] flex-shrink-0'} relative rounded-2xl overflow-hidden bg-slate-900 flex items-center justify-center group`}>
+                                  <video 
+                                    src={(product as any).videoUrl} 
+                                    autoPlay loop muted playsInline 
+                                    className="absolute inset-0 w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-700" 
+                                  />
+                                  <div className="absolute top-1.5 left-1.5 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded-md flex items-center gap-1 z-10 shadow-sm">
+                                      <svg width="6" height="6" viewBox="0 0 24 24" fill="white" className="animate-pulse"><path d="M8 5v14l11-7z"/></svg>
+                                      <span className="text-[7px] font-black text-white tracking-widest uppercase">Vídeo</span>
+                                  </div>
+                                  {(product as any).promotionalPrice > 0 && (
+                                    <div className="absolute top-0 right-0 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-bl-lg shadow-sm z-10">OFERTA</div>
+                                  )}
+                                  {!hasStock && <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center font-black text-white text-[10px] uppercase tracking-widest backdrop-blur-sm z-20">Esgotado</div>}
+                                </div>
+                              ) : (
+                                <div className={`${(productLayout === 'grid' || currentTemplate.category === 'servicos') ? 'w-full aspect-square' : 'w-[88px] h-[88px] flex-shrink-0'} relative rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 p-1 flex items-center justify-center`}>
+                                  <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
+                                  {(product as any).promotionalPrice > 0 && (
+                                    <div className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-br-lg shadow-sm z-10">OFERTA</div>
+                                  )}
+                                  {!hasStock && <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center font-black text-white text-[10px] uppercase tracking-widest backdrop-blur-sm rounded-xl">Esgotado</div>}
+                                </div>
+                              )}
+                              
+                             <div className={`flex-1 flex flex-col justify-start min-w-0 ${(productLayout === 'grid' || currentTemplate.category === 'servicos') ? 'py-0' : 'py-1'}`}>
+                                <h3 className="font-bold text-slate-800 text-[13px] leading-tight line-clamp-2">{product.name}</h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 mb-3 truncate">
+                                  {product.category}
+                                  {currentTemplate.category !== 'servicos' && product.stock !== 999 && product.stock !== 0 && (
+                                    <span className={`ml-2 ${Number(product.stock) <= 5 ? 'text-red-500' : 'text-slate-400'}`}>
+                                      • ESTOQUE: {product.stock}
+                                    </span>
+                                  )}
+                                </p>
+
+                                <div className="flex items-center justify-between mt-auto">
+                                  <div className="flex flex-col">
+                                      {(product as any).promotionalPrice > 0 ? (
+                                          <>
+                                              <span style={{ color: themeColor }} className="font-black text-[14px] leading-none">
+                                                  R$ {Number((product as any).promotionalPrice).toFixed(2)}
+                                              </span>
+                                              <span className="text-[9px] font-bold text-slate-400 line-through mt-0.5">R$ {Number(product.price).toFixed(2)}</span>
+                                          </>
+                                      ) : (
+                                          <span style={{ color: themeColor }} className="font-black text-[14px] leading-none">
+                                              {Number(product.price) > 0 ? `R$ ${Number(product.price).toFixed(2)}` : 'Sob Consulta'}
+                                          </span>
+                                      )}
+                                  </div>
+                                  
+                                  {currentTemplate.category === 'servicos' ? (
+                                    <button 
+                                      onClick={(e) => { e.stopPropagation(); hasStock && handleAddToCart(product); }} 
+                                      disabled={!hasStock}
+                                      style={hasStock ? { backgroundColor: themeColor } : {}}
+                                      className={`px-3 py-1.5 rounded-lg flex items-center justify-center gap-1 shadow-md active:scale-95 shrink-0 ${hasStock ? 'text-white' : 'bg-slate-300 text-slate-500'}`}
+                                    >
+                                        <span className="text-[9px] font-black uppercase tracking-widest">Agendar</span>
+                                    </button>
+                                  ) : (
+                                    <button 
+                                      onClick={(e) => { e.stopPropagation(); hasStock && handleAddToCart(product); }} 
+                                      disabled={!hasStock}
+                                      style={hasStock ? { backgroundColor: themeColor } : {}}
+                                      className={`w-8 h-8 rounded-full flex items-center justify-center shadow-md active:scale-90 shrink-0 ${hasStock ? 'text-white' : 'bg-slate-300 text-slate-500'}`}
+                                    >
+                                        <Plus size={18} strokeWidth={3} />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </React.Fragment>
+                      );
                     })}
 
                     {filteredActiveProducts.length > visibleCount && (
@@ -722,18 +777,18 @@ export default function CustomerCatalog({
                    <Reviews storeId={tenantId} />
 
                    {storeFaq && storeFaq.length > 0 && (
-                     <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-                          <h3 className="text-sm font-black uppercase text-slate-800 mb-4 flex items-center gap-2">
+                     <div className={`p-6 rounded-3xl shadow-sm border ${templateId === 'barbearia_dark' ? 'bg-[#1A1A1A] border-white/10' : 'bg-white border-gray-100'}`}>
+                          <h3 className={`text-sm font-black uppercase mb-4 flex items-center gap-2 ${templateId === 'barbearia_dark' ? 'text-white' : 'text-slate-800'}`}>
                            <ClipboardList size={20} style={{ color: themeColor }} /> Dúvidas Frequentes
                         </h3>
                         <div className="space-y-3">
                            {storeFaq.map((item: any, idx: number) => (
-                             <details key={idx} className="group bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden [&_summary::-webkit-details-marker]:hidden">
-                               <summary className="flex items-center justify-between p-4 font-bold text-slate-700 cursor-pointer text-xs">
+                             <details key={idx} className={`group rounded-2xl border overflow-hidden [&_summary::-webkit-details-marker]:hidden ${templateId === 'barbearia_dark' ? 'bg-[#2A2A2A] border-white/5' : 'bg-slate-50 border-slate-100'}`}>
+                               <summary className={`flex items-center justify-between p-4 font-bold cursor-pointer text-xs ${templateId === 'barbearia_dark' ? 'text-white' : 'text-slate-700'}`}>
                                  {item.question}
-                                 <ChevronDown size={16} className="text-slate-400 group-open:rotate-180 transition-transform flex-shrink-0" />
+                                 <ChevronDown size={16} className={`group-open:rotate-180 transition-transform flex-shrink-0 ${templateId === 'barbearia_dark' ? 'text-gray-400' : 'text-slate-400'}`} />
                                </summary>
-                               <div className="p-4 pt-0 text-[11px] text-slate-500 font-medium leading-relaxed border-t border-slate-100/50">
+                               <div className={`p-4 pt-0 text-[11px] font-medium leading-relaxed border-t ${templateId === 'barbearia_dark' ? 'text-gray-400 border-white/5' : 'text-slate-500 border-slate-100/50'}`}>
                                  {item.answer}
                                </div>
                              </details>
@@ -743,7 +798,7 @@ export default function CustomerCatalog({
                    )}
 
                   {storeAddress && (
-                     <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-sm">
+                     <div className={`p-6 rounded-3xl shadow-sm ${templateId === 'barbearia_dark' ? 'bg-[#1A1A1A] text-white border border-white/10' : 'bg-slate-900 text-white'}`}>
                         <h3 className="text-[11px] font-black uppercase text-slate-300 tracking-widest flex items-center gap-2 mb-4">
                           <MapPin size={16} style={{ color: themeColor }}/> Onde Estamos
                         </h3>
@@ -767,7 +822,7 @@ export default function CustomerCatalog({
                    </div>
               )}
 
-              {/* RODAPÉ GLOBAL (APARECE EM TODOS OS TEMPLATES DO WEBVIEW) */}
+              {/* RODAPÉ GLOBAL */}
               <div className="mt-8 mb-8 mx-4 flex flex-col items-center justify-center text-center border-t border-gray-100 pt-8">
                   {(storeCnpj || STORE_TRUST_DATA.cnpj) && (
                       <p className="text-[10px] font-bold text-slate-400 mb-4">CNPJ: {storeCnpj || STORE_TRUST_DATA.cnpj}</p>
@@ -785,28 +840,45 @@ export default function CustomerCatalog({
             </main>
 
             {/* NAVBAR BOTTOM */}
-            <nav className="shrink-0 w-full bg-white border-t border-gray-200 flex justify-around items-center px-4 py-3 pb-6 z-40 rounded-t-3xl shadow-[0_-10px_30px_rgba(0,0,0,0.05)] relative">
-              <button style={{ color: currentTemplate.primaryColor }} className="flex flex-col items-center gap-1 w-16">
-                <LayoutGrid className="w-5 h-5" />
-                <span className="text-[9px] font-bold uppercase tracking-widest">Início</span>
-              </button>
-              <button onClick={() => alert('Em breve: Rastreio de Pedidos!')} className="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-800 transition-colors w-16">
-                <ClipboardList className="w-5 h-5" />
-                <span className="text-[9px] font-bold uppercase tracking-widest">Pedidos</span>
-              </button>
-              
-              {storeMode !== 'catalogo' && (
-                <button onClick={() => setIsCartOpen(true)} className="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-800 transition-colors relative w-16">
-                  <ShoppingCart className="w-5 h-5" />
-                  <span className="text-[9px] font-bold uppercase tracking-widest">{storeMode === 'orcamento' ? 'Orçamento' : 'Carrinho'}</span>
-                  {cartTotalItems > 0 && (
-                    <span className="absolute -top-1 right-2 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold shadow-sm border border-white">
-                      {cartTotalItems}
-                    </span>
-                  )}
+            {templateId === 'beleza_masonry' ? (
+              <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-11/12 max-w-[320px] bg-white/70 backdrop-blur-xl border border-white shadow-[0_10px_40px_rgba(0,0,0,0.1)] rounded-full flex justify-around items-center px-2 py-2 z-40">
+                <button style={{ color: themeColor, backgroundColor: `${themeColor}20` }} className="p-3 rounded-full transition-all">
+                  <LayoutGrid size={20} />
                 </button>
-              )}
-            </nav>
+                {storeMode !== 'catalogo' && (
+                  <button onClick={() => setIsCartOpen(true)} className="p-3 text-slate-500 hover:text-slate-800 transition-all relative">
+                    <ShoppingBag size={20} />
+                    {cartTotalItems > 0 && <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border border-white"></span>}
+                  </button>
+                )}
+                <button className="p-3 text-slate-500 hover:text-slate-800 transition-all">
+                  <User size={20} />
+                </button>
+              </nav>
+            ) : (
+              <nav className={`shrink-0 w-full flex justify-around items-center px-4 py-3 pb-6 z-40 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] relative ${templateId === 'barbearia_dark' ? 'bg-black border-t border-white/10 rounded-t-3xl text-white' : 'bg-white border-t border-gray-200 rounded-t-3xl'}`}>
+                <button style={{ color: templateId === 'barbearia_dark' ? '#fff' : currentTemplate.primaryColor }} className="flex flex-col items-center gap-1 w-16">
+                  <LayoutGrid className="w-5 h-5" />
+                  <span className="text-[9px] font-bold uppercase tracking-widest">Início</span>
+                </button>
+                <button onClick={() => alert('Em breve: Rastreio de Pedidos!')} className={`flex flex-col items-center gap-1 transition-colors w-16 ${templateId === 'barbearia_dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-800'}`}>
+                  <ClipboardList className="w-5 h-5" />
+                  <span className="text-[9px] font-bold uppercase tracking-widest">Pedidos</span>
+                </button>
+                
+                {storeMode !== 'catalogo' && (
+                  <button onClick={() => setIsCartOpen(true)} className={`flex flex-col items-center gap-1 transition-colors relative w-16 ${templateId === 'barbearia_dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-800'}`}>
+                    <ShoppingCart className="w-5 h-5" />
+                    <span className="text-[9px] font-bold uppercase tracking-widest">{storeMode === 'orcamento' ? 'Orçamento' : 'Carrinho'}</span>
+                    {cartTotalItems > 0 && (
+                      <span className="absolute -top-1 right-2 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold shadow-sm border border-white">
+                        {cartTotalItems}
+                      </span>
+                    )}
+                  </button>
+                )}
+              </nav>
+            )}
 
             {/* 🔥 STICKY FOOTER DE ALTA CONVERSÃO MOBILE 🔥 */}
             <AnimatePresence>

@@ -269,5 +269,41 @@ export const TEMPLATES: TemplateConfig[] = [
         'https://images.unsplash.com/photo-1563514984242-69f8c6eb98c3?auto=format&fit=crop&w=600&q=80'
       ]
     }
+  },
+  {
+    id: 'barbearia_dark',
+    templateName: 'Barbearia Premium (Dark)',
+    category: 'servicos',
+    fontFamily: '"Oswald", sans-serif',
+    primaryColor: '#FBBF24',
+    heroLayout: 'centered',
+    gridConfig: 'list',
+    previewImage: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=500',
+    heroImage: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?q=80&w=800',
+    defaultContent: { heroTitle: 'SEU ESTILO, NOSSA ARTE', heroSubtitle: 'Agende seu horário rápido e fácil', announcementBar: 'Corte + Barba com 20% OFF', ctaText: 'FINALIZAR AGENDAMENTO', reviewMock: '"Melhor fade da cidade!" - João', miniBanners: [] }
+  },
+  {
+    id: 'oficina_step',
+    templateName: 'Oficina & Reparos',
+    category: 'servicos',
+    fontFamily: '"Inter", sans-serif',
+    primaryColor: '#1E3A8A',
+    heroLayout: 'left-aligned',
+    gridConfig: 'grid',
+    previewImage: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=500',
+    heroImage: 'https://images.unsplash.com/photo-1632823462943-6c84c1f964dc?q=80&w=800',
+    defaultContent: { heroTitle: 'CUIDAMOS DO SEU CARRO', heroSubtitle: 'Serviço de confiança na sua porta', announcementBar: 'Revisão Grátis', ctaText: 'SOLICITAR SERVIÇO', reviewMock: '"Mecânico super honesto." - Pedro', miniBanners: [] }
+  },
+  {
+    id: 'beleza_masonry',
+    templateName: 'Estética & Beleza (Glass)',
+    category: 'varejo',
+    fontFamily: '"Playfair Display", serif',
+    primaryColor: '#db2777',
+    heroLayout: 'centered',
+    gridConfig: 'masonry',
+    previewImage: 'https://images.unsplash.com/photo-1596462502278-27bf85033e5a?q=80&w=500',
+    heroImage: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=800',
+    defaultContent: { heroTitle: 'BELEZA NATURAL', heroSubtitle: 'Os melhores produtos para você', announcementBar: 'Frete Grátis acima de R$ 150', ctaText: 'VER MINHA SACOLA', reviewMock: '"Amo os produtos daqui!" - Ana', miniBanners: [] }
   }
 ];
