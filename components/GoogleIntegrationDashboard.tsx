@@ -1,8 +1,8 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaGoogle, FaStore, FaStar, FaImage, FaList, FaBullhorn } from 'react-icons/fa6';
-import { Loader2, ExternalLink, Save, CheckCircle, Send, RefreshCw, MessageSquare, Search, Sparkles, UploadCloud, X, Edit3, Users, ShieldCheck, Clock } from 'lucide-react';
+import { FaGoogle, FaStore, FaStar, FaImage, FaBullhorn } from 'react-icons/fa6';
+import { Loader2, ExternalLink, Save, CheckCircle, Send, RefreshCw, MessageSquare, Search, Sparkles, UploadCloud, X, Edit3, ShieldCheck } from 'lucide-react';
 
 export default function GoogleIntegrationDashboard({ 
     storeId, 
@@ -19,6 +19,9 @@ export default function GoogleIntegrationDashboard({
 }) {
     const [isLoading, setIsLoading] = useState(true);
     const [isConnected, setIsConnected] = useState(false);
+    const [hasLocationId, setHasLocationId] = useState(false); // NOVO: Controle de empresa selecionada
+    const [locations, setLocations] = useState<any[]>([]); // NOVO: Lista de empresas
+    
     const [activeTab, setActiveTab] = useState('profile');
 
     const [profileData, setProfileData] = useState<any>({ title: '', description: '', phone: '', vouchers: [] });
@@ -43,14 +46,18 @@ export default function GoogleIntegrationDashboard({
     const checkConnectionStatus = async () => {
         setIsLoading(true);
         try {
-            // Verifica no Firebase (via prop storeStatus) se o token existe
-            const hasToken = storeStatus?.integrations?.google_my_business?.accessToken;
+            const res = await fetch(`/api/google-gmb?action=checkStatus&storeId=${storeId}`);
+            const data = await res.json();
             
-            if (hasToken) {
+            if (data.connected) {
                 setIsConnected(true);
-                // Se já tiver uma empresa escolhida, busca os dados. Se não, não busca ainda.
-                if (storeStatus?.integrations?.google_my_business?.locationId) {
+                
+                if (data.locationId) {
+                    setHasLocationId(true);
                     fetchProfileData();
+                } else {
+                    // Se não tiver empresa selecionada, busca a lista de empresas da conta
+                    fetchLocationsList();
                 }
             } else {
                 setIsConnected(false);
@@ -59,6 +66,40 @@ export default function GoogleIntegrationDashboard({
             setIsConnected(false);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    // NOVO: Busca todas as empresas do usuário
+    const fetchLocationsList = async () => {
+        try {
+            const res = await fetch(`/api/google-gmb?action=listLocations&storeId=${storeId}`);
+            const data = await res.json();
+            if (data.success && data.locations) {
+                setLocations(data.locations);
+            }
+        } catch (error) {
+            console.error("Erro ao listar locais", error);
+        }
+    };
+
+    // NOVO: Salva a empresa selecionada e libera o painel
+    const handleSelectLocation = async (locationId: string) => {
+        setIsSaving(true);
+        try {
+            const res = await fetch('/api/google-gmb', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'setLocationId', storeId, locationId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setHasLocationId(true);
+                fetchProfileData();
+            }
+        } catch (error) {
+            alert("Erro ao selecionar a loja.");
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -72,8 +113,6 @@ export default function GoogleIntegrationDashboard({
                 let rawDescription = data.profile.profile?.description || '';
                 let extractedVouchers = [];
                 
-                // Inteligência: Se a descrição já tiver os Vales injetados do salvamento anterior,
-                // nós retiramos do texto limpo e usamos para marcar as caixinhas automaticamente!
                 if (rawDescription.includes('💳 Aceitamos Vales e Benefícios:')) {
                     const parts = rawDescription.split('💳 Aceitamos Vales e Benefícios:');
                     rawDescription = parts[0].trim();
@@ -99,7 +138,6 @@ export default function GoogleIntegrationDashboard({
         e.preventDefault();
         setIsSaving(true);
         try {
-            // AEO (Answer Engine Optimization) - Injeta os Vales no final da descrição para o Google indexar nos filtros
             let finalDescription = profileData.description;
             if (profileData.vouchers?.length > 0) {
                 const voucherText = `\n\n💳 Aceitamos Vales e Benefícios: ${profileData.vouchers.join(', ')}.`;
@@ -158,7 +196,6 @@ export default function GoogleIntegrationDashboard({
                 finalImageUrl = selectedProduct.imageUrl;
             }
 
-            // Descobre a URL base da loja e formata o slug do produto para o botão do Google
             let productUrl = null;
             if (selectedProduct) {
                 const baseUrl = storeStatus?.customDomain ? `https://${storeStatus.customDomain}` : `https://${storeId}.velodelivery.com.br`;
@@ -281,24 +318,6 @@ export default function GoogleIntegrationDashboard({
         }
     };
 
-    const handleSyncCatalog = async () => {
-        if (!window.confirm("Deseja sincronizar seu cardápio do Velo com o Google agora?")) return;
-        setIsSaving(true);
-        try {
-            const res = await fetch('/api/google-gmb', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'syncVeloProducts', storeId })
-            });
-            const data = await res.json();
-            if (data.success) alert(`✅ Catálogo sincronizado! ${data.syncedCount} produtos enviados.`);
-            else throw new Error(data.error);
-        } catch (error) { 
-            alert(`❌ Erro ao sincronizar catálogo: ${error.message}`); 
-        } finally { 
-            setIsSaving(false); 
-        }
-    };
-
     if (isLoading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin text-blue-600" size={40} /></div>;
 
     if (!isConnected) {
@@ -326,12 +345,42 @@ export default function GoogleIntegrationDashboard({
         );
     }
 
+    // TELA DE SELEÇÃO DE EMPRESAS (Se o usuário conectou, mas ainda não escolheu a loja)
+    if (isConnected && !hasLocationId) {
+        return (
+            <div className="bg-white p-12 rounded-[3rem] border border-slate-100 text-center shadow-xl max-w-3xl mx-auto mt-10 animate-in fade-in zoom-in">
+                <FaStore size={48} className="text-green-500 mx-auto mb-6" />
+                <h2 className="text-3xl font-black text-slate-800 mb-2 uppercase italic">Conta Conectada!</h2>
+                <p className="text-slate-500 font-bold mb-8 text-sm">Encontramos as seguintes empresas no seu Google. Selecione qual deseja sincronizar com esta loja.</p>
+                
+                <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2 text-left">
+                    {locations.length === 0 ? (
+                        <div className="bg-slate-50 p-6 rounded-2xl text-center text-slate-500 font-bold border border-dashed border-slate-200">
+                            Buscando suas empresas ou você não possui nenhuma ficha criada neste email...
+                        </div>
+                    ) : (
+                        locations.map((loc, idx) => (
+                            <button 
+                                key={idx}
+                                onClick={() => handleSelectLocation(loc.name)}
+                                disabled={isSaving}
+                                className="w-full bg-slate-50 hover:bg-green-50 border border-slate-200 hover:border-green-400 p-4 rounded-2xl transition-all flex items-center justify-between group disabled:opacity-50"
+                            >
+                                <span className="font-black text-slate-800 group-hover:text-green-700 uppercase tracking-widest">{loc.title}</span>
+                                <ChevronRight size={18} className="text-slate-400 group-hover:text-green-600" />
+                            </button>
+                        ))
+                    )}
+                </div>
+            </div>
+        );
+    }
+
     const tabs = [
         { id: 'profile', label: 'Perfil & Dados', icon: <FaStore /> },
         { id: 'feed', label: 'Postagens (Feed)', icon: <FaBullhorn /> },
         { id: 'reviews', label: 'Avaliações', icon: <FaStar /> },
-        { id: 'media', label: 'Mídias e Fotos', icon: <FaImage /> },
-        { id: 'catalog', label: 'Cardápio', icon: <FaList /> }
+        { id: 'media', label: 'Mídias e Fotos', icon: <FaImage /> }
     ];
 
     return (
@@ -402,7 +451,6 @@ export default function GoogleIntegrationDashboard({
                                     <div><label className="text-[10px] font-black uppercase text-slate-400 mb-2 block">Telefone de Contato</label><input type="text" value={profileData.phone} onChange={e => setProfileData({...profileData, phone: e.target.value})} className="w-full p-4 bg-white border border-slate-200 rounded-2xl font-bold outline-none focus:ring-2 ring-blue-500" /></div>
                                     <div><label className="text-[10px] font-black uppercase text-slate-400 mb-2 block">Descrição Oficial</label><textarea rows="4" value={profileData.description} onChange={e => setProfileData({...profileData, description: e.target.value})} className="w-full p-4 bg-white border border-slate-200 rounded-2xl font-medium outline-none focus:ring-2 ring-blue-500 resize-none custom-scrollbar"></textarea></div>
                                     
-                                    {/* UPDATE 2026: VALES E BENEFÍCIOS */}
                                     <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100">
                                         <div className="mb-3">
                                             <label className="text-xs font-black uppercase text-blue-800 flex items-center gap-2">🎟️ Vales e Benefícios (Filtro do Google)</label>
@@ -547,7 +595,6 @@ export default function GoogleIntegrationDashboard({
                                                 <Edit3 size={14}/> Texto da Postagem
                                             </h4>
                                             
-                                            {/* --- NOVO BOTÃO DE IA (DISCRETO E CONTEXTUAL) --- */}
                                             {selectedProduct && (
                                                 <button 
                                                     type="button"
@@ -570,10 +617,6 @@ export default function GoogleIntegrationDashboard({
                                             value={postData.summary}
                                             onChange={(e) => setPostData({...postData, summary: e.target.value})}
                                         ></textarea>
-                                        
-                                        <p className="text-[10px] font-bold text-slate-400 mt-2 ml-2">
-                                            Dica: Use palavras-chave da sua região e evite textos muito curtos. O Google adora detalhes!
-                                        </p>
                                     </div>
                                     
                                     <button type="submit" disabled={isSaving} className="w-full bg-blue-600 text-white py-5 rounded-3xl font-black uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
@@ -593,7 +636,6 @@ export default function GoogleIntegrationDashboard({
                                     </button>
                                 </div>
 
-                                {/* UPDATE 2026: MODERAÇÃO DE REVIEWS */}
                                 <div className="bg-orange-50 border border-orange-200 p-4 rounded-2xl mb-6 flex items-start gap-3">
                                     <ShieldCheck size={20} className="text-orange-500 mt-0.5 flex-shrink-0"/>
                                     <div>
@@ -647,7 +689,6 @@ export default function GoogleIntegrationDashboard({
                                                                 onChange={(e) => setReplyInputs({...replyInputs, [review.reviewId]: e.target.value})} 
                                                                 className="w-full p-4 pr-12 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 ring-blue-500 text-slate-700" 
                                                             />
-                                                            {/* BOTÃO IA ANTI-SPAM (AEO Seguro) */}
                                                             <button 
                                                                 type="button"
                                                                 title="Gerar Resposta Segura (AEO)"
@@ -658,7 +699,6 @@ export default function GoogleIntegrationDashboard({
                                                                     
                                                                     let safeReply = '';
                                                                     if (isPositive) {
-                                                                        // Sem usar nome. Focando no produto, nicho e local (SEO Puro)
                                                                         safeReply = `Olá! Agradecemos muito a sua avaliação positiva. Nosso time trabalha duro todos os dias para entregar a melhor experiência em ${niche}. Sempre que precisar, a equipe da ${storeName} estará à disposição!`;
                                                                     } else {
                                                                         safeReply = `Olá. Agradecemos o seu feedback, pois ele é fundamental para nossa evolução. Lamentamos que a sua experiência não tenha sido ideal. Prezamos muito pela qualidade do nosso serviço na ${storeName}. Por favor, entre em contato conosco pelos canais oficiais para entendermos o ocorrido.`;
@@ -728,61 +768,6 @@ export default function GoogleIntegrationDashboard({
                                 </div>
                             </motion.div>
                         )}
-
-                        {activeTab === 'catalog' && (() => {
-                            // Lógica de Trava (Cooldown) de 12 horas
-                            let lastSyncDate = null;
-                            if (storeStatus?.lastCatalogSync) {
-                                if (typeof storeStatus.lastCatalogSync.toDate === 'function') {
-                                    lastSyncDate = storeStatus.lastCatalogSync.toDate();
-                                } else if (storeStatus.lastCatalogSync.seconds) {
-                                    lastSyncDate = new Date(storeStatus.lastCatalogSync.seconds * 1000);
-                                } else {
-                                    lastSyncDate = new Date(storeStatus.lastCatalogSync);
-                                }
-                            }
-
-                            const cooldownMs = 12 * 60 * 60 * 1000; // 12 horas em milissegundos
-                            const isLocked = lastSyncDate && (new Date() - lastSyncDate) < cooldownMs;
-                            const timeRemainingMs = isLocked ? cooldownMs - (new Date() - lastSyncDate) : 0;
-                            const hoursRemaining = Math.ceil(timeRemainingMs / (1000 * 60 * 60));
-
-                            return (
-                                <motion.div key="catalog" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                                    <div className="text-center py-16 flex flex-col items-center">
-                                        <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mb-6 ${isLocked ? 'bg-slate-100 text-slate-400' : 'bg-green-50 text-green-600'}`}>
-                                            <FaList size={36}/> 
-                                        </div>
-                                        <h2 className="text-3xl font-black uppercase text-slate-800 mb-2">Sincronização de Cardápio</h2>
-                                        <p className="text-sm font-bold text-slate-500 mb-8 max-w-md">
-                                            Envie todos os produtos ativos do painel Velo Delivery diretamente para a aba "Produtos" do seu perfil no Google Maps.
-                                        </p>
-                                        
-                                        <button 
-                                            onClick={handleSyncCatalog} 
-                                            disabled={isSaving || isLocked} 
-                                            className={`px-10 py-5 rounded-[2rem] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 mx-auto disabled:opacity-100 disabled:cursor-not-allowed ${isLocked ? 'bg-slate-200 text-slate-500 shadow-none' : 'bg-green-500 text-white shadow-xl shadow-green-200 hover:bg-green-600'}`}
-                                        >
-                                            {isSaving ? <Loader2 className="animate-spin" size={20}/> : (isLocked ? <CheckCircle size={20}/> : <RefreshCw size={20}/>)}
-                                            {isSaving ? 'Sincronizando...' : (isLocked ? 'Catálogo Sincronizado' : 'Sincronizar Velo -> Google')}
-                                        </button>
-
-                                        {lastSyncDate && (
-                                            <div className="mt-6 flex flex-col items-center gap-1">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
-                                                    Última Sincronização: <span className="text-slate-700">{lastSyncDate.toLocaleString('pt-BR')}</span>
-                                                </p>
-                                                {isLocked && (
-                                                    <p className="text-[9px] font-bold text-orange-600 bg-orange-50 px-3 py-1.5 rounded-lg mt-2 border border-orange-100 flex items-center gap-1 animate-pulse">
-                                                        <Clock size={12}/> Nova sincronização liberada em aprox. {hoursRemaining}h (Prevenção Antispam)
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                </motion.div>
-                            );
-                        })()}
                     </AnimatePresence>
                 </div>
             </div>
