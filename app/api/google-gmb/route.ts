@@ -109,7 +109,13 @@ export async function GET(request: Request) {
             return NextResponse.json({ success: false, error: "ID do Local não configurado." }, { status: 400 });
         }
 
-        const cleanLocationId = locationId ? locationId.replace('locations/', '') : '';
+        // Lógica super robusta para extrair o ID limpo, não importa o formato que o Google envie
+        let cleanLocationId = '';
+        if (locationId) {
+            const parts = locationId.split('/');
+            cleanLocationId = parts[parts.length - 1]; // Pega sempre o último número
+        }
+        
         const locationName = `locations/${cleanLocationId}`;
         const accountLocationName = `accounts/-/locations/${cleanLocationId}`;
 
@@ -118,7 +124,12 @@ export async function GET(request: Request) {
                 headers: { 'Authorization': `Bearer ${accessToken}` }
             });
             const data = await apiRes.json();
-            if (!apiRes.ok) throw new Error(data.error?.message || "Erro na API GMB.");
+            
+            // Tratamento de erro detalhado para debugar se falhar de novo
+            if (!apiRes.ok) {
+                console.error("Erro Google API (Profile):", data);
+                throw new Error(data.error?.message || "Erro na API GMB.");
+            }
             return NextResponse.json({ success: true, profile: data });
         }
 
@@ -168,7 +179,12 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: "Empresa não selecionada." }, { status: 400 });
         }
 
-        const cleanLocationId = locationId.replace('locations/', '');
+        let cleanLocationId = '';
+        if (locationId) {
+            const parts = locationId.split('/');
+            cleanLocationId = parts[parts.length - 1];
+        }
+        
         const locationName = `locations/${cleanLocationId}`;
         const accountLocationName = `accounts/-/locations/${cleanLocationId}`;
 
