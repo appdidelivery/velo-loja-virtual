@@ -43,11 +43,15 @@ export default function GoogleIntegrationDashboard({
     const checkConnectionStatus = async () => {
         setIsLoading(true);
         try {
-            const res = await fetch(`/api/google-gmb?action=checkStatus&storeId=${storeId}`);
-            const data = await res.json();
-            if (data.connected) {
+            // Verifica no Firebase (via prop storeStatus) se o token existe
+            const hasToken = storeStatus?.integrations?.google_my_business?.accessToken;
+            
+            if (hasToken) {
                 setIsConnected(true);
-                fetchProfileData();
+                // Se já tiver uma empresa escolhida, busca os dados. Se não, não busca ainda.
+                if (storeStatus?.integrations?.google_my_business?.locationId) {
+                    fetchProfileData();
+                }
             } else {
                 setIsConnected(false);
             }

@@ -58,7 +58,7 @@ export async function GET(request: Request) {
         }
 
         // Salva os Tokens no Firebase da loja correspondente
-        const settingsRef = doc(db, 'settings', storeId);
+        const settingsRef = doc(db, 'tenants', storeId); // <-- MUDOU DE settings PARA tenants
         await setDoc(settingsRef, {
             integrations: {
                 google_my_business: {
