@@ -50,10 +50,8 @@ export default function CustomerCatalog({
       const host = window.location.hostname;
       const path = window.location.pathname; 
       
-      // 🚀 BLINDAGEM PARA LOCALHOST: Lê o ID que está na URL (ex: /zjEhKki15...)
       if (host === 'localhost' || host === '127.0.0.1') {
         const pathSegments = path.split('/').filter(Boolean);
-        // Garante que não é uma rota de sistema
         if (pathSegments.length > 0 && pathSegments[0] !== 'admin' && pathSegments[0] !== 'login') {
           return pathSegments[0]; 
         }
@@ -61,7 +59,6 @@ export default function CustomerCatalog({
       }
 
       if (host === 'app.mamedes.com.br') return 'mamedes';
-      
       return host; 
     }
     return 'loja_teste_local'; 
@@ -103,13 +100,12 @@ export default function CustomerCatalog({
   const [templateId, setTemplateId] = useState(initialData?.templateId || 'conveniencia_padrao');
   const [storeMode, setStoreMode] = useState<'ecommerce' | 'catalogo' | 'orcamento'>(initialData?.storeMode || 'ecommerce');
   
-  // PROTEÇÃO SÊNIOR: Estados reais para renderização instantânea
   const [storeAddress, setStoreAddress] = useState(initialData?.address || '');
   const [storeAbout, setStoreAbout] = useState(initialData?.aboutText || '');
   const [storeFaq, setStoreFaq] = useState(initialData?.faq || []);
   const [storeCnpj, setStoreCnpj] = useState(initialData?.cnpj || '');
+  const [storeBanners, setStoreBanners] = useState<string[]>(initialData?.banners || []);
   
-  // PROTEÇÃO SÊNIOR: Estados de SEO e Dados Estruturados
   const [storeSeoCategory, setStoreSeoCategory] = useState(initialData?.seoCategory || initialData?.storeNiche || 'Store');
   const [storePriceRange, setStorePriceRange] = useState(initialData?.priceRange || '$$');
   const [storeSocialLinks, setStoreSocialLinks] = useState<string[]>([]);
@@ -132,7 +128,15 @@ export default function CustomerCatalog({
       if (tenantId) {
         const { onSnapshot, doc } = await import('firebase/firestore');
         
-        // Escuta o Firebase em Tempo Real
+        // Ouve os gritos do AdminDashboard e atualiza a tela na hora!
+        const handleStorageChange = () => {
+            const freshBanners = localStorage.getItem('velo_store_banners');
+            if (freshBanners) {
+                try { setStoreBanners(JSON.parse(freshBanners)); } catch(e) {}
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+
         unsubscribe = onSnapshot(
           doc(db, 'tenants', tenantId), 
           (docSnap) => {
@@ -153,6 +157,15 @@ export default function CustomerCatalog({
               setStoreFaq(data.faq || []);
               setStoreCnpj(data.cnpj || '');
               
+              // Tenta ler primeiro do LocalStorage para ser instantâneo no painel, se não, pega do Firebase
+              const cachedBanners = localStorage.getItem('velo_store_banners');
+              if (cachedBanners) {
+                  try { setStoreBanners(JSON.parse(cachedBanners)); } 
+                  catch(e) { setStoreBanners(data.banners || []); }
+              } else {
+                  setStoreBanners(data.banners || []); 
+              }
+              
               setStoreSeoCategory(data.seoCategory || data.storeNiche || 'Store');
               setStorePriceRange(data.priceRange || '$$');
               
@@ -170,7 +183,10 @@ export default function CustomerCatalog({
     };
 
     setupFirebase();
-    return () => unsubscribe();
+    return () => {
+        unsubscribe();
+        window.removeEventListener('storage', handleStorageChange);
+    };
   }, [tenantId]);
 
   const filteredActiveProducts = useMemo(() => {
@@ -475,8 +491,8 @@ export default function CustomerCatalog({
                   <div className={`p-4 pb-2 shadow-sm mb-4 ${templateId === 'barbearia_dark' ? 'bg-black rounded-b-3xl' : templateId === 'beleza_masonry' ? 'bg-transparent' : 'bg-white rounded-b-3xl'}`}>
                     <div className="w-full h-40 md:h-48 rounded-2xl overflow-hidden relative shadow-md group flex overflow-x-auto snap-x snap-mandatory no-scrollbar">
                       
-                      {(settings as any).banners && (settings as any).banners.length > 0 ? (
-                        (settings as any).banners.map((bannerUrl: string, idx: number) => (
+                      {storeBanners && storeBanners.length > 0 ? (
+                        storeBanners.map((bannerUrl: string, idx: number) => (
                           <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
                             <img src={bannerUrl} loading={idx === 0 ? "eager" : "lazy"} className="w-full h-full object-cover" alt={`Oferta ${idx + 1} - ${storeName}`} />
                           </div>
@@ -497,7 +513,7 @@ export default function CustomerCatalog({
 
                     </div>
                     
-                    {(settings as any).banners && (settings as any).banners.length > 1 && (
+                    {storeBanners && storeBanners.length > 1 && (
                       <p className="text-[8px] text-center font-bold text-slate-400 mt-1 uppercase tracking-widest animate-pulse">
                         Arraste para o lado 👉
                       </p>

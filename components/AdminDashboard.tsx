@@ -1525,12 +1525,14 @@ const [termoIA, setTermoIA] = useState('');
                                   newBanners.splice(idx, 1);
                                   setSettingsForm({...settingsForm, banners: newBanners});
                                   
-                                  // Salva a exclusão no Firebase na hora
+                                  // Salva a exclusão no Firebase e no Cache na hora
                                   if (authRole.tenantId && authRole.tenantId !== 'loading') {
                                     await setDoc(doc(db, 'tenants', authRole.tenantId), {
                                       banners: newBanners
                                     }, { merge: true });
                                   }
+                                  localStorage.setItem('velo_store_banners', JSON.stringify(newBanners));
+                                  window.dispatchEvent(new Event('storage'));
                                 }}
                                 className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
                               >
@@ -1568,12 +1570,14 @@ const [termoIA, setTermoIA] = useState('');
                                     // 1. Atualiza o estado da tela para o Admin ver a foto
                                     setSettingsForm((prev: any) => ({ ...prev, banners: novosBanners }));
                                     
-                                    // 2. Salva INSTANTANEAMENTE no Firebase para a vitrine ver
+                                    // 2. Salva INSTANTANEAMENTE no Firebase e no Cache para a vitrine ver na hora
                                     if (authRole.tenantId && authRole.tenantId !== 'loading') {
                                       await setDoc(doc(db, 'tenants', authRole.tenantId), {
                                         banners: novosBanners
                                       }, { merge: true });
                                     }
+                                    localStorage.setItem('velo_store_banners', JSON.stringify(novosBanners));
+                                    window.dispatchEvent(new Event('storage')); // Grita pro Iframe atualizar
                                   } catch (error) {
                                     alert("Erro de conexão ao enviar a imagem.");
                                   } finally {
