@@ -49,23 +49,31 @@ export default function Reviews({ storeId }) {
                         const res = await fetch(`/api/google-gmb?action=getReviews&storeId=${storeId}`);
                         const data = await res.json();
                         if (data.success && data.reviews?.reviews) {
-                            return data.reviews.reviews.map(r => ({
-                                id: r.reviewId,
-                                customerName: r.reviewer?.displayName || 'Cliente Google',
-                                photoUrl: r.reviewer?.profilePhotoUrl,
-                                comment: r.comment || '',
-                                rating: mapGoogleRating(r.starRating),
-                                source: 'google',
-                                // Converte o tempo do Google para o mesmo formato do Firebase para ordenar
-                                createdAt: new Date(r.createTime).getTime() / 1000 
-                            }));
+                            return data.reviews.reviews.map(r => {
+                                // MÁGICA: Limpa o texto da tradução do Google (inglês ou português)
+                                let cleanComment = r.comment || '';
+                                cleanComment = cleanComment.split('(Translated by Google)')[0];
+                                cleanComment = cleanComment.split('(Traduzido pelo Google)')[0];
+                                cleanComment = cleanComment.trim();
+
+                                return {
+                                    id: r.reviewId,
+                                    customerName: r.reviewer?.displayName || 'Cliente Google',
+                                    photoUrl: r.reviewer?.profilePhotoUrl,
+                                    comment: cleanComment,
+                                    rating: mapGoogleRating(r.starRating),
+                                    source: 'google',
+                                    // Converte o tempo do Google para o mesmo formato do Firebase para ordenar
+                                    createdAt: new Date(r.createTime).getTime() / 1000 
+                                };
+                            });
                         }
                         return [];
                     } catch (e) {
                         return []; // Se a loja não tiver GMB conectado, ignora silenciosamente
                     }
                 };
-
+                
                 // Roda as duas buscas ao mesmo tempo para ser super rápido
                 const [fbReviews, googleReviews] = await Promise.all([fetchFirebase(), fetchGoogle()]);
 
