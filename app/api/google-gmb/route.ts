@@ -69,7 +69,7 @@ export async function GET(request: Request) {
 
         const { accessToken, locationId } = await getValidGmbTokenAndIds(storeId);
         
-        // NOVO: Buscar lista de empresas (locations) para o usuário escolher
+        // NOVO: Buscar lista COMPLETA de empresas (locations) de TODOS os grupos
         if (action === 'listLocations') {
             const accountRes = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
                 headers: { 'Authorization': `Bearer ${accessToken}` }
@@ -81,13 +81,28 @@ export async function GET(request: Request) {
                 return NextResponse.json({ success: true, locations: [] });
             }
 
-            const accountName = accountData.accounts[0].name;
+            let allLocations: any[] = [];
 
-            const locRes = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountName}/locations?readMask=title,name`, {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
-            });
-            const locData = await locRes.json();
-            return NextResponse.json({ success: true, locations: locData.locations || [] });
+            // Faz um loop por TODAS as subcontas (Grupos de Locais) que você tem acesso
+            for (const account of accountData.accounts) {
+                try {
+                    const locRes = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${account.name}/locations?readMask=title,name&pageSize=100`, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+                    const locData = await locRes.json();
+                    
+                    if (locData.locations && locData.locations.length > 0) {
+                        allLocations = [...allLocations, ...locData.locations];
+                    }
+                } catch (err) {
+                    console.warn(`Aviso: Falha ao puxar locais do grupo ${account.name}`);
+                }
+            }
+
+            // Ordena a lista em ordem alfabética para facilitar a visualização no painel
+            allLocations.sort((a, b) => a.title.localeCompare(b.title));
+
+            return NextResponse.json({ success: true, locations: allLocations });
         }
 
         if (!locationId && action !== 'getProfile') {
