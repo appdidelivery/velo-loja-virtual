@@ -1,25 +1,22 @@
 import { NextResponse } from 'next/server';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/services/firebase'; // Ajuste se seu import do firebase estiver em outro caminho
+import { db } from '@/services/firebase';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 
-// Função utilitária para verificar e renovar o token do Google automaticamente
 async function getValidGmbTokenAndIds(storeId: string) {
-    const docRef = doc(db, 'settings', storeId);
+    const docRef = doc(db, 'tenants', storeId); // TRAVA SÊNIOR: Ajustado para a coleção tenants
     const docSnap = await getDoc(docRef);
     const data = docSnap.exists() ? docSnap.data()?.integrations?.google_my_business : null;
 
     if (!data || !data.accessToken) {
-        throw new Error("A loja não possui uma conta do Google Meu Negócio conectada.");
+        throw new Error("A loja não possui uma conta do Google conectada.");
     }
 
-    // Calcula se passou de 58 minutos (3500000 ms)
     const connectedAtDate = new Date(data.connectedAt).getTime();
     const isExpired = (Date.now() - connectedAtDate) > 3500000; 
 
-    // Renova o token se estiver expirado e houver um refresh token salvo
     if (isExpired && data.refreshToken) {
         try {
             const tokenParams = new URLSearchParams({
@@ -53,9 +50,6 @@ async function getValidGmbTokenAndIds(storeId: string) {
     return { accessToken: data.accessToken, locationId: data.locationId };
 }
 
-// ==========================================
-// MÉTODOS GET (Leituras)
-// ==========================================
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
@@ -65,13 +59,37 @@ export async function GET(request: Request) {
 
     try {
         if (action === 'checkStatus') {
-            const docSnap = await getDoc(doc(db, 'settings', storeId));
+            const docSnap = await getDoc(doc(db, 'tenants', storeId)); // TRAVA SÊNIOR: Ajustado para tenants
             const gmbData = docSnap.exists() ? docSnap.data()?.integrations?.google_my_business : null;
-            return NextResponse.json({ connected: !!(gmbData && gmbData.accessToken) });
+            return NextResponse.json({ 
+                connected: !!(gmbData && gmbData.accessToken),
+                locationId: gmbData?.locationId || null
+            });
         }
 
         const { accessToken, locationId } = await getValidGmbTokenAndIds(storeId);
         
+        // NOVO: Buscar lista de empresas (locations) para o usuário escolher
+        if (action === 'listLocations') {
+            const accountRes = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            const accountData = await accountRes.json();
+            if (!accountRes.ok) throw new Error("Erro ao buscar conta GMB.");
+            
+            if (!accountData.accounts || accountData.accounts.length === 0) {
+                return NextResponse.json({ success: true, locations: [] });
+            }
+
+            const accountName = accountData.accounts[0].name;
+
+            const locRes = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountName}/locations?readMask=title,name`, {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            const locData = await locRes.json();
+            return NextResponse.json({ success: true, locations: locData.locations || [] });
+        }
+
         if (!locationId && action !== 'getProfile') {
             return NextResponse.json({ success: false, error: "ID do Local não configurado." }, { status: 400 });
         }
@@ -114,9 +132,6 @@ export async function GET(request: Request) {
     }
 }
 
-// ==========================================
-// MÉTODOS POST / PUT / PATCH (Escritas)
-// ==========================================
 export async function POST(request: Request) {
     try {
         const body = await request.json();
@@ -125,9 +140,17 @@ export async function POST(request: Request) {
         if (!storeId) return NextResponse.json({ success: false, error: 'storeId é obrigatório.' }, { status: 400 });
 
         const { accessToken, locationId } = await getValidGmbTokenAndIds(storeId);
+
+        // NOVO: Salvar a empresa escolhida pelo usuário no Firebase
+        if (action === 'setLocationId') {
+            await updateDoc(doc(db, 'tenants', storeId), {
+                "integrations.google_my_business.locationId": params.locationId
+            });
+            return NextResponse.json({ success: true });
+        }
         
         if (!locationId) {
-            return NextResponse.json({ success: false, error: "ID do Local não configurado na aba de integrações." }, { status: 400 });
+            return NextResponse.json({ success: false, error: "Empresa não selecionada." }, { status: 400 });
         }
 
         const cleanLocationId = locationId.replace('locations/', '');
