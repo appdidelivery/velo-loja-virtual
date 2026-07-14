@@ -1,81 +1,91 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/firebase';
 import { collection, query, where, limit, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
-import { Star, ThumbsUp, ImageIcon } from 'lucide-react';
+import { Star, ThumbsUp } from 'lucide-react';
+import { FaGoogle } from 'react-icons/fa6';
+
+// Conversor de estrelas do Google (que vêm como texto) para números
+const mapGoogleRating = (ratingStr) => {
+    const map = { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 };
+    return map[ratingStr] || 5;
+};
 
 export default function Reviews({ storeId }) {
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [isSyncing, setIsSyncing] = useState(false);
     const [newRating, setNewRating] = useState(5);
     const [comment, setComment] = useState('');
     const [orderId, setOrderId] = useState('');
     const [customerName, setCustomerName] = useState('');
 
     useEffect(() => {
-        const fetchReviews = async () => {
+        const fetchAllReviews = async () => {
             if (!storeId) {
                 setLoading(false);
                 return;
             }
 
-            console.log("🔍 Buscando avaliações para a loja ID:", storeId); // LOG PARA DEBUG
-
             try {
-                const q = query(
-                    collection(db, "reviews"),
-                    where("storeId", "==", storeId),
-                    limit(100) 
-                );
-                const snapshot = await getDocs(q);
+                // 1. Busca as avaliações manuais do Firebase
+                const fetchFirebase = async () => {
+                    const q = query(collection(db, "reviews"), where("storeId", "==", storeId), limit(50));
+                    const snapshot = await getDocs(q);
+                    return snapshot.docs.map(doc => {
+                        const data = doc.data();
+                        return {
+                            id: doc.id,
+                            customerName: data.customerName,
+                            comment: data.comment,
+                            rating: Number(data.rating || 5),
+                            source: 'site',
+                            createdAt: data.createdAt?.seconds || 0
+                        };
+                    });
+                };
+
+                // 2. Busca as avaliações OFICIAIS do Google direto da nossa API
+                const fetchGoogle = async () => {
+                    try {
+                        const res = await fetch(`/api/google-gmb?action=getReviews&storeId=${storeId}`);
+                        const data = await res.json();
+                        if (data.success && data.reviews?.reviews) {
+                            return data.reviews.reviews.map(r => ({
+                                id: r.reviewId,
+                                customerName: r.reviewer?.displayName || 'Cliente Google',
+                                photoUrl: r.reviewer?.profilePhotoUrl,
+                                comment: r.comment || '',
+                                rating: mapGoogleRating(r.starRating),
+                                source: 'google',
+                                // Converte o tempo do Google para o mesmo formato do Firebase para ordenar
+                                createdAt: new Date(r.createTime).getTime() / 1000 
+                            }));
+                        }
+                        return [];
+                    } catch (e) {
+                        return []; // Se a loja não tiver GMB conectado, ignora silenciosamente
+                    }
+                };
+
+                // Roda as duas buscas ao mesmo tempo para ser super rápido
+                const [fbReviews, googleReviews] = await Promise.all([fetchFirebase(), fetchGoogle()]);
+
+                // Junta tudo e ordena do mais recente pro mais antigo
+                const combinedReviews = [...fbReviews, ...googleReviews].sort((a, b) => b.createdAt - a.createdAt);
                 
-                const fetchedReviews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                
-                // CORREÇÃO CRÍTICA: Ordenação segura de datas no Firebase
-                fetchedReviews.sort((a, b) => {
-                    const timeA = a.createdAt?.seconds || 0;
-                    const timeB = b.createdAt?.seconds || 0;
-                    return timeB - timeA; // Maior para menor (mais recente primeiro)
-                });
-                
-                setReviews(fetchedReviews);
-                console.log("✅ Avaliações encontradas:", fetchedReviews.length); // LOG PARA DEBUG
+                // Remove avaliações do Google que não têm texto (só deixaram as estrelas) para a vitrine ficar bonita
+                const filteredReviews = combinedReviews.filter(r => r.comment && r.comment.trim() !== '');
+
+                setReviews(filteredReviews);
+
             } catch (error) {
-                console.error("❌ Erro ao carregar avaliações do Firestore:", error);
+                console.error("❌ Erro ao compilar avaliações:", error);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchReviews();
+        fetchAllReviews();
     }, [storeId]);
-
-    const handleSyncGoogleReviews = async () => {
-        setIsSyncing(true);
-        try {
-            // Agora ele chama o Backend do seu próprio Next.js
-            const response = await fetch('/api/sync-google-reviews', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ storeId })
-            });
-
-            if (!response.ok) {
-                throw new Error("Erro de comunicação com o servidor.");
-            }
-            
-            const data = await response.json();
-            alert(`✅ Sucesso: ${data.message}`);
-            
-            // Recarrega para mostrar as novas avaliações do banco
-            window.location.reload(); 
-        } catch (error) {
-            console.error("Erro na sincronização:", error);
-            alert("⚠️ Erro ao buscar avaliações do Google. Verifique a integração.");
-        } finally {
-            setIsSyncing(false);
-        }
-    };
 
     const handleSubmitReview = async (e) => {
         e.preventDefault();
@@ -91,7 +101,7 @@ export default function Reviews({ storeId }) {
                 rating: newRating,
                 comment,
                 customerName,
-                source: 'site', // Adicionado para identificar que veio da loja
+                source: 'site', 
                 createdAt: serverTimestamp()
             });
             
@@ -105,21 +115,20 @@ export default function Reviews({ storeId }) {
             window.location.reload();
 
         } catch (error) {
-            console.error("❌ Erro ao salvar avaliação no banco:", error);
             alert("Erro ao enviar avaliação! Verifique sua conexão e tente novamente.");
         }
     };
 
     const totalReviews = reviews.length;
     const averageRating = totalReviews > 0 
-        ? (reviews.reduce((acc, curr) => acc + Number(curr.rating || 5), 0) / totalReviews).toFixed(1) 
+        ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / totalReviews).toFixed(1) 
         : 5.0;
 
     return (
         <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-slate-100 mt-8 mb-4 relative">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                 <div>
-                    <h2 className="text-2xl font-black italic uppercase text-slate-800 mb-1">Avaliações da Loja</h2>
+                    <h2 className="text-2xl font-black italic uppercase text-slate-800 mb-1">Avaliações de Clientes</h2>
                     <div className="flex items-center gap-3">
                         <span className="text-4xl font-black text-slate-900">{averageRating}</span>
                         <div className="flex flex-col">
@@ -136,52 +145,53 @@ export default function Reviews({ storeId }) {
                 </div>
                 
                 {averageRating >= 4.0 && totalReviews > 0 && (
-                    <div className="flex flex-col gap-2">
-                        <div className="bg-green-100 text-green-700 flex items-center gap-2 px-4 py-2 rounded-2xl border border-green-200 shadow-sm">
-                            <ThumbsUp size={20} className="mb-1" />
-                            <div className="flex flex-col">
-                                <span className="text-xs font-black uppercase tracking-widest leading-none">Excelente</span>
-                                <span className="text-[9px] font-bold opacity-80 uppercase tracking-widest">Loja Verificada</span>
-                            </div>
+                    <div className="bg-green-100 text-green-700 flex items-center gap-2 px-4 py-2 rounded-2xl border border-green-200 shadow-sm">
+                        <ThumbsUp size={20} className="mb-1" />
+                        <div className="flex flex-col">
+                            <span className="text-xs font-black uppercase tracking-widest leading-none">Excelente</span>
+                            <span className="text-[9px] font-bold opacity-80 uppercase tracking-widest">Loja Verificada</span>
                         </div>
-                        
-                        {window.location.pathname.includes('/admin') && (
-                            <button 
-                                onClick={handleSyncGoogleReviews}
-                                disabled={isSyncing}
-                                className="text-[10px] font-bold text-blue-600 underline hover:text-blue-800 uppercase tracking-widest"
-                            >
-                                {isSyncing ? "Sincronizando..." : "Atualizar do Google"}
-                            </button>
-                        )}
                     </div>
                 )}
             </div>
             
-            <div className="space-y-4 mb-8 max-h-80 overflow-y-auto custom-scrollbar pr-2">
+            <div className="space-y-4 mb-8 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
                 {loading ? (
-                    <p className="text-slate-500 font-bold animate-pulse">Buscando avaliações...</p>
+                    <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>
                 ) : reviews.length === 0 ? (
                     <div className="text-center p-6 bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
                         <p className="text-slate-500 font-bold text-sm">Nenhuma avaliação ainda.</p>
                         <p className="text-slate-400 font-medium text-xs mt-1">Preencha o formulário abaixo e seja o primeiro a avaliar!</p>
                     </div>
                 ) : reviews.map(r => (
-                    <div key={r.id} className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                        <div className="flex justify-between items-center mb-3">
-                            <div className="flex items-center gap-2">
-                                <span className="font-black text-sm text-slate-800 uppercase tracking-tight">{r.customerName}</span>
-                                {r.source === 'google' && (
-                                    <span className="bg-blue-500 text-[8px] text-white px-1.5 py-0.5 rounded-md font-black">GOOGLE</span>
+                    <div key={r.id} className="bg-slate-50 p-5 rounded-3xl border border-slate-100 relative overflow-hidden">
+                        <div className="flex justify-between items-start mb-3">
+                            <div className="flex items-center gap-3">
+                                {/* Se for do Google e tiver foto, mostra a foto do cliente. Senão, mostra a letra inicial. */}
+                                {r.photoUrl ? (
+                                    <img src={r.photoUrl} alt={r.customerName} className="w-10 h-10 rounded-full shadow-sm" />
+                                ) : (
+                                    <div className="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center font-black text-slate-600 shadow-sm">
+                                        {r.customerName.charAt(0).toUpperCase()}
+                                    </div>
                                 )}
+                                
+                                <div className="flex flex-col">
+                                    <span className="font-black text-sm text-slate-800 tracking-tight leading-none">{r.customerName}</span>
+                                    {r.source === 'google' && (
+                                        <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1 mt-1">
+                                            <FaGoogle size={10} /> Google Review
+                                        </span>
+                                    )}
+                                </div>
                             </div>
-                            <div className="flex text-yellow-400">
+                            <div className="flex text-yellow-400 bg-white px-2 py-1 rounded-lg border border-slate-100 shadow-sm">
                                 {[...Array(5)].map((_, i) => (
-                                    <Star key={i} size={16} fill={i < r.rating ? "currentColor" : "none"} />
+                                    <Star key={i} size={12} fill={i < r.rating ? "currentColor" : "none"} />
                                 ))}
                             </div>
                         </div>
-                        <p className="text-sm text-slate-600 font-medium leading-relaxed">{r.comment}</p>
+                        <p className="text-sm text-slate-600 font-medium leading-relaxed italic">"{r.comment}"</p>
                     </div>
                 ))}
             </div>
