@@ -43,6 +43,13 @@ export default function GoogleIntegrationDashboard({
         if (storeId) checkConnectionStatus();
     }, [storeId]);
 
+    // Sempre que a aba Profile for ativada e tivermos uma loja selecionada, busca os dados
+    useEffect(() => {
+        if (isConnected && hasLocationId && activeTab === 'profile' && !profileData.title) {
+            fetchProfileData();
+        }
+    }, [activeTab, isConnected, hasLocationId]);
+
     const checkConnectionStatus = async () => {
         setIsLoading(true);
         try {
@@ -94,7 +101,11 @@ export default function GoogleIntegrationDashboard({
             const data = await res.json();
             if (data.success) {
                 setHasLocationId(true);
-                fetchProfileData();
+                
+                // MÁGICA: Força a re-checagem do status para garantir que o GMB saiba qual loja puxar
+                setTimeout(() => {
+                    fetchProfileData();
+                }, 1000);
             } else {
                 alert("Erro ao vincular empresa.");
             }
