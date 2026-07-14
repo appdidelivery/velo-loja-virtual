@@ -19,8 +19,8 @@ export default function GoogleIntegrationDashboard({
 }) {
     const [isLoading, setIsLoading] = useState(true);
     const [isConnected, setIsConnected] = useState(false);
-    const [hasLocationId, setHasLocationId] = useState(false); // NOVO: Controle de empresa selecionada
-    const [locations, setLocations] = useState<any[]>([]); // NOVO: Lista de empresas
+    const [hasLocationId, setHasLocationId] = useState(false);
+    const [locations, setLocations] = useState<any[]>([]);
     
     const [activeTab, setActiveTab] = useState('profile');
 
@@ -46,17 +46,19 @@ export default function GoogleIntegrationDashboard({
     const checkConnectionStatus = async () => {
         setIsLoading(true);
         try {
+            // Consulta a nossa API para saber a verdade absoluta sobre a conexão
             const res = await fetch(`/api/google-gmb?action=checkStatus&storeId=${storeId}`);
             const data = await res.json();
             
             if (data.connected) {
                 setIsConnected(true);
                 
+                // Se já escolheu uma empresa (locationId), entra no painel. Se não, lista as empresas!
                 if (data.locationId) {
                     setHasLocationId(true);
                     fetchProfileData();
                 } else {
-                    // Se não tiver empresa selecionada, busca a lista de empresas da conta
+                    setHasLocationId(false);
                     fetchLocationsList();
                 }
             } else {
@@ -69,7 +71,6 @@ export default function GoogleIntegrationDashboard({
         }
     };
 
-    // NOVO: Busca todas as empresas do usuário
     const fetchLocationsList = async () => {
         try {
             const res = await fetch(`/api/google-gmb?action=listLocations&storeId=${storeId}`);
@@ -82,7 +83,6 @@ export default function GoogleIntegrationDashboard({
         }
     };
 
-    // NOVO: Salva a empresa selecionada e libera o painel
     const handleSelectLocation = async (locationId: string) => {
         setIsSaving(true);
         try {
@@ -95,9 +95,11 @@ export default function GoogleIntegrationDashboard({
             if (data.success) {
                 setHasLocationId(true);
                 fetchProfileData();
+            } else {
+                alert("Erro ao vincular empresa.");
             }
         } catch (error) {
-            alert("Erro ao selecionar a loja.");
+            alert("Erro de conexão ao selecionar a loja.");
         } finally {
             setIsSaving(false);
         }
@@ -345,18 +347,18 @@ export default function GoogleIntegrationDashboard({
         );
     }
 
-    // TELA DE SELEÇÃO DE EMPRESAS (Se o usuário conectou, mas ainda não escolheu a loja)
+    // TELA DE SELEÇÃO DE EMPRESAS
     if (isConnected && !hasLocationId) {
         return (
             <div className="bg-white p-12 rounded-[3rem] border border-slate-100 text-center shadow-xl max-w-3xl mx-auto mt-10 animate-in fade-in zoom-in">
                 <FaStore size={48} className="text-green-500 mx-auto mb-6" />
                 <h2 className="text-3xl font-black text-slate-800 mb-2 uppercase italic">Conta Conectada!</h2>
-                <p className="text-slate-500 font-bold mb-8 text-sm">Encontramos as seguintes empresas no seu Google. Selecione qual deseja sincronizar com esta loja.</p>
+                <p className="text-slate-500 font-bold mb-8 text-sm">Encontramos as seguintes empresas no seu Google. Selecione qual deseja gerenciar nesta loja.</p>
                 
                 <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2 text-left">
                     {locations.length === 0 ? (
                         <div className="bg-slate-50 p-6 rounded-2xl text-center text-slate-500 font-bold border border-dashed border-slate-200">
-                            Buscando suas empresas ou você não possui nenhuma ficha criada neste email...
+                            {isSaving ? 'Vinculando empresa...' : 'Buscando suas empresas no Google... (Ou você não possui nenhuma ficha)'}
                         </div>
                     ) : (
                         locations.map((loc, idx) => (
@@ -367,7 +369,7 @@ export default function GoogleIntegrationDashboard({
                                 className="w-full bg-slate-50 hover:bg-green-50 border border-slate-200 hover:border-green-400 p-4 rounded-2xl transition-all flex items-center justify-between group disabled:opacity-50"
                             >
                                 <span className="font-black text-slate-800 group-hover:text-green-700 uppercase tracking-widest">{loc.title}</span>
-                                <ChevronRight size={18} className="text-slate-400 group-hover:text-green-600" />
+                                <CheckCircle size={18} className="text-slate-300 group-hover:text-green-600" />
                             </button>
                         ))
                     )}
@@ -376,6 +378,7 @@ export default function GoogleIntegrationDashboard({
         );
     }
 
+    // REMOVIDO: A aba "Cardápio" não faz mais parte deste array
     const tabs = [
         { id: 'profile', label: 'Perfil & Dados', icon: <FaStore /> },
         { id: 'feed', label: 'Postagens (Feed)', icon: <FaBullhorn /> },
@@ -394,7 +397,7 @@ export default function GoogleIntegrationDashboard({
                     </div>
                 </div>
                 <button 
-                    onClick={() => alert("Para sua segurança, a desconexão deve ser feita na aba de Integrações do Painel Velo.")}
+                    onClick={() => alert("Para desconectar e escolher outra conta, limpe o acesso na aba de Integrações e APIs em Configurações.")}
                     className="text-xs font-bold text-red-500 uppercase tracking-widest hover:underline"
                 >
                     Desconectar
@@ -490,7 +493,6 @@ export default function GoogleIntegrationDashboard({
                             <motion.div key="feed" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                                 <h2 className="text-2xl font-black uppercase text-slate-800 flex items-center gap-2 mb-6"><MessageSquare className="text-blue-600"/> Feed de Novidades</h2>
                                 
-                                {/* --- BANNER EDUCATIVO SEO/GEO (SUBSTITUIU A CAIXA AZUL) --- */}
                                 <div className="bg-gradient-to-r from-blue-50 to-white border border-blue-200 p-6 md:p-8 rounded-[2rem] shadow-sm relative overflow-hidden mb-8">
                                     <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                                         <FaGoogle size={100} className="text-blue-600" />
@@ -514,7 +516,6 @@ export default function GoogleIntegrationDashboard({
                                         </div>
                                     </div>
                                 </div>
-                                {/* --- FIM DO BANNER EDUCATIVO --- */}
 
                                 <div className="bg-slate-50 p-5 rounded-3xl border border-slate-200 mb-6">
                                     <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2 block ml-1">Vincular Produto (Ofertas e Combos)</label>
@@ -617,6 +618,10 @@ export default function GoogleIntegrationDashboard({
                                             value={postData.summary}
                                             onChange={(e) => setPostData({...postData, summary: e.target.value})}
                                         ></textarea>
+                                        
+                                        <p className="text-[10px] font-bold text-slate-400 mt-2 ml-2">
+                                            Dica: Use palavras-chave da sua região e evite textos muito curtos. O Google adora detalhes!
+                                        </p>
                                     </div>
                                     
                                     <button type="submit" disabled={isSaving} className="w-full bg-blue-600 text-white py-5 rounded-3xl font-black uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
