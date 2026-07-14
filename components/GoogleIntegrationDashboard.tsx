@@ -755,7 +755,7 @@ export default function GoogleIntegrationDashboard({
                                             <option value="COVER">Capa do Google Maps</option>
                                             <option value="INTERIOR">Foto do Interior da Loja</option>
                                             <option value="EXTERIOR">Foto da Fachada (Exterior)</option>
-                                            <option value="FOOD_AND_DRINK">Foto de Produto / Prato</option>
+                                            <option value="FOOD_AND_DRINK">Foto de Produto / Serviço</option>
                                         </select>
                                     </div>
                                     <div>
