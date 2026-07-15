@@ -136,14 +136,16 @@ export default function AdminDashboard() {
   const [editingCategory, setEditingCategory] = useState<{name: string, order: number, isActive: boolean} | null>(null);
   const [categoryForm, setCategoryForm] = useState({ name: '', order: 1, isActive: true });
 
-  const [productForm, setProductForm] = useState({
-    name: '', description: '', price: 0, imageUrl: '', videoUrl: '', category: 'Eletrônicos', stock: 10, sku: '', isActive: true, ean: '', ncm: '', weight: 0, seoTitle: '', seoDescription: ''
+  const [productForm, setProductForm] = useState<any>({
+    name: '', description: '', price: 0, promotionalPrice: 0, brand: '', imageUrl: '', videoUrl: '', category: 'Eletrônicos', stock: 10, sku: '', isActive: true, ean: '', ncm: '', weight: 0, seoTitle: '', seoDescription: ''
   });
 
   const [settingsForm, setSettingsForm] = useState<any>({ 
     ...settings, 
     templateId: 'nativo_app', 
     primaryColor: '#0ea5e9',
+    announcementTexts: ['', '', ''], // Textos da Tarja
+    announcementColor: '#e11d48', // Cor da Tarja
     storeNiche: 'varejo',
     logoUrl: '',
     slogan: 'Catálogo Exclusivo',
@@ -341,7 +343,7 @@ const [termoIA, setTermoIA] = useState('');
         const result = await res.json();
         
         if (res.ok && result.success) {
-            setProductForm(prev => ({
+            setProductForm((prev: any) => ({
                 ...prev,
                 name: result.nome || prev.name,
                 description: result.descricao || prev.description
@@ -414,6 +416,8 @@ const [termoIA, setTermoIA] = useState('');
         productLayout: settingsForm.productLayout,
         templateId: settingsForm.templateId,
         banners: settingsForm.banners || [], // <-- SALVA OS BANNERS
+        announcementTexts: settingsForm.announcementTexts || ['', '', ''],
+        announcementColor: settingsForm.announcementColor || '#e11d48',
         aboutText: settingsForm.aboutText || '',
         address: settingsForm.address || '',
         faq: settingsForm.faq || [],
@@ -1040,41 +1044,51 @@ const [termoIA, setTermoIA] = useState('');
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Preço Base (R$) - Opcional</label>
-                    <input type="number" step="0.01" value={productForm.price || ''} onChange={e => setProductForm({...productForm, price: Number(e.target.value)})} className="w-full p-4 bg-blue-50 rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-black text-xl text-blue-600 border border-blue-100 placeholder:text-blue-300" placeholder="0.00" />
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Preço Base (R$)</label>
+                    <input type="number" step="0.01" value={productForm.price || ''} onChange={e => setProductForm({...productForm, price: Number(e.target.value)})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-black text-xl text-slate-600 border border-slate-200 shadow-sm placeholder:text-slate-300" placeholder="0.00" />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Estoque (Opcional)</label>
-                    <input type="number" value={productForm.stock === 0 ? '' : productForm.stock} onChange={e => setProductForm({...productForm, stock: Number(e.target.value)})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-slate-700 border border-gray-200 shadow-sm placeholder:text-slate-300" placeholder="∞" />
+                    <label className="text-[10px] font-black uppercase text-green-600 tracking-widest ml-1">Preço Oferta (Opcional)</label>
+                    <input type="number" step="0.01" value={productForm.promotionalPrice || ''} onChange={e => setProductForm({...productForm, promotionalPrice: Number(e.target.value)})} className="w-full p-4 bg-green-50 rounded-2xl outline-none focus:ring-2 ring-green-500 font-black text-xl text-green-700 border border-green-200 placeholder:text-green-300 shadow-sm" placeholder="0.00" />
                   </div>
                 </div>
 
-                <div className="space-y-1 pb-4 border-b border-gray-100">
-                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Categoria na Loja</label>
-                  
-                  {/* Select Dinâmico (Lê as categorias únicas existentes na lista de produtos) */}
-                  {(() => {
-                    const uniqueCategoriesList = Array.from(new Set(products.map(p => p.category))).filter(Boolean);
-                    
-                    return (
-                      <div className="relative">
-                        <input 
-                          type="text" 
-                          list="categoriesList"
-                          required 
-                          value={productForm.category} 
-                          onChange={e => setProductForm({...productForm, category: e.target.value})} 
-                          className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 shadow-sm" 
-                          placeholder="Escolha ou digite uma nova..." 
-                        />
-                        <datalist id="categoriesList">
-                          {uniqueCategoriesList.map(cat => (
-                            <option key={cat} value={cat} />
-                          ))}
-                        </datalist>
-                      </div>
-                    );
-                  })()}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Marca / Empresa (SEO)</label>
+                    <input type="text" value={productForm.brand || ''} onChange={e => setProductForm({...productForm, brand: e.target.value})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 shadow-sm" placeholder="Ex: Nike, Velo..." />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">SKU / Código</label>
+                    <input type="text" value={productForm.sku || ''} onChange={e => setProductForm({...productForm, sku: e.target.value})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 shadow-sm" placeholder="Ex: PROD-001" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 pb-4 border-b border-gray-100">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Estoque</label>
+                    <input type="number" value={productForm.stock === 0 ? '' : productForm.stock} onChange={e => setProductForm({...productForm, stock: Number(e.target.value)})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-slate-700 border border-gray-200 shadow-sm placeholder:text-slate-300" placeholder="∞" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Categoria na Loja</label>
+                    {(() => {
+                      const uniqueCategoriesList = Array.from(new Set(products.map(p => p.category))).filter(Boolean);
+                      return (
+                        <div className="relative">
+                          <input 
+                            type="text" list="categoriesList" required 
+                            value={productForm.category} 
+                            onChange={e => setProductForm({...productForm, category: e.target.value})} 
+                            className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 shadow-sm" 
+                            placeholder="Criar ou escolher..." 
+                          />
+                          <datalist id="categoriesList">
+                            {uniqueCategoriesList.map(cat => (<option key={cat} value={cat} />))}
+                          </datalist>
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
 
                 <button type="submit" disabled={isUploadingProductImage} className="w-full bg-[#111827] text-white py-5 rounded-[2rem] font-black uppercase tracking-widest shadow-xl hover:bg-black transition-all active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed">
@@ -1544,14 +1558,14 @@ const [termoIA, setTermoIA] = useState('');
                         <p className="text-[9px] text-slate-400 font-medium">Sua imagem será enviada diretamente para a nuvem.</p>
                       </div>
 
-                      {/* NOVO: GERENCIADOR DE BANNERS CARROSSEL */}
+                      {/* GERENCIADOR DE BANNERS CARROSSEL */}
                       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden p-4 space-y-3">
                         <div className="flex justify-between items-center">
                           <label className="text-[10px] font-black uppercase text-slate-500">Banners (Até 5 Imagens)</label>
                           <span className="text-[9px] font-bold text-slate-400">{(settingsForm.banners || []).length}/5</span>
                         </div>
                         <p className="text-[9px] text-slate-400 font-bold -mt-2 leading-tight">
-                          Recomendado: <b>800x400px</b> (Formato Celular). Máximo de <b>2MB</b> por imagem para não prejudicar a velocidade da sua loja.
+                          Recomendado: <b>800x400px</b> (Formato Celular). Máximo de <b>2MB</b> por imagem.
                         </p>
 
                         <div className="flex gap-2 overflow-x-auto py-2 custom-scrollbar">
@@ -1564,12 +1578,8 @@ const [termoIA, setTermoIA] = useState('');
                                   const newBanners = [...settingsForm.banners];
                                   newBanners.splice(idx, 1);
                                   setSettingsForm({...settingsForm, banners: newBanners});
-                                  
-                                  // Salva a exclusão no Firebase e no Cache na hora
                                   if (authRole.tenantId && authRole.tenantId !== 'loading') {
-                                    await setDoc(doc(db, 'tenants', authRole.tenantId), {
-                                      banners: newBanners
-                                    }, { merge: true });
+                                    await setDoc(doc(db, 'tenants', authRole.tenantId), { banners: newBanners }, { merge: true });
                                   }
                                   localStorage.setItem('velo_store_banners', JSON.stringify(newBanners));
                                   window.dispatchEvent(new Event('storage'));
@@ -1581,7 +1591,7 @@ const [termoIA, setTermoIA] = useState('');
                             </div>
                           ))}
 
-                          {/* Botão de Adicionar (Some se tiver 5) */}
+                          {/* Botão de Adicionar Banners */}
                           {(settingsForm.banners || []).length < 5 && (
                             <label className="w-24 h-12 flex-shrink-0 cursor-pointer bg-gray-50 border-2 border-dashed border-gray-200 hover:border-[#0055ff] hover:bg-blue-50 transition-colors rounded-lg flex flex-col items-center justify-center relative">
                               {isUploadingBanner ? (
@@ -1590,34 +1600,21 @@ const [termoIA, setTermoIA] = useState('');
                                 <Plus className="w-5 h-5 text-slate-400" />
                               )}
                               <input 
-                                type="file" 
-                                accept="image/jpeg, image/png, image/webp" 
-                                disabled={isUploadingBanner}
-                                className="hidden" 
+                                type="file" accept="image/jpeg, image/png, image/webp" disabled={isUploadingBanner} className="hidden" 
                                 onChange={async (e) => {
                                   const file = e.target.files?.[0];
                                   if (!file) return;
-                                  
-                                  if (file.size > 2 * 1024 * 1024) {
-                                    return alert("⚠️ Imagem muito pesada! Comprima sua imagem para menos de 2MB antes de enviar.");
-                                  }
-
+                                  if (file.size > 2 * 1024 * 1024) return alert("⚠️ Imagem muito pesada!");
                                   setIsUploadingBanner(true);
                                   try {
                                     const url = await uploadImageToCloudinary(file);
                                     const novosBanners = [...(settingsForm.banners || []), url];
-                                    
-                                    // 1. Atualiza o estado da tela para o Admin ver a foto
                                     setSettingsForm((prev: any) => ({ ...prev, banners: novosBanners }));
-                                    
-                                    // 2. Salva INSTANTANEAMENTE no Firebase e no Cache para a vitrine ver na hora
                                     if (authRole.tenantId && authRole.tenantId !== 'loading') {
-                                      await setDoc(doc(db, 'tenants', authRole.tenantId), {
-                                        banners: novosBanners
-                                      }, { merge: true });
+                                      await setDoc(doc(db, 'tenants', authRole.tenantId), { banners: novosBanners }, { merge: true });
                                     }
                                     localStorage.setItem('velo_store_banners', JSON.stringify(novosBanners));
-                                    window.dispatchEvent(new Event('storage')); // Grita pro Iframe atualizar
+                                    window.dispatchEvent(new Event('storage'));
                                   } catch (error) {
                                     alert("Erro de conexão ao enviar a imagem.");
                                   } finally {
@@ -1627,6 +1624,43 @@ const [termoIA, setTermoIA] = useState('');
                               />
                             </label>
                           )}
+                        </div>
+                      </div>
+
+                      {/* BANNER TARJA (ANNOUNCEMENT BAR) CORRIGIDO - AGORA ESTÁ FORA DO CARROSSEL! */}
+                      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden p-4 space-y-3">
+                        <label className="text-[10px] font-black uppercase text-slate-500">Banner Tarja (Topo da Loja)</label>
+                        <p className="text-[9px] text-slate-400 font-bold -mt-2 leading-tight">
+                          Chame a atenção para promoções. Adicione até 3 mensagens que ficarão passando na tela.
+                        </p>
+
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="relative w-8 h-8 shrink-0 rounded-full overflow-hidden border-2 border-gray-200 shadow-sm cursor-pointer hover:border-[#0055ff]">
+                            <input 
+                              type="color" 
+                              value={settingsForm.announcementColor || '#e11d48'} 
+                              onChange={(e) => setSettingsForm({...settingsForm, announcementColor: e.target.value})} 
+                              className="absolute -top-2 -left-2 w-12 h-12 cursor-pointer" 
+                            />
+                          </div>
+                          <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Cor de Fundo da Tarja</span>
+                        </div>
+
+                        <div className="space-y-2">
+                          {[0, 1, 2].map((index) => (
+                            <input
+                              key={index}
+                              type="text"
+                              placeholder={`Mensagem ${index + 1} (Ex: 🚀 Frete Grátis acima de R$ 100)`}
+                              value={(settingsForm.announcementTexts && settingsForm.announcementTexts[index]) || ''}
+                              onChange={(e) => {
+                                const newTexts = [...(settingsForm.announcementTexts || ['', '', ''])];
+                                newTexts[index] = e.target.value;
+                                setSettingsForm({...settingsForm, announcementTexts: newTexts});
+                              }}
+                              className="w-full bg-gray-50 border border-gray-200 text-xs font-bold text-slate-700 p-2.5 rounded-lg outline-none focus:border-[#0055ff]"
+                            />
+                          ))}
                         </div>
                       </div>
 

@@ -106,6 +106,21 @@ export default function CustomerCatalog({
   const [storeCnpj, setStoreCnpj] = useState(initialData?.cnpj || '');
   const [storeBanners, setStoreBanners] = useState<string[]>(initialData?.banners || []);
   
+  // NOVOS ESTADOS DA TARJA
+  const [announcementTexts, setAnnouncementTexts] = useState<string[]>(initialData?.announcementTexts?.filter(Boolean) || []);
+  const [announcementColor, setAnnouncementColor] = useState<string>(initialData?.announcementColor || '#e11d48');
+  const [currentAnnounceIdx, setCurrentAnnounceIdx] = useState(0);
+
+  // Efeito para rotacionar o texto da tarja a cada 3.5 segundos (se houver mais de 1)
+  useEffect(() => {
+      if (announcementTexts.length > 1) {
+          const timer = setInterval(() => {
+              setCurrentAnnounceIdx((prev) => (prev + 1) % announcementTexts.length);
+          }, 3500);
+          return () => clearInterval(timer);
+      }
+  }, [announcementTexts]);
+
   const [storeSeoCategory, setStoreSeoCategory] = useState(initialData?.seoCategory || initialData?.storeNiche || 'Store');
   const [storePriceRange, setStorePriceRange] = useState(initialData?.priceRange || '$$');
   const [storeSocialLinks, setStoreSocialLinks] = useState<string[]>([]);
