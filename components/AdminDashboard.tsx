@@ -84,12 +84,12 @@ export default function AdminDashboard() {
         // PROTEÇÃO SÊNIOR: Verifica se está rodando na máquina local
         const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-        // Usuário logado: Se for local, usa uma loja de teste. Se for nuvem, usa o UID real.
+        // Puxa SEMPRE o UID real do Firebase para testar o Google Meu Negócio real
         setAuthRole({
           email: user.email,
           role: 'merchant_owner',
           businessType: 'ecommerce', 
-          tenantId: isLocal ? 'loja_teste_local' : user.uid 
+          tenantId: user.uid 
         });
       } else {
         // Ninguém logado? Expulsa para a tela de login imediatamente.

@@ -122,6 +122,7 @@ export default function GoogleIntegrationDashboard({
             const res = await fetch(`/api/google-gmb?action=getProfile&storeId=${storeId}`);
             const data = await res.json();
             
+            // LÊ ESTRITAMENTE OS DADOS REAIS QUE VIERAM DA API DO GOOGLE
             if (data.success && data.profile) {
                 let rawDescription = data.profile.profile?.description || '';
                 let extractedVouchers = [];
@@ -133,15 +134,18 @@ export default function GoogleIntegrationDashboard({
                     extractedVouchers = vouchersString.split(',').map(v => v.trim());
                 }
 
+                // Seta os dados EXATAMENTE como estão na ficha do GMB
                 setProfileData({
                     title: data.profile.title || '',
                     description: rawDescription,
-                    phone: data.profile.primaryPhone || '',
+                    phone: data.profile.primaryPhone || '', 
                     vouchers: extractedVouchers
                 });
+            } else {
+                console.warn("A API do Google não retornou dados de perfil.");
             }
         } catch (error) { 
-            console.error("Erro ao buscar perfil", error); 
+            console.error("Erro ao buscar perfil real no Google:", error); 
         } finally {
             setIsFetchingProfile(false);
         }
