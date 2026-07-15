@@ -7,7 +7,7 @@ import {
   Layers, AlertCircle, Send, HelpCircle, FileCheck, Percent,
   TrendingUp, X, CreditCard, Sun, Moon, ExternalLink, ChevronDown, List,
   Megaphone, ChevronLeft, ChevronRight, Filter, RefreshCw, ShieldCheck, LayoutTemplate, Package,
-  Store, UploadCloud
+  Store, UploadCloud, LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -56,7 +56,18 @@ export default function AdminDashboard() {
       setIsClearingCache(false);
     }
   };
-
+const handleLogout = async () => {
+    if (window.confirm('Tem certeza que deseja sair da sua conta?')) {
+      const { getAuth, signOut } = require('firebase/auth');
+      const auth = getAuth();
+      try {
+        await signOut(auth);
+        window.location.href = '/login';
+      } catch (error) {
+        alert("Erro ao sair da conta.");
+      }
+    }
+  };
   const getInitialTenant = () => {
     if (typeof window !== 'undefined') {
       const host = window.location.hostname;
@@ -685,14 +696,24 @@ const [termoIA, setTermoIA] = useState('');
                  <ExternalLink className="w-4 h-4"/> VER LOJA ONLINE
                </a>
             </div>
-            <div className="flex items-center justify-between bg-white p-3 rounded-2xl border-2 border-gray-100 shadow-sm cursor-pointer hover:border-[#ff7b00] transition-colors">
+            <div className="flex items-center justify-between bg-white p-2.5 rounded-2xl border-2 border-gray-100 shadow-sm group">
                <div className="flex items-center gap-3 overflow-hidden">
-                 <div className="w-10 h-10 rounded-full bg-[#111827] text-white flex items-center justify-center font-black text-sm shrink-0">{authRole.email.charAt(0).toUpperCase()}</div>
+                 <div className="w-10 h-10 rounded-full bg-[#111827] text-white flex items-center justify-center font-black text-sm shrink-0">
+                    {authRole.email.charAt(0).toUpperCase()}
+                 </div>
                  <div className="overflow-hidden">
                    <p className="text-[11px] font-black text-slate-800 uppercase tracking-wider truncate">USUÁRIO</p>
-                   <p className="text-[10px] text-slate-500 truncate font-medium">{authRole.email}</p>
+                   <p className="text-[10px] text-slate-500 truncate font-medium" title={authRole.email}>{authRole.email}</p>
                  </div>
                </div>
+               
+               <button 
+                  onClick={handleLogout} 
+                  title="Sair da Conta"
+                  className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all shrink-0 active:scale-95"
+               >
+                 <LogOut size={18} />
+               </button>
             </div>
           </div>
         </aside>
