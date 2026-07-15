@@ -240,6 +240,7 @@ export default function VeloOnboarding({
                   <p className="text-sm font-medium text-slate-500 leading-relaxed">
                     Conectar sua loja ao Google Meu Negócio permite que você apareça nas buscas da sua região. Clientes confiam em lojas que aparecem no mapa.
                   </p>
+                  
                   {/* VERIFICA SE JÁ EXISTE TOKEN DO GOOGLE SALVO NO FIREBASE */}
                   {settingsForm?.integrations?.google_my_business?.accessToken ? (
                       <div className="bg-green-50 border-2 border-green-200 p-6 rounded-2xl flex flex-col items-center justify-center gap-2 text-center animate-in zoom-in">
@@ -601,9 +602,9 @@ export default function VeloOnboarding({
           </AnimatePresence>
         </div>
 
-        {/* Rodapé de Ações (Fixo no fundo) */}
-        <div className="p-6 md:px-10 border-t-2 border-gray-100 flex items-center justify-between bg-white shrink-0">
-          <button 
+        {/* Rodapé de Ações (Fixo no fundo) - CORRIGIDO MOBILE */}
+        <div className="p-4 sm:p-6 md:px-10 border-t-2 border-gray-100 flex items-center justify-between bg-white shrink-0 sticky bottom-0 z-50">
+          <button
             onClick={currentStep === 1 ? onFinish : handlePrev}
             className="px-6 py-3.5 bg-gray-50 border border-gray-200 hover:bg-gray-100 text-slate-600 font-black uppercase tracking-widest text-[10px] rounded-xl flex items-center gap-2 transition-all shadow-sm"
           >

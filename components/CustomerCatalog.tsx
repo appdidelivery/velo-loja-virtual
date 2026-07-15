@@ -460,7 +460,7 @@ export default function CustomerCatalog({
             itemSchema.sku = p.sku || p.id;
             itemSchema.brand = {
                 "@type": "Brand",
-                "name": storeName // Se ele não preencher marca, a loja é a própria marca
+                "name": (p as any).brand || storeName // Usa a marca digitada ou o nome da loja
             };
             // Truque de SEO: Estrelinhas individuais para cada produto na aba "Google Shopping" e Pesquisa
             itemSchema.aggregateRating = {
