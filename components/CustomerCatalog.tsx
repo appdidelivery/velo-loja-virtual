@@ -106,9 +106,9 @@ export default function CustomerCatalog({
   const [storeCnpj, setStoreCnpj] = useState(initialData?.cnpj || '');
   const [storeBanners, setStoreBanners] = useState<string[]>(initialData?.banners || []);
   
-  // NOVOS ESTADOS DA TARJA
-  const [announcementTexts, setAnnouncementTexts] = useState<string[]>(initialData?.announcementTexts?.filter(Boolean) || []);
-  const [announcementColor, setAnnouncementColor] = useState<string>(initialData?.announcementColor || '#e11d48');
+  // ESTADOS DA TARJA
+  const [announcementTexts, setAnnouncementTexts] = useState<string[]>([]);
+  const [announcementColor, setAnnouncementColor] = useState<string>('#e11d48');
   const [currentAnnounceIdx, setCurrentAnnounceIdx] = useState(0);
 
   // Efeito para rotacionar o texto da tarja a cada 3.5 segundos (se houver mais de 1)
@@ -206,7 +206,21 @@ export default function CustomerCatalog({
               } else {
                   setStoreBanners(data.banners || []); 
               }
-              
+              // LÊ A TARJA E A COR DIRETO DO FIREBASE OU CACHE
+              const cachedAnnouncements = localStorage.getItem('velo_store_announcement');
+              if (cachedAnnouncements) {
+                  try { 
+                      const parsed = JSON.parse(cachedAnnouncements);
+                      setAnnouncementTexts(parsed.texts?.filter(Boolean) || []);
+                      setAnnouncementColor(parsed.color || '#e11d48');
+                  } catch(e) {}
+              } else if (data.announcementTexts) {
+                  setAnnouncementTexts(data.announcementTexts.filter(Boolean));
+                  setAnnouncementColor(data.announcementColor || '#e11d48');
+              } else {
+                  // Fallback se não tiver nada no banco
+                  setAnnouncementTexts([]);
+              }
               setStoreSeoCategory(data.seoCategory || data.storeNiche || 'Store');
               setStorePriceRange(data.priceRange || '$$');
               
@@ -607,13 +621,29 @@ export default function CustomerCatalog({
               {/* BANNERS */}
               {templateId !== 'nativo_app' && (
                 <>
-                  {currentTemplate.defaultContent.announcementBar && (
-                    <div style={{ backgroundColor: currentTemplate.primaryColor }} className="w-full text-center py-2 px-4 shadow-inner">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-white leading-none flex items-center justify-center gap-2">
+                  {/* BANNERS TARJA DINÂMICOS (Lidos do Firebase/Painel) */}
+                  {announcementTexts.length > 0 ? (
+                    <div style={{ backgroundColor: announcementColor }} className="w-full text-center py-2 px-4 shadow-inner border-b border-white/20 overflow-hidden h-8 flex items-center justify-center transition-colors duration-500">
+                      <AnimatePresence mode="popLayout">
+                        <motion.span 
+                          key={currentAnnounceIdx}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.4 }}
+                          className="text-[10px] font-black uppercase tracking-widest text-white leading-none flex items-center justify-center gap-2 drop-shadow-md whitespace-nowrap"
+                        >
+                          <Sparkles size={12} className="shrink-0"/> {announcementTexts[currentAnnounceIdx]}
+                        </motion.span>
+                      </AnimatePresence>
+                    </div>
+                  ) : currentTemplate.defaultContent?.announcementBar ? (
+                    <div style={{ backgroundColor: currentTemplate.primaryColor }} className="w-full text-center py-2 px-4 shadow-inner border-b border-white/20">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white leading-none flex items-center justify-center gap-2 drop-shadow-md">
                         <Sparkles size={12}/> {currentTemplate.defaultContent.announcementBar}
                       </span>
                     </div>
-                  )}
+                  ) : null}
 
                   <div className={`p-4 pb-2 shadow-sm mb-4 ${templateId === 'barbearia_dark' ? 'bg-black rounded-b-3xl' : templateId === 'beleza_masonry' ? 'bg-transparent' : 'bg-white rounded-b-3xl'}`}>
                     <div className="w-full h-40 md:h-48 rounded-2xl overflow-hidden relative shadow-md group flex overflow-x-auto snap-x snap-mandatory no-scrollbar">
