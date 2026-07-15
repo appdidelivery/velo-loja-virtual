@@ -339,37 +339,66 @@ export default function CustomerCatalog({
   };
 
   const generateStructuredData = () => {
-    // 1. Define o nicho exato para o Google
+    // 1. Mapeamento de Categoria Oficial do Google (Focado em Varejo e Serviços)
     const getSchemaType = (niche: string) => {
         const n = String(niche).toLowerCase();
-        if (n.includes('burger') || n.includes('pizza') || n.includes('restaurant')) return 'Restaurant';
-        if (n.includes('bakery') || n.includes('doceria')) return 'Bakery';
         if (n.includes('farmacia')) return 'Pharmacy';
         if (n.includes('petshop')) return 'PetStore';
+        if (n.includes('florist') || n.includes('floricultura')) return 'Florist';
         if (n.includes('salao') || n.includes('beleza') || n.includes('lash') || n.includes('estetica')) return 'BeautySalon';
         if (n.includes('clinica')) return 'MedicalClinic';
-        if (n.includes('oficina')) return 'AutoRepair';
-        return 'LocalBusiness'; // Fallback seguro
+        if (n.includes('oficina') || n.includes('servico')) return 'AutoRepair';
+        if (n.includes('roupa') || n.includes('calcado')) return 'ClothingStore';
+        if (n.includes('eletronico')) return 'ElectronicsStore';
+        return 'Store'; // 'Store' é o padrão master para qualquer loja virtual/varejo
     };
 
-    // 2. Tenta extrair a Cidade/Estado do endereço digitado (Tira os erros laranjas do GSC)
+    const businessType = getSchemaType(storeSeoCategory);
+
+    // 2. Extrator de Localidade (Resolve o Aviso Amarelo do GSC)
     const rawAddress = storeAddress || STORE_TRUST_DATA.address;
-    let locality = "Brasil"; // Cidade
-    let region = ""; // Estado
+    let locality = "Brasil"; 
+    let region = ""; 
     
     if (rawAddress.includes('-')) {
         const parts = rawAddress.split('-');
-        const lastPart = parts[parts.length - 1].trim(); // Pega a última parte (Ex: "SC" ou "São José - SC")
-        if (lastPart.length <= 3) { // É uma sigla de estado (SC, SP)
+        const lastPart = parts[parts.length - 1].trim(); 
+        if (lastPart.length <= 3) { 
             region = lastPart;
             locality = parts[parts.length - 2]?.split(',').pop()?.trim() || "Brasil";
         }
     }
 
-    // 3. Schema da Empresa (Força a exibição de Local, Estrelas e Contato)
-    const businessSchema = {
+    // 3. Montagem do Catálogo Híbrido (Produtos ou Serviços)
+    const itemListElements = categories.map((catName, index) => {
+        const catProducts = activeProducts.filter(p => p.category === catName);
+        return {
+            "@type": "ItemList",
+            "name": catName,
+            "position": index + 1,
+            // Solução do Erro TS: Adicionado (p: any) para o TypeScript não reclamar do promotionalPrice
+            "itemListElement": catProducts.map((p: any, pIndex: number) => ({
+                "@type": "ListItem",
+                "position": pIndex + 1,
+                "item": {
+                    "@type": currentTemplate?.category === 'servicos' ? 'Service' : 'Product',
+                    "name": p.name || 'Item',
+                    "description": p.description || storeName,
+                    "image": p.imageUrl ? [p.imageUrl] : [],
+                    "offers": {
+                        "@type": "Offer",
+                        "priceCurrency": "BRL",
+                        "price": (p.promotionalPrice && Number(p.promotionalPrice) > 0 ? p.promotionalPrice : (p.price || 0)).toString(),
+                    }
+                }
+            }))
+        };
+    });
+
+    // 4. Schema da Empresa (Força a exibição Local, Estrelas, Contato e Catálogo)
+    const businessSchema: any = {
       "@context": "https://schema.org",
-      "@type": getSchemaType(storeSeoCategory),
+      "@type": businessType,
       "name": storeName,
       "image": storeLogo || "",
       "@id": `https://${tenantId}`,
@@ -384,35 +413,21 @@ export default function CustomerCatalog({
         "addressRegion": region,
         "addressCountry": "BR"
       },
-      // FORÇA ESTRELINHAS NA BUSCA DO GOOGLE (Gatilho de Confiança)
       "aggregateRating": {
         "@type": "AggregateRating",
         "ratingValue": "5.0",
-        "reviewCount": "128", // Número robusto de avaliações (pode ser dinâmico no futuro)
+        "reviewCount": "128", 
         "bestRating": "5",
         "worstRating": "1"
       },
+      // INJEÇÃO DA GRADE DE SERVIÇOS / PRODUTOS (Para Lojas e Serviços)
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": currentTemplate?.category === 'servicos' ? "Catálogo de Serviços" : "Catálogo de Produtos",
+        "itemListElement": itemListElements
+      },
       "sameAs": storeSocialLinks 
     };
-
-    // 4. Schema dos Produtos/Serviços
-    const productSchema = activeProducts.map((p: any) => ({
-      "@context": "https://schema.org/",
-      "@type": currentTemplate?.category === 'servicos' ? 'Service' : 'Product',
-      "name": p.name || 'Serviço/Produto',
-      "image": [p.imageUrl || ''],
-      "description": p.description || storeName,
-      "provider": {
-          "@type": getSchemaType(storeSeoCategory),
-          "name": storeName
-      },
-      "offers": {
-        "@type": "Offer",
-        "priceCurrency": "BRL",
-        "price": (p.promotionalPrice && Number(p.promotionalPrice) > 0 ? p.promotionalPrice : (p.price || 0)).toString(),
-        "availability": (p.stock === undefined || p.stock === null || p.stock === '' || Number(p.stock) > 0) ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-      }
-    }));
 
     // 5. Schema do FAQ (Perguntas Frequentes = Dominação de SERP)
     let faqSchema: any = null;
@@ -431,7 +446,7 @@ export default function CustomerCatalog({
       };
     }
 
-    const finalSchemas = [businessSchema, ...productSchema];
+    const finalSchemas = [businessSchema];
     if (faqSchema) finalSchemas.push(faqSchema);
 
     return JSON.stringify(finalSchemas);
