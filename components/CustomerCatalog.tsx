@@ -1407,18 +1407,21 @@ export default function CustomerCatalog({
                 <button 
                   onClick={() => {
                     // Truque de Mestre para Carrinho
-                    // @ts-ignore
-                    const productToAdd = (selectedProduct as any).variations && (selectedProduct as any).variations.length > 0 
+                    const hasVariations = (selectedProduct as any).variations && (selectedProduct as any).variations.length > 0;
+                    const promoPrice = (selectedProduct as any).promotionalPrice;
+                    const finalBasePrice = promoPrice > 0 ? promoPrice : selectedProduct.price;
+
+                    const productToAdd = hasVariations
                       ? { 
                           ...selectedProduct, 
-                          // @ts-ignore
                           id: `${selectedProduct.id}-${selectedVariationIndex}`, 
-                          // @ts-ignore
                           name: `${selectedProduct.name} (${(selectedProduct as any).variations[selectedVariationIndex].name})`,
-                          // @ts-ignore
                           price: (selectedProduct as any).variations[selectedVariationIndex].price
                         } 
-                      : selectedProduct;
+                      : {
+                          ...selectedProduct,
+                          price: finalBasePrice // Garante que o carrinho cobre o preço promocional se existir!
+                      };
                     
                     handleAddToCart(productToAdd);
                     setSelectedProduct(null);
