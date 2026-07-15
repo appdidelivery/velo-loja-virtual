@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  ShoppingBag, Settings, MessageSquare, Plus, Edit2, Trash2, 
+  Menu, ShoppingBag, Settings, MessageSquare, Plus, Edit2, Trash2, 
   Search, CheckCircle2, DollarSign, Eye, EyeOff, User, Sparkles, MapPin,
   Layers, AlertCircle, Send, HelpCircle, FileCheck, Percent,
   TrendingUp, X, CreditCard, Sun, Moon, ExternalLink, ChevronDown, List,
@@ -34,6 +34,9 @@ export default function AdminDashboard() {
   
   // Estado que controla se o usuário vê o Wizard ou o Dashboard clássico
   const [showOnboarding, setShowOnboarding] = useState(true); 
+  
+  // NOVO: Controle de abertura do menu no Mobile
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); 
 
   const [isClearingCache, setIsClearingCache] = useState(false);
 
@@ -547,9 +550,25 @@ const [termoIA, setTermoIA] = useState('');
     <div className="light">
       <div className="flex h-screen bg-[#f4f7f6] text-slate-800 font-sans overflow-hidden selection:bg-[#0055ff] selection:text-white">
         
-        {/* SIDEBAR PADRÃO VELO DELIVERY */}
-        <aside className="w-[280px] flex flex-col bg-white border-r border-gray-200 shrink-0 shadow-sm z-10 relative">
-          <div className="p-6 flex flex-col items-center border-b border-gray-50">
+        {/* OVERLAY MOBILE (Fecha o menu ao clicar na parte escura) */}
+        {isMobileMenuOpen && (
+          <div 
+            className="fixed inset-0 bg-slate-900/60 z-[90] lg:hidden backdrop-blur-sm transition-opacity" 
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
+
+        {/* SIDEBAR PADRÃO VELO DELIVERY - AGORA RESPONSIVA (OFF-CANVAS NO MOBILE) */}
+        <aside className={`fixed inset-y-0 left-0 z-[100] w-[280px] flex flex-col bg-white border-r border-gray-200 shrink-0 shadow-2xl lg:shadow-sm transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className="p-6 flex flex-col items-center border-b border-gray-50 relative">
+            
+            {/* Botão de Fechar no Mobile (Visível apenas em telas menores) */}
+            <button 
+              onClick={() => setIsMobileMenuOpen(false)} 
+              className="absolute top-4 right-4 p-2 bg-gray-50 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 lg:hidden transition-colors"
+            >
+              <X size={16} />
+            </button>
             <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center overflow-hidden shadow-md mb-3 border-4 border-gray-50 p-1">
               <img src="/velo loja virtual logo.png" alt="Velo Logo" className="w-full h-full object-contain" />
             </div>
@@ -674,10 +693,31 @@ const [termoIA, setTermoIA] = useState('');
           </div>
         </aside>
 
-        {/* MAIN CONTENT AREA */}
-        <main className="flex-1 overflow-y-auto p-6 lg:p-10">
+        {/* CONTAINER DIREITO (Engloba Header Mobile + Área Principal) */}
+        <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0 bg-[#f4f7f6]">
           
-          {activePanel === 'dashboard' && (
+          {/* HEADER MOBILE (Visível apenas em telas pequenas) */}
+          <header className="lg:hidden flex items-center justify-between bg-white border-b border-gray-200 p-4 shrink-0 shadow-sm z-40 relative">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center overflow-hidden border border-gray-100 p-0.5 shadow-sm">
+                <img src="/velo loja virtual logo.png" alt="Velo Logo" className="w-full h-full object-contain" />
+              </div>
+              <h1 className="text-xs font-black text-[#111827] uppercase tracking-wider line-clamp-1">
+                {settings.businessName || 'Painel de Controle'}
+              </h1>
+            </div>
+            <button 
+              onClick={() => setIsMobileMenuOpen(true)} 
+              className="p-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-600 hover:text-[#0055ff] hover:bg-blue-50 transition-colors shadow-sm"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          </header>
+
+          {/* MAIN CONTENT AREA - OCUPARÁ 100% DA LARGURA NO MOBILE AGORA */}
+          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 relative">
+            
+            {activePanel === 'dashboard' && (
             <>
               {showOnboarding ? (
                 <div className="max-w-[1200px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -2062,8 +2102,9 @@ const [termoIA, setTermoIA] = useState('');
               )}
             </div>
           )}
-        </main>
-      </div>
+            </main>
+          </div> {/* FIM DO NOVO CONTAINER DIREITO (Header Mobile + Main) */}
+      </div> {/* FIM DO CONTAINER PRINCIPAL (flex h-screen) */}
 {/* --- ADD/EDIT CATEGORY MODAL --- */}
       <AnimatePresence>
         {isCategoryModalOpen && (

@@ -124,17 +124,19 @@ export default function CustomerCatalog({
     setMounted(true);
     let unsubscribe = () => {};
 
+    // CORREÇÃO: Função movida para o escopo raiz do useEffect
+    const handleStorageChange = () => {
+        const freshBanners = localStorage.getItem('velo_store_banners');
+        if (freshBanners) {
+            try { setStoreBanners(JSON.parse(freshBanners)); } catch(e) {}
+        }
+    };
+
     const setupFirebase = async () => {
       if (tenantId) {
         const { onSnapshot, doc } = await import('firebase/firestore');
         
         // Ouve os gritos do AdminDashboard e atualiza a tela na hora!
-        const handleStorageChange = () => {
-            const freshBanners = localStorage.getItem('velo_store_banners');
-            if (freshBanners) {
-                try { setStoreBanners(JSON.parse(freshBanners)); } catch(e) {}
-            }
-        };
         window.addEventListener('storage', handleStorageChange);
 
         unsubscribe = onSnapshot(

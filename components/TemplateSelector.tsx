@@ -16,25 +16,27 @@ export default function TemplateSelector({ selectedTemplateId, onSelect }: Templ
 
   return (
     <div className="space-y-6">
-      {/* Abas (Varejo vs Serviços) */}
-      <div className="flex bg-slate-100 p-1 rounded-2xl w-max shadow-inner">
+     {/* Abas (Varejo vs Serviços) - RESPONSIVO MOBILE */}
+      <div className="grid grid-cols-2 sm:flex bg-slate-100 p-1 rounded-2xl w-full sm:w-max shadow-inner gap-1 sm:gap-0">
         <button
           type="button"
           onClick={() => setActiveCategory('varejo')}
-          className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+          className={`px-1 sm:px-6 py-3 sm:py-2.5 rounded-xl text-[9px] sm:text-xs font-black uppercase tracking-widest transition-all flex flex-col sm:flex-row items-center justify-center gap-1 text-center leading-tight ${
             activeCategory === 'varejo' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
           }`}
         >
-          🛍️ Produtos e Varejo
+          <span className="shrink-0 text-xs sm:text-sm">🛍️</span>
+          <span>Produtos e Varejo</span>
         </button>
         <button
           type="button"
           onClick={() => setActiveCategory('servicos')}
-          className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+          className={`px-1 sm:px-6 py-3 sm:py-2.5 rounded-xl text-[9px] sm:text-xs font-black uppercase tracking-widest transition-all flex flex-col sm:flex-row items-center justify-center gap-1 text-center leading-tight ${
             activeCategory === 'servicos' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
           }`}
         >
-          📅 Serviços (Orçamentos)
+          <span className="shrink-0 text-xs sm:text-sm">📅</span>
+          <span>Serviços (Orçamentos)</span>
         </button>
       </div>
 
