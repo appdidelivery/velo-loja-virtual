@@ -240,15 +240,26 @@ export default function VeloOnboarding({
                   <p className="text-sm font-medium text-slate-500 leading-relaxed">
                     Conectar sua loja ao Google Meu Negócio permite que você apareça nas buscas da sua região. Clientes confiam em lojas que aparecem no mapa.
                   </p>
-                  <div className="bg-orange-50 border border-orange-200 p-5 rounded-2xl">
-                    <p className="text-xs font-bold text-orange-800 mb-3">Já tem uma ficha no Google?</p>
-                    <button 
-                      onClick={() => setActivePanel('google_business')}
-                      className="w-full bg-white border-2 border-orange-200 text-orange-700 hover:bg-orange-100 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all"
-                    >
-                      Ir para Integração do Google
-                    </button>
-                  </div>
+                  {/* VERIFICA SE JÁ EXISTE TOKEN DO GOOGLE SALVO NO FIREBASE */}
+                  {settingsForm?.integrations?.google_my_business?.accessToken ? (
+                      <div className="bg-green-50 border-2 border-green-200 p-6 rounded-2xl flex flex-col items-center justify-center gap-2 text-center animate-in zoom-in">
+                          <div className="bg-green-500 text-white p-2 rounded-full mb-1">
+                              <CheckCircle2 size={24} />
+                          </div>
+                          <h4 className="font-black text-green-800 uppercase tracking-widest text-sm">Ficha Conectada!</h4>
+                          <p className="text-[10px] font-bold text-green-600">Sua loja já está sincronizada com o Google Meu Negócio.</p>
+                      </div>
+                  ) : (
+                      <div className="bg-orange-50 border border-orange-200 p-5 rounded-2xl">
+                        <p className="text-xs font-bold text-orange-800 mb-3">Já tem uma ficha no Google?</p>
+                        <button 
+                          onClick={() => setActivePanel('google_business')}
+                          className="w-full bg-white border-2 border-orange-200 text-orange-700 hover:bg-orange-100 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all"
+                        >
+                          Ir para Integração do Google
+                        </button>
+                      </div>
+                  )}
                 </div>
               )}
 
