@@ -123,7 +123,8 @@ export async function GET(request: Request) {
         const accountLocationName = `accounts/-/locations/${cleanIdForOldApi}`;
 
         if (action === 'getProfile') {
-            const apiRes = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${locationName}?readMask=title,profile,primaryPhone`, {
+            // FIX: O Google exige que a máscara do telefone seja 'phoneNumbers' e não 'primaryPhone'
+            const apiRes = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${locationName}?readMask=title,profile,phoneNumbers`, {
                 headers: { 'Authorization': `Bearer ${accessToken}` }
             });
             const data = await apiRes.json();
@@ -198,8 +199,9 @@ export async function POST(request: Request) {
 
             if (title) { updatePayload.title = title; updateMask.push('title'); }
             if (description) { updatePayload.profile = { description }; updateMask.push('profile.description'); }
-            if (phone) { updatePayload.primaryPhone = phone; updateMask.push('primaryPhone'); }
-
+            // FIX: Estrutura correta para salvar o telefone no Google v1
+            if (phone) { updatePayload.phoneNumbers = { primaryPhone: phone }; updateMask.push('phoneNumbers.primaryPhone'); }
+            
             const apiRes = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/${locationName}?updateMask=${updateMask.join(',')}`, {
                 method: 'PATCH',
                 headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },

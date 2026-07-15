@@ -135,10 +135,11 @@ export default function GoogleIntegrationDashboard({
                 }
 
                 // Seta os dados EXATAMENTE como estão na ficha do GMB
+                // FIX: Mapeando corretamente o JSON que o Google devolve
                 setProfileData({
                     title: data.profile.title || '',
                     description: rawDescription,
-                    phone: data.profile.primaryPhone || '', 
+                    phone: data.profile.phoneNumbers?.primaryPhone || '',
                     vouchers: extractedVouchers
                 });
             } else {
