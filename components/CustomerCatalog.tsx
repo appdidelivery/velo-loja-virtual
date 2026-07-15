@@ -7,7 +7,7 @@ import {
   ChevronDown, Star, ShieldCheck, MapPin, Phone, 
   X, Plus, Minus, Trash2, LayoutGrid, ClipboardList, ShoppingBag,
   Scissors, Smartphone, Sofa, Wrench, Shirt, Gem, Beer, ChevronRight, Sparkles,
-  Store, Calendar, UploadCloud
+  Store, Calendar, UploadCloud, Heart, Share2
 } from 'lucide-react';
 
 import { Product, TenantSettings } from '../types';
@@ -134,6 +134,30 @@ export default function CustomerCatalog({
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedVariationIndex, setSelectedVariationIndex] = useState<number>(0);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
+
+  // NOVOS ESTADOS: Compartilhamento e Curtidas
+  const [likedProducts, setLikedProducts] = useState<string[]>([]);
+
+  // TRUQUE DE SEO: Muda a URL do navegador quando abre um produto (Ex: /p/nome-do-produto)
+  useEffect(() => {
+    if (selectedProduct) {
+        const slug = selectedProduct.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-');
+        window.history.pushState({}, '', `/p/${slug}`);
+    } else if (mounted) {
+        window.history.pushState({}, '', `/${tenantId}`);
+    }
+  }, [selectedProduct]);
+
+  const handleShareProduct = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+        try { await navigator.share({ title: `Veja isso na ${storeName}`, text: `Olha esse produto: ${selectedProduct?.name}`, url: url }); } 
+        catch (err) { console.log('Erro ao compartilhar', err); }
+    } else {
+        navigator.clipboard.writeText(url);
+        alert("Link copiado para a área de transferência!");
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -293,20 +317,20 @@ export default function CustomerCatalog({
     
     if (cart.length === 0 || !customerName.trim()) return;
     if (!isService && (!customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim())) return;
-    if (isService && (!serviceDate || !serviceTime || !serviceAddress.trim())) return;
+    // FIX: Removido a trava do endereço do serviço
+    if (isService && (!serviceDate || !serviceTime)) return;
 
     let message = isService ? `📅 *SOLICITAÇÃO DE AGENDAMENTO - ${storeName}*\n\n` : `🛒 *SOLICITAÇÃO DE ORÇAMENTO - ${storeName}*\n\n`;
     
     message += `*Dados do Cliente:*\n`;
-    message += `👤 Nome/Empresa: ${customerName}\n`;
+    message += `👤 Nome: ${customerName}\n`;
     if (!isService) message += `📄 CNPJ: ${customerCnpj}\n`;
     message += `💳 Pagamento Desejado: ${paymentMethod}\n\n`;
     
     if (isService) {
       message += `*Detalhes do Agendamento:*\n`;
       message += `🗓️ Data Desejada: ${serviceDate.split('-').reverse().join('/')}\n`;
-      message += `⏰ Horário: ${serviceTime}\n`;
-      message += `📍 Local do Serviço: ${serviceAddress}\n\n`;
+      message += `⏰ Horário: ${serviceTime}\n\n`;
     } else {
       message += `*Endereço para Cálculo de Frete:*\n`;
       message += `📍 CEP: ${cep}\n`;
@@ -1231,15 +1255,58 @@ export default function CustomerCatalog({
               {/* FIM DA GALERIA */}
 
               <div className="flex-1 overflow-y-auto p-6 sm:p-8 custom-scrollbar bg-white">
-                <div className="mb-2">
-                  <span style={{ color: themeColor, backgroundColor: `${themeColor}15` }} className="px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full">
+                <div className="flex justify-between items-start mb-4">
+                  <span style={{ color: themeColor, backgroundColor: `${themeColor}15` }} className="px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full h-fit">
                     {selectedProduct.category}
                   </span>
+                  
+                  {/* BOTOES DE COMPARTILHAR E CURTIR */}
+                  <div className="flex gap-2">
+                      <button 
+                          onClick={handleShareProduct} 
+                          className="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-500 hover:text-blue-500 transition-colors shadow-sm"
+                      >
+                          <Share2 size={14} />
+                      </button>
+                      <button 
+                          onClick={() => {
+                              setLikedProducts(prev => 
+                                  prev.includes(selectedProduct.id) 
+                                      ? prev.filter(id => id !== selectedProduct.id) 
+                                      : [...prev, selectedProduct.id]
+                              );
+                          }} 
+                          className={`w-8 h-8 rounded-full border flex items-center justify-center transition-colors shadow-sm ${
+                              likedProducts.includes(selectedProduct.id) ? 'bg-red-50 border-red-200 text-red-500' : 'bg-slate-50 border-slate-200 text-slate-400'
+                          }`}
+                      >
+                          <Heart size={14} fill={likedProducts.includes(selectedProduct.id) ? "currentColor" : "none"} />
+                      </button>
+                  </div>
                 </div>
+
                 <h2 className="text-xl sm:text-2xl font-black text-gray-900 leading-tight mb-2">
                   {selectedProduct.name}
                 </h2>
-                <p className="text-xs font-mono text-gray-400 mb-6 font-bold">SKU: {selectedProduct.sku}</p>
+                
+                {/* DADOS DE SEO VISÍVEIS (SKU, MARCA E ESTOQUE) */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-6">
+                    <p className="text-[10px] font-mono text-gray-400 font-bold bg-gray-50 px-2 py-1 rounded">SKU: {selectedProduct.sku || 'N/A'}</p>
+                    
+                    {/* @ts-ignore */}
+                    {selectedProduct.brand && (
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 bg-gray-50 px-2 py-1 rounded">
+                            {/* @ts-ignore */}
+                            Marca: {selectedProduct.brand}
+                        </p>
+                    )}
+                    
+                    {(selectedProduct.stock !== undefined && selectedProduct.stock !== null && selectedProduct.stock !== 999 && selectedProduct.stock !== 0) && (
+                        <p className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded ${Number(selectedProduct.stock) <= 5 ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
+                            Estoque: {selectedProduct.stock} un
+                        </p>
+                    )}
+                </div>
 
                 <div className="prose prose-sm text-gray-600 mb-8 max-w-none">
                   <p className="whitespace-pre-wrap leading-relaxed font-medium">
@@ -1283,12 +1350,28 @@ export default function CustomerCatalog({
                       ? ((selectedProduct as any).variations && (selectedProduct as any).variations.length > 0 ? 'A Partir de' : 'Preço Unitário') 
                       : ''}
                   </p>
-                  <p style={{ color: themeColor }} className="text-2xl sm:text-3xl font-black tracking-tight">
-                    {/* @ts-ignore */}
-                    {((selectedProduct as any).variations && (selectedProduct as any).variations.length > 0 ? (selectedProduct as any).variations[selectedVariationIndex].price : selectedProduct.price) > 0 
-                      ? `R$ ${((selectedProduct as any).variations && (selectedProduct as any).variations.length > 0 ? (selectedProduct as any).variations[selectedVariationIndex].price : selectedProduct.price).toFixed(2)}` 
-                      : 'Sob Consulta'}
-                  </p>
+                  {/* LÓGICA DO PREÇO PROMOCIONAL NO MODAL */}
+                  {/* @ts-ignore */}
+                  {(selectedProduct as any).promotionalPrice > 0 ? (
+                      <>
+                          <div className="flex items-end gap-2">
+                              <span style={{ color: themeColor }} className="text-2xl sm:text-3xl font-black tracking-tight leading-none">
+                                  {/* @ts-ignore */}
+                                  R$ {Number((selectedProduct as any).promotionalPrice).toFixed(2)}
+                              </span>
+                              <span className="text-xs font-bold text-slate-400 line-through mb-1">
+                                  R$ {Number(selectedProduct.price).toFixed(2)}
+                              </span>
+                          </div>
+                      </>
+                  ) : (
+                      <span style={{ color: themeColor }} className="text-2xl sm:text-3xl font-black tracking-tight">
+                          {/* @ts-ignore */}
+                          {((selectedProduct as any).variations && (selectedProduct as any).variations.length > 0 ? (selectedProduct as any).variations[selectedVariationIndex].price : selectedProduct.price) > 0 
+                            ? `R$ ${((selectedProduct as any).variations && (selectedProduct as any).variations.length > 0 ? (selectedProduct as any).variations[selectedVariationIndex].price : selectedProduct.price).toFixed(2)}` 
+                            : 'Sob Consulta'}
+                      </span>
+                  )}
                 </div>
                 
                 <button 
@@ -1380,7 +1463,6 @@ export default function CustomerCatalog({
                           <input type="date" value={serviceDate} onChange={(e) => setServiceDate(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all text-gray-700" required />
                           <input type="time" value={serviceTime} onChange={(e) => setServiceTime(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all text-gray-700" required />
                         </div>
-                        <input type="text" placeholder="Endereço Completo do Serviço *" value={serviceAddress} onChange={(e) => setServiceAddress(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all mt-2" required />
                       </>
                     ) : (
                       <>
@@ -1411,25 +1493,25 @@ export default function CustomerCatalog({
                   disabled={
                     cart.length === 0 || !customerName.trim() || 
                     (currentTemplate.category !== 'servicos' && (!customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim())) ||
-                    (currentTemplate.category === 'servicos' && (!serviceDate || !serviceTime || !serviceAddress.trim()))
+                    (currentTemplate.category === 'servicos' && (!serviceDate || !serviceTime))
                   }
                   style={
                     (cart.length > 0 && customerName.trim() && (
                       (currentTemplate.category !== 'servicos' && customerCnpj.trim() && cep.length === 8 && addressNumber.trim()) ||
-                      (currentTemplate.category === 'servicos' && serviceDate && serviceTime && serviceAddress.trim())
+                      (currentTemplate.category === 'servicos' && serviceDate && serviceTime)
                     )) ? { backgroundColor: currentTemplate.primaryColor } : {}
                   }
                   className={`w-full py-4 font-black rounded-xl text-xs flex items-center justify-center gap-2 transition-all uppercase tracking-widest ${
                     (cart.length === 0 || !customerName.trim() || 
                     (currentTemplate.category !== 'servicos' && (!customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim())) ||
-                    (currentTemplate.category === 'servicos' && (!serviceDate || !serviceTime || !serviceAddress.trim())))
+                    (currentTemplate.category === 'servicos' && (!serviceDate || !serviceTime)))
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'text-white shadow-xl hover:scale-[0.98]'
                   }`}
                 >
                   <Phone className="w-4 h-4 fill-current" />
                   {currentTemplate.category === 'servicos' 
-                    ? 'Agendar Visita/Serviço' 
+                    ? 'Confirmar Agendamento' 
                     : (storeMode === 'ecommerce' ? 'Finalizar Pedido (WhatsApp)' : 'Solicitar Orçamento')}
                 </button>
 

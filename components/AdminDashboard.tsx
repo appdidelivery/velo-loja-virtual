@@ -1069,26 +1069,6 @@ const [termoIA, setTermoIA] = useState('');
                     <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Estoque</label>
                     <input type="number" value={productForm.stock === 0 ? '' : productForm.stock} onChange={e => setProductForm({...productForm, stock: Number(e.target.value)})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-slate-700 border border-gray-200 shadow-sm placeholder:text-slate-300" placeholder="∞" />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Categoria na Loja</label>
-                    {(() => {
-                      const uniqueCategoriesList = Array.from(new Set(products.map(p => p.category))).filter(Boolean);
-                      return (
-                        <div className="relative">
-                          <input 
-                            type="text" list="categoriesList" required 
-                            value={productForm.category} 
-                            onChange={e => setProductForm({...productForm, category: e.target.value})} 
-                            className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 shadow-sm" 
-                            placeholder="Criar ou escolher..." 
-                          />
-                          <datalist id="categoriesList">
-                            {uniqueCategoriesList.map(cat => (<option key={cat} value={cat} />))}
-                          </datalist>
-                        </div>
-                      );
-                    })()}
-                  </div>
                 </div>
 
                 <button type="submit" disabled={isUploadingProductImage} className="w-full bg-[#111827] text-white py-5 rounded-[2rem] font-black uppercase tracking-widest shadow-xl hover:bg-black transition-all active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed">
@@ -2310,12 +2290,58 @@ const [termoIA, setTermoIA] = useState('');
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Preço Base (R$) - Opcional</label>
-                    <input type="number" step="0.01" value={productForm.price || ''} onChange={e => setProductForm({...productForm, price: Number(e.target.value)})} className="w-full p-4 bg-blue-50 rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-black text-xl text-blue-600 border border-blue-100 placeholder:text-blue-300" placeholder="0.00" />
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Preço Base (R$)</label>
+                    <input type="number" step="0.01" value={productForm.price || ''} onChange={e => setProductForm({...productForm, price: Number(e.target.value)})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-black text-xl text-slate-600 border border-slate-200 shadow-sm placeholder:text-slate-300" placeholder="0.00" />
                   </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-green-600 tracking-widest ml-1">Preço Oferta (Opcional)</label>
+                    <input type="number" step="0.01" value={productForm.promotionalPrice || ''} onChange={e => setProductForm({...productForm, promotionalPrice: Number(e.target.value)})} className="w-full p-4 bg-green-50 rounded-2xl outline-none focus:ring-2 ring-green-500 font-black text-xl text-green-700 border border-green-200 placeholder:text-green-300 shadow-sm" placeholder="0.00" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Marca / Empresa (SEO)</label>
+                    <input type="text" value={productForm.brand || ''} onChange={e => setProductForm({...productForm, brand: e.target.value})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 shadow-sm" placeholder="Ex: Nike, Velo..." />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">SKU / Código</label>
+                    <input type="text" value={productForm.sku || ''} onChange={e => setProductForm({...productForm, sku: e.target.value})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 shadow-sm" placeholder="Ex: PROD-001" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 pb-4 border-b border-gray-100">
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Estoque (Opcional)</label>
                     <input type="number" value={productForm.stock === 0 ? '' : productForm.stock} onChange={e => setProductForm({...productForm, stock: Number(e.target.value)})} className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-slate-700 border border-gray-200 shadow-sm placeholder:text-slate-300" placeholder="∞" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Categoria na Loja</label>
+                    {(() => {
+                      // Pegamos a lista de categorias existentes na loja
+                      const uniqueCategoriesList = Array.from(new Set(products.map(p => p.category))).filter(Boolean);
+                      
+                      return (
+                        <div className="relative">
+                          <select 
+                            required 
+                            value={productForm.category} 
+                            onChange={e => setProductForm({...productForm, category: e.target.value})} 
+                            className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 shadow-sm appearance-none cursor-pointer" 
+                          >
+                            <option value="" disabled>Selecione uma Categoria...</option>
+                            {uniqueCategoriesList.map(cat => (
+                              <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                            {/* Caso ele tenha digitado algo manualmente antes, isso garante que não quebre */}
+                            {productForm.category && !uniqueCategoriesList.includes(productForm.category) && (
+                                <option value={productForm.category}>{productForm.category}</option>
+                            )}
+                          </select>
+                          <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
 
