@@ -30,13 +30,21 @@ import GoogleIntegrationDashboard from './GoogleIntegrationDashboard';
 import { FaGoogle } from 'react-icons/fa6';
 
 export default function AdminDashboard() {
-  const [activePanel, setActivePanel] = useState<'dashboard' | 'products' | 'categories' | 'orders' | 'chats' | 'settings' | 'google_business' | 'finance'>('dashboard');
-  
+  const [activePanel, setActivePanel] = useState<'dashboard' | 'manual' | 'products' | 'categories' | 'orders' | 'customers' | 'chats' | 'settings' | 'google_business' | 'finance'>('dashboard');
+
   // Estado que controla se o usuário vê o Wizard ou o Dashboard clássico
   const [showOnboarding, setShowOnboarding] = useState(true); 
   
   // NOVO: Controle de abertura do menu no Mobile
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); 
+
+  // --- ESTADOS DO PDV (FRENTE DE CAIXA) ---
+  const [manualCart, setManualCart] = useState<any[]>([]);
+  const [pdvSearch, setPdvSearch] = useState('');
+  const [manualCustomer, setManualCustomer] = useState({ name: '', phone: '', date: '', time: '', isService: false });
+  const [manualDiscount, setManualDiscount] = useState<number>(0);
+  const [isSubmittingPDV, setIsSubmittingPDV] = useState(false);
+  const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
 
   const [isClearingCache, setIsClearingCache] = useState(false);
 
@@ -116,7 +124,7 @@ const handleLogout = async () => {
   const tenantForHooks = authRole?.tenantId || 'loading';
 
   const { products, addProduct, updateProduct, deleteProduct } = useProducts(tenantForHooks);
-  const { orders, updateStatus: updateOrderStatus } = useOrders(tenantForHooks);
+  const { orders, updateStatus: updateOrderStatus, addOrder } = useOrders(tenantForHooks);
   
   const [chats, setChats] = useState<ChatSession[]>(INITIAL_CHATS);
   const [settings, setSettings] = useState<TenantSettings>(INITIAL_SETTINGS);
@@ -623,17 +631,33 @@ const [termoIA, setTermoIA] = useState('');
             </button>
 
             {authRole.businessType === 'ecommerce' && (
-              <button 
-                onClick={() => setActivePanel('orders')} 
-                className={`w-full flex items-center justify-start gap-3 px-4 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activePanel === 'orders' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
-              >
-                <FileCheck className="w-5 h-5 shrink-0" /> 
-                <span className="text-left truncate">Pedidos</span>
-              </button>
+              <>
+                <button 
+                  onClick={() => setActivePanel('manual')} 
+                  className={`w-full flex items-center justify-start gap-3 px-4 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activePanel === 'manual' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
+                >
+                  <Store className="w-5 h-5 shrink-0" /> 
+                  <span className="text-left truncate">Frente de Caixa</span>
+                </button>
+                <button 
+                  onClick={() => setActivePanel('orders')} 
+                  className={`w-full flex items-center justify-start gap-3 px-4 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activePanel === 'orders' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
+                >
+                  <FileCheck className="w-5 h-5 shrink-0" /> 
+                  <span className="text-left truncate">Pedidos</span>
+                </button>
+                <button 
+                  onClick={() => setActivePanel('customers')} 
+                  className={`w-full flex items-center justify-start gap-3 px-4 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activePanel === 'customers' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
+                >
+                  <User className="w-5 h-5 shrink-0" /> 
+                  <span className="text-left truncate">Clientes (CRM)</span>
+                </button>
+              </>
             )}
 
             <button 
-              onClick={() => setActivePanel('google_business')} 
+              onClick={() => setActivePanel('google_business')}
               className={`w-full flex items-center justify-start gap-3 px-4 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all relative overflow-hidden ${activePanel === 'google_business' ? 'bg-white text-slate-900 shadow-[0_0_15px_rgba(66,133,244,0.15)] border border-slate-200 z-10' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
             >
               {activePanel === 'google_business' && (
@@ -1311,42 +1335,337 @@ const [termoIA, setTermoIA] = useState('');
               )}
             </div>
           )}
+{/* --- TELA PDV (FRENTE DE CAIXA) --- */}
+          {activePanel === 'manual' && (
+            <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-100px)] animate-in fade-in slide-in-from-bottom-4 duration-500 relative pb-20 lg:pb-0 max-w-7xl mx-auto">
+                {/* COLUNA ESQUERDA: CATÁLOGO */}
+                <div className="flex-1 flex flex-col bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+                    <div className="p-6 border-b border-slate-100 bg-slate-50 space-y-4">
+                        <h2 className="text-2xl font-black italic uppercase text-slate-800 flex items-center gap-2">
+                            <Store size={24} className="text-blue-600"/> Lançar Venda/Agendamento
+                        </h2>
+                        <div className="relative">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                            <input 
+                                type="text" 
+                                placeholder="Buscar produto ou serviço..." 
+                                className="w-full p-4 pl-12 bg-white border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-blue-500 transition-all shadow-sm"
+                                value={pdvSearch}
+                                onChange={(e) => setPdvSearch(e.target.value)}
+                            />
+                        </div>
+                    </div>
 
+                    <div className="flex-1 overflow-y-auto p-6 bg-slate-50 custom-scrollbar">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {products.filter(p => p.isActive && p.name.toLowerCase().includes(pdvSearch.toLowerCase())).map(p => {
+                                const isOutOfStock = p.stock !== undefined && p.stock !== null && String(p.stock) !== '' && Number(p.stock) <= 0;
+                                return (
+                                    <div 
+                                        key={p.id}
+                                        onClick={() => {
+                                            if (isOutOfStock) return alert("Produto Esgotado!");
+                                            const existing = manualCart.find(it => it.id === p.id);
+                                            if (existing) {
+                                                if (p.stock && existing.quantity >= Number(p.stock)) return alert("Estoque máximo atingido!");
+                                                setManualCart(manualCart.map(it => it.id === p.id ? { ...it, quantity: it.quantity + 1 } : it));
+                                            } else {
+                                                setManualCart([...manualCart, { ...p, quantity: 1, currentPrice: Number((p as any).promotionalPrice) > 0 ? Number((p as any).promotionalPrice) : Number(p.price) }]);
+                                            }
+                                        }}
+                                        className={`bg-white rounded-3xl p-4 border-2 transition-all flex flex-col justify-between h-40 select-none ${isOutOfStock ? 'border-slate-100 opacity-50 cursor-not-allowed grayscale' : 'border-transparent hover:border-blue-400 cursor-pointer shadow-sm active:scale-95'}`}
+                                    >
+                                        <div className="flex justify-between items-start mb-2">
+                                            {p.imageUrl ? <img src={p.imageUrl} className="w-10 h-10 object-cover rounded-xl shrink-0" alt={p.name} /> : <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center"><Package size={16} className="text-slate-400"/></div>}
+                                            <span className={`text-[9px] font-black px-1.5 py-1 rounded-md shrink-0 ${isOutOfStock ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'}`}>
+                                                {isOutOfStock ? 'Esgotado' : `Estoque: ${p.stock || '∞'}`}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-slate-700 text-xs leading-tight line-clamp-2 mb-1">{p.name}</p>
+                                            <p className="font-black text-blue-600 text-sm">R$ {Number((p as any).promotionalPrice > 0 ? (p as any).promotionalPrice : p.price).toFixed(2)}</p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+
+                {/* BOTÃO FLUTUANTE MOBILE */}
+                <div className="lg:hidden fixed bottom-4 left-4 right-4 z-30">
+                    <button 
+                        onClick={() => setIsMobileCartOpen(!isMobileCartOpen)}
+                        className="w-full bg-slate-900 text-white p-4 rounded-[1.5rem] font-black text-sm uppercase tracking-widest shadow-xl flex justify-between items-center active:scale-95 transition-transform"
+                    >
+                        <div className="flex items-center gap-2"><ShoppingBag size={20}/> Comanda ({manualCart.reduce((a, b) => a + b.quantity, 0)})</div>
+                        <span>R$ {manualCart.reduce((a, b) => a + (b.currentPrice * b.quantity), 0).toFixed(2)}</span>
+                    </button>
+                </div>
+
+                {/* COLUNA DIREITA: COMANDA/CARRINHO */}
+                <div className={`${isMobileCartOpen ? 'fixed inset-0 z-40 bg-white m-0' : 'hidden lg:flex'} w-full lg:w-[400px] xl:w-[450px] flex-col bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden flex-shrink-0`}>
+                    <div className="p-6 bg-slate-900 text-white flex justify-between items-center relative">
+                        <h3 className="font-black italic uppercase text-xl">Comanda</h3>
+                        <button onClick={() => setManualCart([])} className="text-[10px] text-red-400 font-bold uppercase tracking-widest hover:text-red-300">Limpar</button>
+                        {isMobileCartOpen && <button onClick={() => setIsMobileCartOpen(false)} className="absolute top-6 right-6 lg:hidden"><X size={20}/></button>}
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50 p-4">
+                        {manualCart.length === 0 ? (
+                            <div className="h-full flex flex-col items-center justify-center text-slate-300 opacity-50">
+                                <ShoppingBag size={48} className="mb-2"/>
+                                <p className="text-xs font-bold uppercase tracking-widest">Caixa Livre</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {manualCart.map(i => (
+                                    <div key={i.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-2">
+                                        <div className="flex justify-between items-start">
+                                            <span className="font-black text-slate-700 text-xs flex-1 pr-2">{i.name}</span>
+                                            <span className="font-black text-blue-600 text-sm">R$ {(i.currentPrice * i.quantity).toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3 bg-slate-50 p-1.5 rounded-xl border border-slate-100 w-fit">
+                                            <button onClick={() => i.quantity <= 1 ? setManualCart(manualCart.filter(item => item.id !== i.id)) : setManualCart(manualCart.map(item => item.id === i.id ? { ...item, quantity: item.quantity - 1 } : item))} className="w-6 h-6 bg-white rounded-lg shadow-sm text-slate-500 font-bold">-</button>
+                                            <span className="font-black text-slate-800 text-xs w-6 text-center">{i.quantity}</span>
+                                            <button onClick={() => {
+                                                if (i.stock && i.quantity >= Number(i.stock)) return alert("Estoque máximo atingido!");
+                                                setManualCart(manualCart.map(item => item.id === i.id ? { ...item, quantity: item.quantity + 1 } : item));
+                                            }} className="w-6 h-6 bg-white rounded-lg shadow-sm text-blue-600 font-bold">+</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="p-6 bg-white border-t border-slate-100">
+                        {manualCart.length > 0 && (
+                            <div className="mb-4 space-y-3 max-h-[35vh] overflow-y-auto custom-scrollbar p-1">
+                                <label className="flex items-center gap-2 cursor-pointer bg-blue-50 p-3 rounded-xl border border-blue-100">
+                                    <input type="checkbox" checked={manualCustomer.isService} onChange={(e) => setManualCustomer({...manualCustomer, isService: e.target.checked})} className="w-4 h-4 accent-blue-600"/>
+                                    <span className="font-black text-[10px] uppercase text-blue-800 tracking-widest">É um Agendamento?</span>
+                                </label>
+                                
+                                <input type="text" placeholder="Nome do Cliente *" value={manualCustomer.name} onChange={e => setManualCustomer({...manualCustomer, name: e.target.value})} className="w-full p-3 bg-slate-50 rounded-xl font-bold text-xs border border-slate-200 outline-none focus:ring-2 ring-blue-500" />
+                                <input type="tel" placeholder="WhatsApp do Cliente *" value={manualCustomer.phone} onChange={e => setManualCustomer({...manualCustomer, phone: e.target.value.replace(/\D/g, '')})} className="w-full p-3 bg-slate-50 rounded-xl font-bold text-xs border border-slate-200 outline-none focus:ring-2 ring-blue-500" />
+                                
+                                {manualCustomer.isService && (
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <input type="date" value={manualCustomer.date} onChange={e => setManualCustomer({...manualCustomer, date: e.target.value})} className="w-full p-3 bg-slate-50 rounded-xl font-bold text-xs border border-slate-200 outline-none focus:ring-2 ring-blue-500" />
+                                        <input type="time" value={manualCustomer.time} onChange={e => setManualCustomer({...manualCustomer, time: e.target.value})} className="w-full p-3 bg-slate-50 rounded-xl font-bold text-xs border border-slate-200 outline-none focus:ring-2 ring-blue-500" />
+                                    </div>
+                                )}
+                                
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black uppercase text-slate-400">Desconto R$</span>
+                                    <input type="number" placeholder="0.00" value={manualDiscount || ''} onChange={e => setManualDiscount(Number(e.target.value))} className="w-full p-3 bg-green-50 text-green-700 rounded-xl font-bold text-xs border border-green-200 outline-none focus:ring-2 ring-green-500 text-right" />
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex justify-between items-end mb-4">
+                            <span className="font-black text-slate-400 uppercase tracking-widest text-[10px]">Total Final</span>
+                            <span className="text-3xl font-black text-slate-900 italic leading-none">
+                                R$ {Math.max(0, manualCart.reduce((a, b) => a + (b.currentPrice * b.quantity), 0) - manualDiscount).toFixed(2)}
+                            </span>
+                        </div>
+
+                        <button 
+                            onClick={async () => {
+                                if (manualCart.length === 0 || !manualCustomer.name || !manualCustomer.phone) return alert("Preencha o Nome, WhatsApp e adicione itens.");
+                                if (manualCustomer.isService && (!manualCustomer.date || !manualCustomer.time)) return alert("Preencha a Data e Hora do agendamento.");
+                                
+                                setIsSubmittingPDV(true);
+                                try {
+                                    const finalTotal = Math.max(0, manualCart.reduce((a, b) => a + (b.currentPrice * b.quantity), 0) - manualDiscount);
+                                    let notes = manualCustomer.isService ? `Agendamento: ${manualCustomer.date.split('-').reverse().join('/')} às ${manualCustomer.time}` : 'Venda (PDV)';
+                                    
+                                    if (addOrder) {
+                                        await addOrder({
+                                            customerName: manualCustomer.name,
+                                            customerPhone: manualCustomer.phone,
+                                            items: manualCart.map(i => ({
+                                                productId: i.id,
+                                                name: i.name,
+                                                price: i.currentPrice,
+                                                quantity: i.quantity
+                                            })),
+                                            total: finalTotal,
+                                            status: (manualCustomer.isService ? 'pending' : 'completed'),
+                                            paymentStatus: 'paid', 
+                                            source: 'manual_pdv',
+                                            notes: notes,
+                                            tenantId: tenantForHooks,
+                                            createdAt: new Date().toISOString()
+                                        } as any);
+                                        
+                                        alert("✅ Pedido/Agendamento lançado com sucesso!");
+                                        setManualCart([]);
+                                        setManualCustomer({ name: '', phone: '', date: '', time: '', isService: false });
+                                        setManualDiscount(0);
+                                        setIsMobileCartOpen(false);
+                                    } else {
+                                        alert("A função addOrder não está mapeada corretamente.");
+                                    }
+                                } catch (error) {
+                                    alert("Erro ao lançar pedido.");
+                                } finally {
+                                    setIsSubmittingPDV(false);
+                                }
+                            }}
+                            disabled={manualCart.length === 0 || isSubmittingPDV}
+                            className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                        >
+                            {isSubmittingPDV ? 'Processando...' : 'Lançar no Sistema'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+          )}
           {activePanel === 'orders' && (
-            <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-8 space-y-6 max-w-6xl mx-auto shadow-sm">
+            <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-8 space-y-6 max-w-6xl mx-auto shadow-sm animate-in fade-in slide-in-from-bottom-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-gray-50 pb-6">
-                 <h2 className="text-2xl font-black italic uppercase text-[#111827]">Pedidos</h2>
+                 <div>
+                   <h2 className="text-2xl font-black italic uppercase text-[#111827]">Pedidos & Agendamentos</h2>
+                   <p className="text-sm font-bold text-slate-500 mt-1">Gerencie as solicitações recebidas da sua vitrine.</p>
                  </div>
+              </div>
               <div className="space-y-4">
                 {filteredOrders.length === 0 ? (
                   <div className="bg-gray-50 py-16 rounded-2xl text-center text-slate-400 font-bold border-2 border-dashed border-gray-200">Nenhum pedido localizado.</div>
                 ) : (
                   filteredOrders.map(ord => (
-                    <div key={ord.id} className="bg-white border-2 border-gray-100 rounded-2xl p-6 flex flex-col md:flex-row justify-between gap-6 items-start md:items-center hover:shadow-md transition-shadow">
-                      <div className="space-y-2">
+                    <div key={ord.id} className="bg-white border-2 border-gray-100 rounded-[1.5rem] p-6 flex flex-col md:flex-row justify-between gap-6 items-start md:items-center hover:shadow-lg transition-shadow relative overflow-hidden">
+                      {ord.notes && ord.notes.includes('Agendamento:') && (
+                         <div className="absolute top-0 left-0 w-1.5 h-full bg-purple-500"></div>
+                      )}
+                      <div className="space-y-3 flex-1">
                         <div className="flex items-center gap-3">
-                          <span className="font-mono text-sm font-black text-slate-800 bg-gray-100 px-3 py-1 rounded-lg">{ord.id}</span>
-                          <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg border-2 bg-gray-100 text-slate-800 border-gray-200">
-                            {ord.paymentStatus === 'approved' ? 'Aprovado' : 'Pendente'}
+                          <span className="font-mono text-xs font-black text-slate-800 bg-gray-100 px-3 py-1.5 rounded-lg">{ord.id}</span>
+                          <span className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg border-2 ${ord.paymentStatus === 'approved' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
+                            {ord.paymentStatus === 'approved' ? 'Pagamento Aprovado' : 'Aguardando Pagamento'}
                           </span>
                         </div>
-                        <div className="text-sm text-slate-600 font-medium">Cliente: <strong className="text-slate-900 font-black">{ord.customerName}</strong></div>
-                        <div className="text-xs text-slate-500 font-medium bg-gray-50 p-3 rounded-xl border border-gray-100">{ord.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}</div>
+                        
+                        <div>
+                          <div className="text-sm text-slate-600 font-medium">Cliente: <strong className="text-slate-900 font-black text-lg">{ord.customerName}</strong></div>
+                          {ord.customerPhone && (
+                             <a href={`https://wa.me/55${ord.customerPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-green-600 hover:underline flex items-center gap-1 mt-1">
+                               <MessageSquare size={12}/> {ord.customerPhone}
+                             </a>
+                          )}
+                        </div>
+
+                        {/* EXIBE A DATA DO AGENDAMENTO (Ou Endereço) */}
+                        {ord.notes && (
+                            <div className={`text-xs font-bold p-3 rounded-xl border ${ord.notes.includes('Agendamento:') ? 'bg-purple-50 text-purple-800 border-purple-200' : 'bg-blue-50 text-blue-800 border-blue-200'}`}>
+                                {ord.notes}
+                            </div>
+                        )}
+
+                        <div className="text-xs text-slate-500 font-medium bg-gray-50 p-3 rounded-xl border border-gray-100 line-clamp-2">
+                           <strong>Itens:</strong> {ord.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}
+                        </div>
                       </div>
-                      <div className="flex flex-col sm:flex-row items-center gap-4">
-                        <div className="text-right bg-gray-50 p-4 rounded-2xl border-2 border-gray-100 min-w-[150px]">
-                          <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Total</div>
+
+                      <div className="flex flex-col sm:flex-row items-center gap-4 shrink-0">
+                        <div className="text-right bg-gray-50 p-4 rounded-2xl border-2 border-gray-100 min-w-[150px] flex flex-col justify-center">
+                          <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Total a Cobrar</div>
                           <div className="text-2xl font-black text-[#ff7b00] tracking-tight">R$ {ord.total.toFixed(2)}</div>
                         </div>
-                        <div className="flex flex-col gap-2">
-                          {ord.status === 'pending' && <button onClick={() => updateOrderStatus(ord.id, 'paid')} className="px-4 py-2.5 bg-white border-2 border-gray-200 text-[#111827] hover:bg-[#111827] hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all">Confirmar Pago</button>}
-                          {ord.status === 'paid' && <button onClick={() => updateOrderStatus(ord.id, 'delivered')} className="px-4 py-2.5 bg-white border-2 border-gray-200 text-[#111827] hover:bg-[#111827] hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all">Marcar Enviado</button>}
-                          <span className="text-center px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl bg-gray-100 text-slate-500">Status: {ord.status === 'pending' ? 'Pendente' : ord.status === 'paid' ? 'Pago' : 'Entregue'}</span>
+                        
+                        <div className="flex flex-col gap-2 w-full sm:w-auto">
+                          {ord.status === 'pending' && <button onClick={() => updateOrderStatus(ord.id, 'paid')} className="px-5 py-3 bg-white border-2 border-gray-200 text-[#111827] hover:bg-[#111827] hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all w-full">Confirmar Pagamento</button>}
+                          {ord.status === 'paid' && <button onClick={() => updateOrderStatus(ord.id, 'delivered')} className="px-5 py-3 bg-white border-2 border-gray-200 text-[#111827] hover:bg-[#111827] hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all w-full">Marcar Concluído</button>}
+                          
+                          <div className={`text-center px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border ${ord.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : ord.status === 'paid' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                              Status: {ord.status === 'pending' ? 'Pendente' : ord.status === 'paid' ? 'Pago/Confirmado' : 'Entregue/Realizado'}
+                          </div>
                         </div>
                       </div>
                     </div>
                   ))
                 )}
+              </div>
+            </div>
+          )}
+
+          {activePanel === 'customers' && (
+            <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-8 space-y-6 max-w-6xl mx-auto shadow-sm animate-in fade-in slide-in-from-bottom-4">
+               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-gray-50 pb-6">
+                 <div>
+                   <h2 className="text-2xl font-black italic uppercase text-[#111827] flex items-center gap-2"><User className="text-blue-600"/> Gestão de Clientes (CRM)</h2>
+                   <p className="text-sm font-bold text-slate-500 mt-1">Base de contatos gerada automaticamente a partir dos seus pedidos.</p>
+                 </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b-2 border-gray-100">
+                      <th className="pb-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente</th>
+                      <th className="pb-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Contato (WhatsApp)</th>
+                      <th className="pb-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Pedidos</th>
+                      <th className="pb-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">LTV (Gasto Total)</th>
+                      <th className="pb-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                        // Extrai e agrupa clientes únicos baseado nos pedidos
+                        const customerMap = new Map();
+                        orders.forEach(o => {
+                            if (!o.customerName) return;
+                            const key = o.customerPhone || o.customerName; 
+                            if (!customerMap.has(key)) {
+                                customerMap.set(key, { name: o.customerName, phone: o.customerPhone, totalSpent: 0, orderCount: 0 });
+                            }
+                            const c = customerMap.get(key);
+                            c.totalSpent += Number(o.total || 0);
+                            c.orderCount += 1;
+                        });
+                        const uniqueCustomers = Array.from(customerMap.values()).sort((a, b) => b.totalSpent - a.totalSpent);
+
+                        if (uniqueCustomers.length === 0) {
+                            return (
+                                <tr>
+                                    <td colSpan={5} className="py-12 text-center text-slate-400 font-bold border-b border-gray-50">Nenhum cliente registrado ainda.</td>
+                                </tr>
+                            );
+                        }
+
+                        return uniqueCustomers.map((cust, idx) => (
+                            <tr key={idx} className="border-b border-gray-50 hover:bg-gray-50 transition-colors group">
+                                <td className="py-4 px-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-black text-xs shrink-0">
+                                            {cust.name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <span className="font-bold text-slate-800">{cust.name}</span>
+                                    </div>
+                                </td>
+                                <td className="py-4 px-4 font-medium text-slate-600">
+                                    {cust.phone ? cust.phone : <span className="text-gray-300 italic">Não informado</span>}
+                                </td>
+                                <td className="py-4 px-4 text-center font-black text-slate-700">
+                                    <span className="bg-gray-100 px-2 py-1 rounded-lg text-xs">{cust.orderCount}</span>
+                                </td>
+                                <td className="py-4 px-4 text-right font-black text-green-600">
+                                    R$ {cust.totalSpent.toFixed(2)}
+                                </td>
+                                <td className="py-4 px-4 text-right">
+                                    {cust.phone && (
+                                        <a href={`https://wa.me/55${cust.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center p-2 bg-green-50 text-green-600 hover:bg-green-500 hover:text-white rounded-lg transition-colors">
+                                            <MessageSquare size={16} />
+                                        </a>
+                                    )}
+                                </td>
+                            </tr>
+                        ));
+                    })()}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}

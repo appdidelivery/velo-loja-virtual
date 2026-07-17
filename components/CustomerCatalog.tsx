@@ -76,6 +76,7 @@ export default function CustomerCatalog({
   const [mounted, setMounted] = useState(false);
   
   const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState(''); // NOVO: Captura do WhatsApp
   const [customerCnpj, setCustomerCnpj] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Pix');
   const [cep, setCep] = useState('');
@@ -329,15 +330,15 @@ export default function CustomerCatalog({
   const handleWhatsAppCheckout = () => {
     const isService = (TEMPLATES.find((t: any) => t.id === templateId) || TEMPLATES[9]).category === 'servicos';
     
-    if (cart.length === 0 || !customerName.trim()) return;
+    if (cart.length === 0 || !customerName.trim() || !customerPhone.trim()) return;
     if (!isService && (!customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim())) return;
-    // FIX: Removido a trava do endereço do serviço
     if (isService && (!serviceDate || !serviceTime)) return;
 
     let message = isService ? `📅 *SOLICITAÇÃO DE AGENDAMENTO - ${storeName}*\n\n` : `🛒 *SOLICITAÇÃO DE ORÇAMENTO - ${storeName}*\n\n`;
     
     message += `*Dados do Cliente:*\n`;
     message += `👤 Nome: ${customerName}\n`;
+    message += `📱 WhatsApp: ${customerPhone}\n`;
     if (!isService) message += `📄 CNPJ: ${customerCnpj}\n`;
     message += `💳 Pagamento Desejado: ${paymentMethod}\n\n`;
     
@@ -367,9 +368,17 @@ export default function CustomerCatalog({
 
     const encodedMessage = encodeURIComponent(message);
     
+    // NOVO: Adicionamos a data/hora e o telefone para o lojista ver no painel!
+    let orderNotes = `Pagamento: ${paymentMethod}`;
+    if (isService) {
+        orderNotes += ` | 🗓️ Agendamento: ${serviceDate.split('-').reverse().join('/')} às ${serviceTime}`;
+    } else {
+        orderNotes += ` | CEP: ${cep} | CNPJ: ${customerCnpj}`;
+    }
+
     addOrder({
       customerName: customerName,
-      customerPhone: '', 
+      customerPhone: customerPhone, 
       items: cart.map(item => ({
         productId: item.product.id,
         name: item.product.name,
@@ -381,7 +390,7 @@ export default function CustomerCatalog({
       paymentStatus: 'pending',
       createdAt: new Date().toISOString(),
       tenantId: tenantId,
-      notes: `CNPJ: ${customerCnpj} | Pagamento: ${paymentMethod} | CEP: ${cep}`
+      notes: orderNotes
     });
 
     const rawPhone = storeWhatsapp.replace(/\D/g, '');
@@ -1476,7 +1485,8 @@ export default function CustomerCatalog({
                 {cart.length > 0 && (
                   <div className="mb-4 space-y-2 bg-gray-50 p-3 rounded-xl border border-gray-100 max-h-[40vh] overflow-y-auto custom-scrollbar">
                     <p className="text-[10px] font-black uppercase text-gray-500 tracking-wider mb-2">1. Dados Básicos</p>
-                    <input type="text" placeholder="Nome Completo / Contato *" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all" />
+                    <input type="text" placeholder="Nome Completo *" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all mb-2" />
+                    <input type="tel" placeholder="WhatsApp / Celular *" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ''))} maxLength={11} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all mb-2" />
                     {currentTemplate.category !== 'servicos' && (
                       <div className="grid grid-cols-2 gap-2">
                         <input type="text" placeholder="CNPJ *" value={customerCnpj} onChange={(e) => setCustomerCnpj(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all" />
