@@ -1719,7 +1719,7 @@ const [termoIA, setTermoIA] = useState('');
               </div>
 
               <div className="pt-6">
-                <PricingTable plans={pricingPlans} />
+                <PricingTable plans={pricingPlans} tenantId={authRole.tenantId} />
               </div>
 
               <div className="mt-12 bg-white border-2 border-gray-100 rounded-[2rem] p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
