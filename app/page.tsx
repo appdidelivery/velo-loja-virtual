@@ -231,7 +231,7 @@ export default function LandingPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 1.2, delay: 0.8, ease: "easeOut" }}
-                src="/sua-imagem-aqui.png" 
+                src="/tela-app.png" 
                 alt="Interface do Aplicativo Velo Loja"
                 className="absolute inset-0 w-full h-full object-cover object-top z-20 pointer-events-none"
               />
