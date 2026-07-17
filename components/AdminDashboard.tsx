@@ -104,11 +104,21 @@ const handleLogout = async () => {
         const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
         // Usuário logado: Se for local, usa uma loja de teste. Se for nuvem, usa o UID real.
+        // 🧠 IDENTIFICAÇÃO INTELIGENTE (Resolve o problema do Dark Ops)
+        let resolvedTenantId = user.uid; // Padrão
+
+        if (typeof window !== 'undefined') {
+            const host = window.location.hostname;
+            if (host.includes('mamedes.com.br')) resolvedTenantId = 'mamedes';
+            else if (host.includes('sacolaonline.com.br')) resolvedTenantId = 'sacola';
+            else if (host === 'localhost' || host === '127.0.0.1') resolvedTenantId = 'loja_teste_local';
+        }
+
         setAuthRole({
           email: user.email,
           role: 'merchant_owner',
           businessType: 'ecommerce', 
-          tenantId: isLocal ? 'loja_teste_local' : user.uid 
+          tenantId: resolvedTenantId
         });
       } else {
         // Ninguém logado? Expulsa para a tela de login imediatamente.
@@ -197,14 +207,18 @@ const handleLogout = async () => {
       return { name: catName, order: 1, isActive: isActive, count: catProducts.length };
   }).sort((a, b) => a.name.localeCompare(b.name));
 
-  // Oculta a aba Financeira se for Mamedes/Sacola, ou se o status/plano configurado no Dark Ops for gratuito
-  const hideFinance = 
+  // 🛡️ BLINDAGEM MESTRA: Oculta a aba Financeira com base na URL ou no banco de dados (Dark Ops)
+  const isProtectedPartner = 
     authRole.tenantId.includes('mamedes') || 
-    authRole.tenantId.includes('sacola') || 
-    (settingsForm as any)?.billingStatus === 'gratis_vitalicio' || 
-    (settingsForm as any)?.billingStatus === 'cortesia' || 
-    (settingsForm as any)?.billingStatus === 'teste' || 
-    (settingsForm as any)?.plan === 'gratis';
+    authRole.tenantId.includes('sacola') ||
+    (typeof window !== 'undefined' && window.location.hostname.includes('mamedes')) ||
+    (typeof window !== 'undefined' && window.location.hostname.includes('sacola'));
+
+  const hideFinance = 
+    isProtectedPartner || 
+    (settings as any)?.billingStatus === 'gratis_vitalicio' || 
+    (settings as any)?.billingStatus === 'cortesia' ||
+    (settingsForm as any)?.billingStatus === 'gratis_vitalicio';
 
   const showFinanceTab = !hideFinance;
 
