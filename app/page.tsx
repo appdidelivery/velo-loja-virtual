@@ -206,7 +206,8 @@ export default function LandingPage() {
           <div className="flex-1 w-full relative animate-in fade-in zoom-in duration-700">
             <div className="relative mx-auto w-[280px] h-[580px] bg-slate-900 rounded-[3rem] border-[8px] border-slate-800 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.3)] overflow-hidden z-20 flex justify-center">
               <div className="absolute top-0 w-32 h-6 bg-slate-800 rounded-b-3xl z-30"></div>
-              {/* Fake UI do App Cliente */}
+              
+              {/* Fake UI do App Cliente (Mantido estrategicamente como Skeleton Loader) */}
               <div className="w-full h-full bg-slate-50 flex flex-col relative pt-8 px-4">
                 <div className="w-full h-12 bg-white rounded-xl mb-4 shadow-sm flex items-center px-3 gap-2">
                   <div className="w-6 h-6 bg-blue-600 rounded-full"></div>
@@ -224,6 +225,16 @@ export default function LandingPage() {
                    <div className="h-24 bg-white rounded-xl shadow-sm border border-slate-100"></div>
                 </div>
               </div>
+
+              {/* IMAGEM REALISTA DA INTERFACE */}
+              <motion.img 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 1.2, delay: 0.8, ease: "easeOut" }}
+                src="/sua-imagem-aqui.png" 
+                alt="Interface do Aplicativo Velo Loja"
+                className="absolute inset-0 w-full h-full object-cover object-top z-20 pointer-events-none"
+              />
             </div>
 
             {/* Elementos Flutuantes (Decoração) */}
