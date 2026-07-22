@@ -1905,8 +1905,8 @@ const [termoIA, setTermoIA] = useState('');
                         <div className="flex gap-2 overflow-x-auto py-2 custom-scrollbar">
                           {/* Lista de Banners Atuais */}
                           {(settingsForm.banners || []).map((bannerUrl: string, idx: number) => (
-                            <div key={idx} className="w-24 h-12 bg-gray-100 rounded-lg border border-gray-200 flex-shrink-0 relative group">
-                              <img src={bannerUrl} alt={`Banner ${idx}`} className="w-full h-full object-cover rounded-lg" />
+                            <div key={idx} className="h-16 w-auto min-w-[4rem] max-w-[12rem] bg-gray-100 rounded-lg border border-gray-200 flex-shrink-0 relative group flex items-center justify-center overflow-hidden">
+                              <img src={bannerUrl} alt={`Banner ${idx}`} className="max-w-full max-h-full object-contain rounded-lg" />
                               <button 
                                 onClick={async () => {
                                   const newBanners = [...settingsForm.banners];
@@ -2198,11 +2198,6 @@ const [termoIA, setTermoIA] = useState('');
                             <option value="clinica">Clínica / Consultório</option>
                             <option value="oficina">Oficina Mecânica / Assistência Técnica</option>
                             <option value="servicos_gerais">Serviços Gerais (Limpeza, Reformas, Manutenção)</option>
-                        </optgroup>
-                        <optgroup label="Alimentação (Food Service)">
-                            <option value="restaurante">Restaurante / Lanchonete</option>
-                            <option value="doceria">Doceria / Açaiteria / Cafeteria</option>
-                            <option value="bebidas">Adega / Distribuidora de Bebidas</option>
                         </optgroup>
                       </select>
                     </div>

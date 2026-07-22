@@ -712,21 +712,58 @@ export default function GoogleIntegrationDashboard({
                                                             />
                                                             <button 
                                                                 type="button"
-                                                                title="Gerar Resposta Segura (AEO)"
+                                                                title="Gerar Resposta Segura e Otimizada (SEO Local)"
                                                                 onClick={() => {
                                                                     const isPositive = review.starRating === 'FIVE' || review.starRating === 'FOUR';
-                                                                    const storeName = storeStatus?.name || 'nossa loja';
-                                                                    const niche = storeStatus?.storeNiche || 'delivery';
+                                                                    const nomeLoja = settings?.businessName || storeStatus?.name || 'nossa empresa';
                                                                     
+                                                                    // Mapeamento Inteligente de Nichos (Adeus "delivery" padrão)
+                                                                    const rawNiche = settings?.storeNiche || storeStatus?.storeNiche || 'varejo';
+                                                                    const mapaNichos: any = {
+                                                                        'salao_beleza': 'beleza e estética',
+                                                                        'oficina': 'manutenção e excelência técnica',
+                                                                        'clinica': 'atendimento humanizado',
+                                                                        'servicos_gerais': 'serviços especializados',
+                                                                        'restaurante': 'gastronomia',
+                                                                        'floricultura': 'floricultura e presentes',
+                                                                        'mercado': 'compras e conveniência',
+                                                                        'varejo': 'produtos de alta qualidade'
+                                                                    };
+                                                                    const nichoTexto = mapaNichos[rawNiche] || 'nossos serviços';
+
+                                                                    // Captura de Geo SEO (Extrai a cidade/bairro do endereço da loja)
+                                                                    const endereco = settings?.address || '';
+                                                                    let geoTexto = '';
+                                                                    if (endereco.includes('-')) {
+                                                                        const partes = endereco.split('-');
+                                                                        if (partes.length > 1) {
+                                                                            const cidadeStr = partes[partes.length - 1].split(',')[0].trim();
+                                                                            if (cidadeStr.length > 2) geoTexto = ` em ${cidadeStr}`;
+                                                                        }
+                                                                    }
+
+                                                                    // Análise de Contexto (Lê o comentário do cliente)
+                                                                    const comentario = (review.comment || '').toLowerCase();
+                                                                    let detalheTexto = 'a qualidade do nosso trabalho';
+                                                                    if (comentario.includes('rápido') || comentario.includes('tempo')) detalheTexto = 'a nossa agilidade e compromisso com prazos';
+                                                                    else if (comentario.includes('atendimento') || comentario.includes('equipe') || comentario.includes('atenção')) detalheTexto = 'o carinho e dedicação do nosso time';
+                                                                    else if (comentario.includes('preço') || comentario.includes('barato') || comentario.includes('valor')) detalheTexto = 'o nosso excelente custo-benefício';
+                                                                    else if (comentario.includes('limpo') || comentario.includes('higiene') || comentario.includes('organizado')) detalheTexto = 'o nosso rigor com limpeza e organização';
+
+                                                                    // Randomizador de Saudações (Para não ser pego pelo Filtro de Spam do Google)
+                                                                    const saudacoes = ['Olá!', 'Que alegria ler isso!', 'Ficamos honrados com suas palavras!', 'Muito obrigado pelo feedback!'];
+                                                                    const saudacao = saudacoes[Math.floor(Math.random() * saudacoes.length)];
+
                                                                     let safeReply = '';
                                                                     if (isPositive) {
-                                                                        safeReply = `Olá! Agradecemos muito a sua avaliação positiva. Nosso time trabalha duro todos os dias para entregar a melhor experiência em ${niche}. Sempre que precisar, a equipe da ${storeName} estará à disposição!`;
+                                                                        safeReply = `${saudacao} Agradecemos imensamente por reconhecer ${detalheTexto}. A equipe da ${nomeLoja} trabalha diariamente para entregar a melhor experiência de ${nichoTexto}${geoTexto}. Volte sempre que precisar!`;
                                                                     } else {
-                                                                        safeReply = `Olá. Agradecemos o seu feedback, pois ele é fundamental para nossa evolução. Lamentamos que a sua experiência não tenha sido ideal. Prezamos muito pela qualidade do nosso serviço na ${storeName}. Por favor, entre em contato conosco pelos canais oficiais para entendermos o ocorrido.`;
+                                                                        safeReply = `Olá. Agradecemos o seu feedback, pois ele é fundamental para nossa evolução contínua. Lamentamos que a sua experiência com nossos serviços de ${nichoTexto} não tenha atingido o alto padrão que buscamos na ${nomeLoja}. Por favor, entre em contato através dos nossos canais oficiais para que possamos entender melhor o ocorrido.`;
                                                                     }
+                                                                    
                                                                     setReplyInputs({...replyInputs, [review.reviewId]: safeReply});
                                                                 }}
-                                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-600 hover:text-white transition-all"
+                                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-600 hover:text-white transition-all shadow-sm"
                                                             >
                                                                 <Sparkles size={16}/>
                                                             </button>

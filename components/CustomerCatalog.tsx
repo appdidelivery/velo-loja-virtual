@@ -74,6 +74,7 @@ export default function CustomerCatalog({
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [legalModal, setLegalModal] = useState<'privacy' | 'terms' | null>(null);
   
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState(''); // NOVO: Captura do WhatsApp
@@ -1010,8 +1011,8 @@ export default function CustomerCatalog({
                       <p className="text-[10px] font-bold text-slate-400 mb-4">CNPJ: {storeCnpj || STORE_TRUST_DATA.cnpj}</p>
                   )}
                   <div className="flex gap-4 justify-center text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-6">
-                       <a href="/politicas" className="hover:text-slate-600 transition-colors">Privacidade</a>
-                      <a href="/politicas" className="hover:text-slate-600 transition-colors">Termos</a>
+                      <button onClick={() => setLegalModal('privacy')} className="hover:text-slate-600 transition-colors cursor-pointer">Privacidade</button>
+                      <button onClick={() => setLegalModal('terms')} className="hover:text-slate-600 transition-colors cursor-pointer">Termos</button>
                   </div>
                   <a href="https://veloloja.com.br" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center opacity-40 hover:opacity-100 grayscale hover:grayscale-0 transition-all">
                       <img src="/velo loja virtual logo.png" alt="Velo Loja Virtual" className="h-5 w-auto mb-1.5" />
@@ -1039,7 +1040,7 @@ export default function CustomerCatalog({
               </nav>
             ) : (
               <nav className={`shrink-0 w-full flex justify-around items-center px-4 py-3 pb-6 z-40 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] relative ${templateId === 'barbearia_dark' ? 'bg-black border-t border-white/10 rounded-t-3xl text-white' : 'bg-white border-t border-gray-200 rounded-t-3xl'}`}>
-                <button style={{ color: templateId === 'barbearia_dark' ? '#fff' : currentTemplate.primaryColor }} className="flex flex-col items-center gap-1 w-16">
+                <button style={{ color: templateId === 'barbearia_dark' ? '#fff' : themeColor }} className="flex flex-col items-center gap-1 w-16">
                   <LayoutGrid className="w-5 h-5" />
                   <span className="text-[9px] font-bold uppercase tracking-widest">Início</span>
                 </button>
@@ -1574,6 +1575,72 @@ export default function CustomerCatalog({
                 <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-3"><User className="w-5 h-5 text-gray-500" /><span className="text-sm font-bold text-gray-800">Entrar ou Cadastrar</span></div>
                 {categories.map(cat => (<a key={cat} href={`#${cat}`} className="block px-4 py-3 border-b border-gray-100 text-sm font-medium text-gray-700">{cat}</a>))}
               </nav>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* =========================================
+          MODAL DE POLÍTICAS E TERMOS (GOOGLE COMPLIANCE)
+          ========================================= */}
+      <AnimatePresence>
+        {legalModal && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            onClick={() => setLegalModal(null)}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200] flex items-center justify-center p-4 sm:p-6"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 20 }} 
+              animate={{ scale: 1, opacity: 1, y: 0 }} 
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              onClick={(e) => e.stopPropagation()} 
+              className="bg-white w-full max-w-lg max-h-[85vh] rounded-[2rem] shadow-2xl flex flex-col overflow-hidden relative"
+            >
+              <div style={{ backgroundColor: themeColor }} className="p-5 text-white flex items-center justify-between shrink-0 shadow-md z-10">
+                <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5" /> 
+                  {legalModal === 'privacy' ? 'Política de Privacidade' : 'Termos e Condições'}
+                </h3>
+                <button onClick={() => setLegalModal(null)} className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 sm:p-8 custom-scrollbar text-sm font-medium text-slate-600 space-y-4">
+                {legalModal === 'privacy' ? (
+                  <>
+                    <h4 className="font-black text-slate-800 text-base">1. Coleta de Dados e LGPD</h4>
+                    <p>A sua privacidade é importante para nós. Coletamos informações pessoais (como nome, endereço e telefone) exclusivamente com o objetivo de processar seus pedidos, emitir notas fiscais e garantir a entrega dos produtos ou serviços contratados. Atuamos em total conformidade com a Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018).</p>
+                    
+                    <h4 className="font-black text-slate-800 text-base mt-6">2. Uso das Informações</h4>
+                    <p>Não vendemos, alugamos ou repassamos seus dados para terceiros sob nenhuma circunstância, exceto quando estritamente necessário para o cumprimento do serviço (ex: transportadoras e processadores de pagamento).</p>
+
+                    <h4 className="font-black text-slate-800 text-base mt-6">3. Segurança</h4>
+                    <p>Nosso ambiente utiliza protocolos avançados de criptografia. Seus dados de pagamento são processados de forma segura por gateways homologados, sem armazenamento de dados sensíveis de cartão de crédito em nossos servidores.</p>
+                  </>
+                ) : (
+                  <>
+                    <h4 className="font-black text-slate-800 text-base">1. Condições Gerais e Compras</h4>
+                    <p>Ao utilizar nossa loja, você concorda com nossos termos. Todos os pedidos estão sujeitos à confirmação de disponibilidade de estoque. Reservamo-nos o direito de alterar preços e descrições de produtos sem aviso prévio.</p>
+                    
+                    <h4 className="font-black text-slate-800 text-base mt-6">2. Política de Trocas e Reembolso</h4>
+                    <p>Em respeito ao Código de Defesa do Consumidor (Art. 49), garantimos a você o <strong>Direito de Arrependimento</strong>. Você pode solicitar a devolução e reembolso total do produto no prazo de até <strong>7 (sete) dias corridos</strong> após o recebimento, desde que o produto esteja em sua embalagem original e sem indícios de uso.</p>
+                    <p>Para casos de produtos com defeito de fabricação, o prazo para solicitação de troca é de 30 dias corridos.</p>
+
+                    <h4 className="font-black text-slate-800 text-base mt-6">3. Agendamentos e Serviços</h4>
+                    <p>Para prestação de serviços, o agendamento está sujeito à confirmação de nossa equipe via WhatsApp. Cancelamentos devem ser informados com no mínimo 24 horas de antecedência.</p>
+                  </>
+                )}
+              </div>
+              
+              <div className="p-4 bg-gray-50 border-t border-gray-100 shrink-0 text-center">
+                <button onClick={() => setLegalModal(null)} style={{ backgroundColor: themeColor }} className="w-full py-3.5 rounded-xl text-white font-black uppercase tracking-widest text-xs shadow-md hover:opacity-90 transition-opacity">
+                  Entendi e Concordo
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
