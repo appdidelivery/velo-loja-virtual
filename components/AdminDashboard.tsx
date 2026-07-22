@@ -957,7 +957,7 @@ const [termoIA, setTermoIA] = useState('');
                           value={categoryForm.name} 
                           onChange={e => setCategoryForm({ ...categoryForm, name: e.target.value })} 
                           placeholder="Ex: Hambúrgueres"
-                          className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm border border-gray-200 shadow-sm" 
+                          className="w-full p-4 bg-white text-slate-800 rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm border border-gray-200 shadow-sm" 
                       />
                   </div>
 
@@ -968,7 +968,7 @@ const [termoIA, setTermoIA] = useState('');
                           required 
                           value={categoryForm.order} 
                           onChange={e => setCategoryForm({ ...categoryForm, order: Number(e.target.value) })} 
-                          className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm border border-gray-200 shadow-sm" 
+                          className="w-full p-4 bg-white text-slate-800 rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm border border-gray-200 shadow-sm" 
                       />
                   </div>
 
@@ -2502,7 +2502,7 @@ const [termoIA, setTermoIA] = useState('');
                           value={categoryForm.name} 
                           onChange={e => setCategoryForm({ ...categoryForm, name: e.target.value })} 
                           placeholder="Ex: Hambúrgueres"
-                          className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm border border-gray-200 shadow-sm" 
+                          className="w-full p-4 bg-white text-slate-800 rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm border border-gray-200 shadow-sm" 
                       />
                   </div>
 
@@ -2513,7 +2513,7 @@ const [termoIA, setTermoIA] = useState('');
                           required 
                           value={categoryForm.order} 
                           onChange={e => setCategoryForm({ ...categoryForm, order: Number(e.target.value) })} 
-                          className="w-full p-4 bg-white rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm border border-gray-200 shadow-sm" 
+                          className="w-full p-4 bg-white text-slate-800 rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm border border-gray-200 shadow-sm" 
                       />
                   </div>
 

@@ -40,18 +40,37 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       
       const storeName = data.businessName || data.nome || 'Catálogo Virtual';
       const storeDescription = data.slogan || data.description || 'Faça seu pedido online.';
-      const storeLogo = data.logoUrl || '/favicon.ico';
+      const storeLogo = data.logoUrl || 'https://veloloja.com.br/velo-loja-virtual-logo.png'; // Sempre URL Absoluta
+      const siteUrl = `https://www.veloloja.com.br/${slugOrId}`;
 
       return {
+        metadataBase: new URL('https://www.veloloja.com.br'), // Resolve o bug do Vercel Favicon
         title: storeName,
         description: storeDescription,
         openGraph: { 
           title: storeName,
           description: storeDescription,
-          images: [storeLogo] 
+          url: siteUrl, // Resolve o aviso "og:url ausente" do Facebook
+          siteName: storeName,
+          type: 'website', // Resolve o aviso "og:type ausente" do Facebook
+          images: [
+            {
+              url: storeLogo,
+              width: 800,
+              height: 600,
+              alt: storeName,
+            }
+          ] 
+        },
+        twitter: {
+          card: 'summary_large_image',
+          title: storeName,
+          description: storeDescription,
+          images: [storeLogo],
         },
         icons: {
-          icon: storeLogo,
+          icon: storeLogo, // Favicon dinâmico da loja
+          shortcut: storeLogo,
           apple: storeLogo,
         }
       };
@@ -62,7 +81,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return { 
     title: 'Catálogo Virtual', 
-    description: 'Faça seu pedido online.' 
+    description: 'Faça seu pedido online.',
+    metadataBase: new URL('https://www.veloloja.com.br')
   };
 }
 
