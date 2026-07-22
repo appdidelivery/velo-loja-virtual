@@ -438,6 +438,11 @@ export default function CustomerCatalog({
   const generateStructuredData = () => {
     // 1. Mapeamento de Categoria Oficial do Google (Focado em Varejo e Serviços)
     const getSchemaType = (niche: string) => {
+        // LISTA DE SCHEMAS OFICIAIS EXATOS (Vindos do novo Select do Painel)
+        const exactSchemas = ['Store', 'BeautySalon', 'Restaurant', 'AutoRepair', 'MedicalClinic', 'PetStore', 'Pharmacy', 'ProfessionalService'];
+        if (exactSchemas.includes(niche)) return niche;
+
+        // Fallback antigo caso a loja seja velha e ainda não tenha atualizado o painel
         const n = String(niche).toLowerCase();
         if (n.includes('farmacia')) return 'Pharmacy';
         if (n.includes('petshop')) return 'PetStore';

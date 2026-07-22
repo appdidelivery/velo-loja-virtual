@@ -480,6 +480,7 @@ const [termoIA, setTermoIA] = useState('');
         termsOfUse: settingsForm.termsOfUse || '',
         supportHours: settingsForm.supportHours || '',
         seoDescription: settingsForm.seoDescription || '',
+        seoCategory: settingsForm.seoCategory || 'Store',
         adminPhones: settingsForm.whatsappNumber ? [settingsForm.whatsappNumber.replace(/\D/g, '')] : []
       }, { merge: true });
       
@@ -2309,6 +2310,30 @@ const [termoIA, setTermoIA] = useState('');
                         rows={4}
                         placeholder="Ex: Fundada em 2010, nossa empresa é especialista em resolver os seus problemas..."
                       />
+                    </div>
+
+                    {/* NOVO CAMPO: CATEGORIA EXATA PARA SEO (SCHEMA.ORG) */}
+                    <div className="space-y-2 md:col-span-2 pt-4 border-t border-gray-100">
+                      <label className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-purple-600" /> Categoria SEO (Rich Results Google)
+                      </label>
+                      <p className="text-[10px] text-slate-500 font-bold -mt-1 leading-tight max-w-3xl">
+                        Define como os robôs do Google enxergam a estrutura do seu negócio (Schema.org). Isso é independente da categoria do Google Meu Negócio e foca em te destacar nos resultados de pesquisa.
+                      </p>
+                      <select
+                        value={(settingsForm as any).seoCategory || 'Store'}
+                        onChange={(e) => setSettingsForm({...settingsForm, seoCategory: e.target.value} as any)}
+                        className="w-full bg-white border-2 border-purple-100 text-sm font-bold text-slate-700 p-3.5 rounded-xl outline-none focus:border-purple-500 transition-colors cursor-pointer shadow-sm"
+                      >
+                        <option value="Store">Loja Genérica / E-commerce (Padrão)</option>
+                        <option value="BeautySalon">Salão de Beleza / Estética / Cílios / Barbearia</option>
+                        <option value="Restaurant">Restaurante / Lanchonete / Food Service</option>
+                        <option value="AutoRepair">Oficina Mecânica / Reparos</option>
+                        <option value="MedicalClinic">Clínica Médica / Odontológica / Saúde</option>
+                        <option value="PetStore">Pet Shop / Agropecuária</option>
+                        <option value="Pharmacy">Farmácia / Drogaria</option>
+                        <option value="ProfessionalService">Serviços Profissionais / Autônomos</option>
+                      </select>
                     </div>
 
                     {/* NOVO CAMPO MASTER: DESCRIÇÃO SEO (META TAG) */}
