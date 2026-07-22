@@ -5,7 +5,7 @@ import { signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, create
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/services/firebase';
 import { useRouter } from 'next/navigation';
-import { ShoppingBag, AlertCircle, Loader2, Mail, Lock } from 'lucide-react';
+import { ShoppingBag, AlertCircle, Loader2, Mail, Lock, Sparkles } from 'lucide-react';
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -157,16 +157,26 @@ export default function LoginPage() {
 
         {/* Alternância Login / Cadastro */}
         <div className="text-center mb-6">
-          <button 
-            type="button"
-            onClick={() => {
-              setIsRegistering(!isRegistering);
-              setError('');
-            }}
-            className="text-[11px] font-bold text-slate-500 hover:text-[#111827] transition-colors"
-          >
-            {isRegistering ? 'Já tem uma loja? Entrar agora' : 'Não tem uma loja? Crie grátis aqui'}
-          </button>
+          {isRegistering ? (
+            <button 
+              type="button"
+              onClick={() => { setIsRegistering(false); setError(''); }}
+              className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-[#111827] transition-colors underline underline-offset-4"
+            >
+              Já tem uma loja? Voltar para o Login
+            </button>
+          ) : (
+            <div className="pt-4 border-t border-gray-100 mt-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Ainda não é parceiro?</p>
+              <button 
+                type="button"
+                onClick={() => { setIsRegistering(true); setError(''); }}
+                className="w-full bg-blue-50 hover:bg-blue-100 border-2 border-dashed border-blue-200 hover:border-blue-400 text-blue-700 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] transition-all flex items-center justify-center gap-2 active:scale-95 shadow-sm"
+              >
+                <Sparkles size={16} /> Crie sua loja grátis agora
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Divisor */}

@@ -482,13 +482,15 @@ export default function CustomerCatalog({
     });
 
     // 4. Schema da Empresa (Business Master)
+    const siteUrl = `https://www.veloloja.com.br/${initialData?.slug || tenantId}`;
+
     const businessSchema: any = {
       "@context": "https://schema.org",
       "@type": businessType,
       "name": storeName,
       "image": storeLogo || "",
-      "@id": `https://${tenantId}`,
-      "url": `https://${tenantId}`,
+      "@id": siteUrl,
+      "url": siteUrl,
       "telephone": storeWhatsapp,
       "priceRange": storePriceRange || "$$",
       // Puxa do initialData a nova descrição!
@@ -531,14 +533,14 @@ export default function CustomerCatalog({
             "name": p.name || 'Item',
             "image": p.imageUrl ? [p.imageUrl] : [storeLogo],
             "description": p.description || `${p.name} oferecido por ${storeName}.`,
-            "url": `https://${tenantId}/p/${p.id}`,
+            "url": `${siteUrl}/p/${p.id}`,
             "offers": {
                 "@type": "Offer",
                 "priceCurrency": "BRL",
                 "price": finalPrice,
                 "availability": inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
                 "priceValidUntil": priceValidUntil,
-                "url": `https://${tenantId}/p/${p.id}`,
+                "url": `${siteUrl}/p/${p.id}`,
                 "seller": {
                     "@type": businessType,
                     "name": storeName
