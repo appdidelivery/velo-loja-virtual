@@ -96,6 +96,21 @@ const handleLogout = async () => {
     tenantId: 'loading' 
   });
 
+  // DESTRUIDOR DE CACHE: Força o Favicon da Velo Loja no Painel
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // 1. Caça e destrói qualquer Favicon antigo (Vercel ou Next.js)
+      document.querySelectorAll("link[rel~='icon']").forEach(el => el.remove());
+      document.querySelectorAll("link[rel='apple-touch-icon']").forEach(el => el.remove());
+      
+      // 2. Injeta a Logo da Velo à força
+      const newIcon = document.createElement('link');
+      newIcon.rel = 'icon';
+      newIcon.href = '/velo loja virtual logo.png'; // URL da sua imagem na pasta public
+      document.head.appendChild(newIcon);
+    }
+  }, []);
+
   // Trava de Segurança Real (Protege a rota /admin)
   useEffect(() => {
     const { onAuthStateChanged } = require('firebase/auth');
@@ -1938,9 +1953,10 @@ const [termoIA, setTermoIA] = useState('');
                                   setSettingsForm({...settingsForm, banners: newBanners});
                                   if (authRole.tenantId && authRole.tenantId !== 'loading') {
                                     await setDoc(doc(db, 'tenants', authRole.tenantId), { banners: newBanners }, { merge: true });
+                                    // GRAVAÇÃO BLINDADA COM O ID DO LOJISTA
+                                    localStorage.setItem(`velo_store_banners_${authRole.tenantId}`, JSON.stringify(newBanners));
+                                    window.dispatchEvent(new Event('storage'));
                                   }
-                                  localStorage.setItem('velo_store_banners', JSON.stringify(newBanners));
-                                  window.dispatchEvent(new Event('storage'));
                                 }}
                                 className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
                               >
@@ -1970,9 +1986,10 @@ const [termoIA, setTermoIA] = useState('');
                                     setSettingsForm((prev: any) => ({ ...prev, banners: novosBanners }));
                                     if (authRole.tenantId && authRole.tenantId !== 'loading') {
                                       await setDoc(doc(db, 'tenants', authRole.tenantId), { banners: novosBanners }, { merge: true });
+                                      // GRAVAÇÃO BLINDADA COM O ID DO LOJISTA
+                                      localStorage.setItem(`velo_store_banners_${authRole.tenantId}`, JSON.stringify(novosBanners));
+                                      window.dispatchEvent(new Event('storage'));
                                     }
-                                    localStorage.setItem('velo_store_banners', JSON.stringify(novosBanners));
-                                    window.dispatchEvent(new Event('storage'));
                                   } catch (error) {
                                     alert("Erro de conexão ao enviar a imagem.");
                                   } finally {

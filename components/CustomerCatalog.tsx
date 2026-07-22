@@ -111,16 +111,23 @@ export default function CustomerCatalog({
   const [storeTermsOfUse, setStoreTermsOfUse] = useState(initialData?.termsOfUse || '');
   const [storeSupportHours, setStoreSupportHours] = useState(initialData?.supportHours || STORE_TRUST_DATA.supportHours);
 
-  // INJEÇÃO FORÇADA DE FAVICON (Troca a imagem da aba do navegador na hora)
+  // DESTRUIDOR DE CACHE: Força a Logo do Lojista na Vitrine
   useEffect(() => {
-    if (storeLogo) {
-      let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
-      if (!link) {
-        link = document.createElement('link');
-        link.rel = 'icon';
-        document.head.appendChild(link);
-      }
-      link.href = storeLogo;
+    if (storeLogo && typeof window !== 'undefined') {
+      // 1. Caça e destrói o Favicon da Vercel ou qualquer outro
+      document.querySelectorAll("link[rel~='icon']").forEach(el => el.remove());
+      document.querySelectorAll("link[rel='apple-touch-icon']").forEach(el => el.remove());
+      
+      // 2. Injeta a Logo do Lojista à força no navegador
+      const newIcon = document.createElement('link');
+      newIcon.rel = 'icon';
+      newIcon.href = storeLogo;
+      document.head.appendChild(newIcon);
+
+      const appleIcon = document.createElement('link');
+      appleIcon.rel = 'apple-touch-icon';
+      appleIcon.href = storeLogo;
+      document.head.appendChild(appleIcon);
     }
   }, [storeLogo]);
 
@@ -181,9 +188,15 @@ export default function CustomerCatalog({
     setMounted(true);
     let unsubscribe = () => {};
 
-    // CORREÇÃO: Função movida para o escopo raiz do useEffect
+    // DESTRUIDOR DE CACHE CONTAMINADO (Executa 1x para limpar o bug antigo dos clientes)
+    try {
+        localStorage.removeItem('velo_store_banners');
+        localStorage.removeItem('velo_store_announcement');
+    } catch(e) {}
+
+    // CORREÇÃO SÊNIOR: Escopo blindado por Tenant (Lojista)
     const handleStorageChange = () => {
-        const freshBanners = localStorage.getItem('velo_store_banners');
+        const freshBanners = localStorage.getItem(`velo_store_banners_${tenantId}`);
         if (freshBanners) {
             try { setStoreBanners(JSON.parse(freshBanners)); } catch(e) {}
         }
@@ -219,16 +232,18 @@ export default function CustomerCatalog({
               setStoreTermsOfUse(data.termsOfUse || '');
               setStoreSupportHours(data.supportHours || STORE_TRUST_DATA.supportHours);
               
-              // Tenta ler primeiro do LocalStorage para ser instantâneo no painel, se não, pega do Firebase
-              const cachedBanners = localStorage.getItem('velo_store_banners');
+              // PRIORIDADE ABSOLUTA: Firebase (Evita vazamento de dados entre lojas)
+              // O Cache local agora é amarrado EXATAMENTE ao ID da loja atual.
+              const cachedBanners = localStorage.getItem(`velo_store_banners_${tenantId}`);
               if (cachedBanners) {
                   try { setStoreBanners(JSON.parse(cachedBanners)); } 
                   catch(e) { setStoreBanners(data.banners || []); }
               } else {
                   setStoreBanners(data.banners || []); 
               }
-              // LÊ A TARJA E A COR DIRETO DO FIREBASE OU CACHE
-              const cachedAnnouncements = localStorage.getItem('velo_store_announcement');
+
+              // LÊ A TARJA E A COR DIRETO DO FIREBASE OU CACHE BLINDADO
+              const cachedAnnouncements = localStorage.getItem(`velo_store_announcement_${tenantId}`);
               if (cachedAnnouncements) {
                   try { 
                       const parsed = JSON.parse(cachedAnnouncements);
