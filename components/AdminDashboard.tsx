@@ -464,6 +464,7 @@ const [termoIA, setTermoIA] = useState('');
         privacyPolicy: settingsForm.privacyPolicy || '',
         termsOfUse: settingsForm.termsOfUse || '',
         supportHours: settingsForm.supportHours || '',
+        seoDescription: settingsForm.seoDescription || '',
         adminPhones: settingsForm.whatsappNumber ? [settingsForm.whatsappNumber.replace(/\D/g, '')] : []
       }, { merge: true });
       
@@ -2268,6 +2269,45 @@ const [termoIA, setTermoIA] = useState('');
                         rows={4}
                         placeholder="Ex: Fundada em 2010, nossa empresa é especialista em resolver os seus problemas..."
                       />
+                    </div>
+
+                    {/* NOVO CAMPO MASTER: DESCRIÇÃO SEO (META TAG) */}
+                    <div className="space-y-2 md:col-span-2 pt-4 border-t border-gray-100">
+                      <div className="flex justify-between items-center">
+                        <label className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                          <Search className="w-4 h-4 text-blue-600" /> Descrição para o Google (Meta SEO)
+                        </label>
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            if (!settingsForm.businessName) return alert("Preencha o Nome da Loja primeiro!");
+                            const niche = settingsForm.storeNiche || 'varejo';
+                            const loc = (settingsForm as any).address ? ` em ${(settingsForm as any).address.split('-').pop()?.trim()}` : '';
+                            const generatedSEO = `${settingsForm.businessName}: Especialistas em ${niche === 'salao_beleza' ? 'beleza e estética' : niche === 'oficina' ? 'manutenção automotiva' : niche === 'floricultura' ? 'arranjos e presentes' : 'produtos exclusivos'}${loc}. Oferecemos qualidade, atendimento rápido e os melhores preços da região. Acesse nosso catálogo online e garanta sua oferta agora mesmo!`;
+                            setSettingsForm({...settingsForm, seoDescription: generatedSEO} as any);
+                          }}
+                          className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                        >
+                          <Sparkles size={12}/> Auto-Completar (IA)
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-slate-500 font-bold -mt-1 leading-tight max-w-2xl">
+                        Este é o texto que aparece embaixo do link quando alguém compartilha sua loja no WhatsApp ou encontra no Google. O ideal é ter entre 140 e 160 caracteres.
+                      </p>
+                      
+                      <div className="relative">
+                        <textarea
+                          maxLength={160}
+                          value={(settingsForm as any).seoDescription || ''}
+                          onChange={(e) => setSettingsForm({...settingsForm, seoDescription: e.target.value} as any)}
+                          className="w-full bg-white border-2 border-blue-100 text-sm font-medium text-slate-800 p-4 rounded-xl outline-none focus:border-blue-500 transition-colors resize-none shadow-sm"
+                          rows={3}
+                          placeholder="Acesse nosso catálogo e confira os melhores produtos da região..."
+                        />
+                        <div className={`absolute bottom-3 right-4 text-[10px] font-black ${((settingsForm as any).seoDescription || '').length > 150 ? 'text-red-500' : 'text-slate-400'}`}>
+                          {((settingsForm as any).seoDescription || '').length}/160
+                        </div>
+                      </div>
                     </div>
 
                     {/* NOVO CAMPO: FAQ (PERGUNTAS FREQUENTES) */}

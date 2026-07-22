@@ -39,7 +39,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       const data = docSnap.data();
       
       const storeName = data.businessName || data.nome || 'Catálogo Virtual';
-      const storeDescription = data.slogan || data.description || 'Faça seu pedido online.';
+      // MÁGICA: Prioriza a SEO Description recém-criada. Se não existir, pega o About, se não, o Slogan.
+      const storeDescription = data.seoDescription || data.aboutText || data.slogan || 'Catálogo exclusivo. Clique aqui e faça o seu pedido agora mesmo!';
       const storeLogo = data.logoUrl || 'https://veloloja.com.br/velo-loja-virtual-logo.png'; // Sempre URL Absoluta
       const siteUrl = `https://www.veloloja.com.br/${slugOrId}`;
 

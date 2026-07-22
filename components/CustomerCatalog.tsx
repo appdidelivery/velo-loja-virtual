@@ -476,7 +476,8 @@ export default function CustomerCatalog({
       "url": `https://${tenantId}`,
       "telephone": storeWhatsapp,
       "priceRange": storePriceRange || "$$",
-      "description": storeAbout || storeSlogan || "Especialistas em excelência e qualidade.",
+      // Puxa do initialData a nova descrição!
+      "description": initialData?.seoDescription || storeAbout || storeSlogan || "Especialistas em excelência e qualidade.",
       "address": {
         "@type": "PostalAddress",
         "streetAddress": rawAddress,
