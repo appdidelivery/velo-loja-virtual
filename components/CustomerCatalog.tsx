@@ -469,8 +469,9 @@ export default function CustomerCatalog({
         "addressRegion": region,
         "addressCountry": "BR"
       },
+      "paymentAccepted": "Dinheiro, Cartão de Crédito, Cartão de Débito, Pix",
+      "openingHours": "Mo,Tu,We,Th,Fr 08:00-18:00",
       "aggregateRating": {
-        "@type": "AggregateRating",
         "ratingValue": "5.0",
         "reviewCount": "128", 
         "bestRating": "5",
@@ -664,8 +665,8 @@ export default function CustomerCatalog({
                       
                       {storeBanners && storeBanners.length > 0 ? (
                         storeBanners.map((bannerUrl: string, idx: number) => (
-                          <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
-                            <img src={bannerUrl} loading={idx === 0 ? "eager" : "lazy"} className="w-full h-full object-cover" alt={`Oferta ${idx + 1} - ${storeName}`} />
+                          <div key={idx} className={`w-full h-full flex-shrink-0 snap-center relative flex items-center justify-center ${templateId === 'barbearia_dark' ? 'bg-[#1a1a1a]' : 'bg-gray-50/50'}`}>
+                            <img src={bannerUrl} loading={idx === 0 ? "eager" : "lazy"} className="max-w-full max-h-full object-contain drop-shadow-sm" alt={`Oferta ${idx + 1} - ${storeName}`} />
                           </div>
                         ))
                       ) : (
