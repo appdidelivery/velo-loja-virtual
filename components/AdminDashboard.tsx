@@ -607,7 +607,7 @@ const [termoIA, setTermoIA] = useState('');
               <X size={16} />
             </button>
             <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center overflow-hidden shadow-md mb-3 border-4 border-gray-50 p-1">
-              <img src="/velo loja virtual logo.png" alt="Velo Logo" className="w-full h-full object-contain" />
+              <img src={(settings as any).logoUrl || "/velo loja virtual logo.png"} alt={settings.businessName || "Velo Logo"} className="w-full h-full object-contain" />
             </div>
             <h1 className="text-sm font-black text-[#111827] uppercase tracking-wider text-center leading-tight">
               {settings.businessName}
@@ -763,8 +763,8 @@ const [termoIA, setTermoIA] = useState('');
           <header className="lg:hidden flex items-center justify-between bg-white border-b border-gray-200 p-4 shrink-0 shadow-sm z-40 relative">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center overflow-hidden border border-gray-100 p-0.5 shadow-sm">
-                <img src="/velo loja virtual logo.png" alt="Velo Logo" className="w-full h-full object-contain" />
-              </div>
+              <img src={(settings as any).logoUrl || "/velo loja virtual logo.png"} alt={settings.businessName || "Velo Logo"} className="w-full h-full object-contain" />
+            </div>
               <h1 className="text-xs font-black text-[#111827] uppercase tracking-wider line-clamp-1">
                 {settings.businessName || 'Painel de Controle'}
               </h1>

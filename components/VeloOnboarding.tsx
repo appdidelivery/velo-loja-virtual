@@ -58,7 +58,12 @@ export default function VeloOnboarding({
 
   const progressPercentage = ((currentStep - 1) / (steps.length - 1)) * 100;
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    // SALVAMENTO AUTOMÁTICO: Se estiver no passo do Catálogo e tiver digitado um nome, salva antes de avançar.
+    if (currentStep === 5 && productForm.name && !productSaved) {
+      await handleSaveFirstProduct();
+    }
+    
     if (currentStep < steps.length) setCurrentStep(currentStep + 1);
   };
 
@@ -275,7 +280,12 @@ export default function VeloOnboarding({
                       <input 
                         type="text" 
                         value={settingsForm.businessName || ''}
-                        onChange={(e) => setSettingsForm((prev: any) => ({...prev, businessName: e.target.value}))}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          // Slugify: Transforma "Loja do João" em "loja-do-joao"
+                          const newSlug = val.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+                          setSettingsForm((prev: any) => ({...prev, businessName: val, slug: newSlug}));
+                        }}
                         className="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 ring-[#0055ff] font-bold text-sm text-slate-700 border border-gray-200 transition-all" 
                         placeholder="Ex: Velo Express"
                       />
