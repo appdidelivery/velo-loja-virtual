@@ -109,7 +109,21 @@ export default function CustomerCatalog({
   const [storeBanners, setStoreBanners] = useState<string[]>(initialData?.banners || []);
   const [storePrivacyPolicy, setStorePrivacyPolicy] = useState(initialData?.privacyPolicy || '');
   const [storeTermsOfUse, setStoreTermsOfUse] = useState(initialData?.termsOfUse || '');
-  
+  const [storeSupportHours, setStoreSupportHours] = useState(initialData?.supportHours || STORE_TRUST_DATA.supportHours);
+
+  // INJEÇÃO FORÇADA DE FAVICON (Troca a imagem da aba do navegador na hora)
+  useEffect(() => {
+    if (storeLogo) {
+      let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+      link.href = storeLogo;
+    }
+  }, [storeLogo]);
+
   // ESTADOS DA TARJA
   const [announcementTexts, setAnnouncementTexts] = useState<string[]>([]);
   const [announcementColor, setAnnouncementColor] = useState<string>('#e11d48');
@@ -203,6 +217,7 @@ export default function CustomerCatalog({
               setStoreCnpj(data.cnpj || '');
               setStorePrivacyPolicy(data.privacyPolicy || '');
               setStoreTermsOfUse(data.termsOfUse || '');
+              setStoreSupportHours(data.supportHours || STORE_TRUST_DATA.supportHours);
               
               // Tenta ler primeiro do LocalStorage para ser instantâneo no painel, se não, pega do Firebase
               const cachedBanners = localStorage.getItem('velo_store_banners');
@@ -1029,8 +1044,10 @@ export default function CustomerCatalog({
               {/* RODAPÉ GLOBAL */}
               <div className="mt-8 mb-8 mx-4 flex flex-col items-center justify-center text-center border-t border-gray-100 pt-8">
                   {(storeCnpj || STORE_TRUST_DATA.cnpj) && (
-                      <p className="text-[10px] font-bold text-slate-400 mb-4">CNPJ: {storeCnpj || STORE_TRUST_DATA.cnpj}</p>
+                      <p className="text-[10px] font-bold text-slate-400 mb-1">CNPJ: {storeCnpj || STORE_TRUST_DATA.cnpj}</p>
                   )}
+                  <p className="text-[10px] font-bold text-slate-400 mb-4">Atendimento: {storeSupportHours}</p>
+                  
                   <div className="flex gap-4 justify-center text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-6">
                       <button onClick={() => setLegalModal('privacy')} className="hover:text-slate-600 transition-colors cursor-pointer">Privacidade</button>
                       <button onClick={() => setLegalModal('terms')} className="hover:text-slate-600 transition-colors cursor-pointer">Termos</button>

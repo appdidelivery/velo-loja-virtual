@@ -86,7 +86,7 @@ export default function LandingPage() {
         "name": "Velo Loja Virtual",
         "url": "https://veloloja.com.br",
         "logo": "https://veloloja.com.br/velo loja virtual logo.png",
-        "description": "Plataforma SaaS de E-commerce e Delivery com Inteligência Artificial, Automação de WhatsApp e Integração com Google Meu Negócio.",
+        "description": "Plataforma SaaS de E-commerce e Gestão de negócios com Inteligência Artificial, Automação de WhatsApp e Integração com Google Meu Negócio.",
         "sameAs": [
           "https://instagram.com/veloloja",
           "https://facebook.com/veloloja"

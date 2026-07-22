@@ -13,15 +13,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Velo Loja Virtual | Crie seu Catálogo e Delivery Grátis',
+  title: 'Velo Loja Virtual | Crie seu Catálogo Grátis',
   description: 'Plataforma SaaS completa para lojistas. Catálogo digital, PDV, robô de WhatsApp, IA de vendas e integração com o Google Meu Negócio. Comece sem taxa de comissão.',
-  keywords: ['criar loja virtual', 'catálogo digital', 'delivery no whatsapp', 'pdv online', 'sistema para restaurante', 'sistema para loja', 'robô whatsapp'],
-  authors: [{ name: 'Velo Delivery' }],
+  keywords: ['criar loja virtual', 'catálogo digital', 'Atendimento no whatsapp', 'pdv online', 'sistema para restaurante', 'sistema para loja', 'robô whatsapp'],
+  authors: [{ name: 'Velo Loja' }],
   metadataBase: new URL('https://veloloja.com.br'),
   openGraph: {
     type: 'website',
     url: 'https://veloloja.com.br',
-    title: 'Velo Loja Virtual | O Futuro do seu Delivery e Varejo',
+    title: 'Velo Loja Virtual | O Futuro do seu atendimento e gestao de negócio',
     description: 'Pare de pagar taxas abusivas. Tenha sua loja própria com WhatsApp automatizado e IA integrada.',
     siteName: 'Velo Loja Virtual',
     images: [{

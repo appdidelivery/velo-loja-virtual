@@ -7,7 +7,7 @@ import {
   Layers, AlertCircle, Send, HelpCircle, FileCheck, Percent,
   TrendingUp, X, CreditCard, Sun, Moon, ExternalLink, ChevronDown, List,
   Megaphone, ChevronLeft, ChevronRight, Filter, RefreshCw, ShieldCheck, LayoutTemplate, Package,
-  Store, UploadCloud, LogOut
+  Store, UploadCloud, LogOut, Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -460,6 +460,7 @@ const [termoIA, setTermoIA] = useState('');
         metaApiToken: settingsForm.metaApiToken || '',
         privacyPolicy: settingsForm.privacyPolicy || '',
         termsOfUse: settingsForm.termsOfUse || '',
+        supportHours: settingsForm.supportHours || '',
         adminPhones: settingsForm.whatsappNumber ? [settingsForm.whatsappNumber.replace(/\D/g, '')] : []
       }, { merge: true });
       
@@ -2230,6 +2231,21 @@ const [termoIA, setTermoIA] = useState('');
                         onChange={(e) => setSettingsForm({...settingsForm, address: e.target.value} as any)}
                         className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-red-500 transition-colors"
                         placeholder="Ex: Rua das Flores, 123 - Centro, São Paulo - SP"
+                      />
+                    </div>
+
+                    {/* NOVO CAMPO: HORÁRIO DE ATENDIMENTO */}
+                    <div className="space-y-2 md:col-span-2 pt-4 border-t border-gray-100">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5 text-orange-500" /> Horário de Atendimento
+                      </label>
+                      <p className="text-[10px] text-slate-400 font-medium -mt-1">Aparecerá no rodapé da loja. Ex: Segunda a Sexta, das 08h às 18h.</p>
+                      <input 
+                        type="text" 
+                        value={(settingsForm as any).supportHours || ''}
+                        onChange={(e) => setSettingsForm({...settingsForm, supportHours: e.target.value} as any)}
+                        className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-orange-500 transition-colors"
+                        placeholder="Ex: Seg a Sex, das 09:00 às 18:00"
                       />
                     </div>
 
