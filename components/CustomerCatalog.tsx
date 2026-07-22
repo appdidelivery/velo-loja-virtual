@@ -107,6 +107,8 @@ export default function CustomerCatalog({
   const [storeFaq, setStoreFaq] = useState(initialData?.faq || []);
   const [storeCnpj, setStoreCnpj] = useState(initialData?.cnpj || '');
   const [storeBanners, setStoreBanners] = useState<string[]>(initialData?.banners || []);
+  const [storePrivacyPolicy, setStorePrivacyPolicy] = useState(initialData?.privacyPolicy || '');
+  const [storeTermsOfUse, setStoreTermsOfUse] = useState(initialData?.termsOfUse || '');
   
   // ESTADOS DA TARJA
   const [announcementTexts, setAnnouncementTexts] = useState<string[]>([]);
@@ -199,6 +201,8 @@ export default function CustomerCatalog({
               setStoreAbout(data.aboutText || '');
               setStoreFaq(data.faq || []);
               setStoreCnpj(data.cnpj || '');
+              setStorePrivacyPolicy(data.privacyPolicy || '');
+              setStoreTermsOfUse(data.termsOfUse || '');
               
               // Tenta ler primeiro do LocalStorage para ser instantâneo no painel, se não, pega do Firebase
               const cachedBanners = localStorage.getItem('velo_store_banners');
@@ -1634,28 +1638,36 @@ export default function CustomerCatalog({
 
               <div className="flex-1 overflow-y-auto p-6 sm:p-8 custom-scrollbar text-sm font-medium text-slate-600 space-y-4">
                 {legalModal === 'privacy' ? (
-                  <>
-                    <h4 className="font-black text-slate-800 text-base">1. Coleta de Dados e LGPD</h4>
-                    <p>A sua privacidade é importante para nós. Coletamos informações pessoais (como nome, endereço e telefone) exclusivamente com o objetivo de processar seus pedidos, emitir notas fiscais e garantir a entrega dos produtos ou serviços contratados. Atuamos em total conformidade com a Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018).</p>
-                    
-                    <h4 className="font-black text-slate-800 text-base mt-6">2. Uso das Informações</h4>
-                    <p>Não vendemos, alugamos ou repassamos seus dados para terceiros sob nenhuma circunstância, exceto quando estritamente necessário para o cumprimento do serviço (ex: transportadoras e processadores de pagamento).</p>
+                  storePrivacyPolicy ? (
+                    <div className="whitespace-pre-wrap leading-relaxed">{storePrivacyPolicy}</div>
+                  ) : (
+                    <>
+                      <h4 className="font-black text-slate-800 text-base">1. Coleta de Dados e LGPD</h4>
+                      <p>A sua privacidade é importante para nós. Coletamos informações pessoais (como nome, endereço e telefone) exclusivamente com o objetivo de processar seus pedidos, emitir notas fiscais e garantir a entrega dos produtos ou serviços contratados. Atuamos em total conformidade com a Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018).</p>
+                      
+                      <h4 className="font-black text-slate-800 text-base mt-6">2. Uso das Informações</h4>
+                      <p>Não vendemos, alugamos ou repassamos seus dados para terceiros sob nenhuma circunstância, exceto quando estritamente necessário para o cumprimento do serviço (ex: transportadoras e processadores de pagamento).</p>
 
-                    <h4 className="font-black text-slate-800 text-base mt-6">3. Segurança</h4>
-                    <p>Nosso ambiente utiliza protocolos avançados de criptografia. Seus dados de pagamento são processados de forma segura por gateways homologados, sem armazenamento de dados sensíveis de cartão de crédito em nossos servidores.</p>
-                  </>
+                      <h4 className="font-black text-slate-800 text-base mt-6">3. Segurança</h4>
+                      <p>Nosso ambiente utiliza protocolos avançados de criptografia. Seus dados de pagamento são processados de forma segura por gateways homologados, sem armazenamento de dados sensíveis de cartão de crédito em nossos servidores.</p>
+                    </>
+                  )
                 ) : (
-                  <>
-                    <h4 className="font-black text-slate-800 text-base">1. Condições Gerais e Compras</h4>
-                    <p>Ao utilizar nossa loja, você concorda com nossos termos. Todos os pedidos estão sujeitos à confirmação de disponibilidade de estoque. Reservamo-nos o direito de alterar preços e descrições de produtos sem aviso prévio.</p>
-                    
-                    <h4 className="font-black text-slate-800 text-base mt-6">2. Política de Trocas e Reembolso</h4>
-                    <p>Em respeito ao Código de Defesa do Consumidor (Art. 49), garantimos a você o <strong>Direito de Arrependimento</strong>. Você pode solicitar a devolução e reembolso total do produto no prazo de até <strong>7 (sete) dias corridos</strong> após o recebimento, desde que o produto esteja em sua embalagem original e sem indícios de uso.</p>
-                    <p>Para casos de produtos com defeito de fabricação, o prazo para solicitação de troca é de 30 dias corridos.</p>
+                  storeTermsOfUse ? (
+                    <div className="whitespace-pre-wrap leading-relaxed">{storeTermsOfUse}</div>
+                  ) : (
+                    <>
+                      <h4 className="font-black text-slate-800 text-base">1. Condições Gerais e Compras</h4>
+                      <p>Ao utilizar nossa loja, você concorda com nossos termos. Todos os pedidos estão sujeitos à confirmação de disponibilidade de estoque. Reservamo-nos o direito de alterar preços e descrições de produtos sem aviso prévio.</p>
+                      
+                      <h4 className="font-black text-slate-800 text-base mt-6">2. Política de Trocas e Reembolso</h4>
+                      <p>Em respeito ao Código de Defesa do Consumidor (Art. 49), garantimos a você o <strong>Direito de Arrependimento</strong>. Você pode solicitar a devolução e reembolso total do produto no prazo de até <strong>7 (sete) dias corridos</strong> após o recebimento, desde que o produto esteja em sua embalagem original e sem indícios de uso.</p>
+                      <p>Para casos de produtos com defeito de fabricação, o prazo para solicitação de troca é de 30 dias corridos.</p>
 
-                    <h4 className="font-black text-slate-800 text-base mt-6">3. Agendamentos e Serviços</h4>
-                    <p>Para prestação de serviços, o agendamento está sujeito à confirmação de nossa equipe via WhatsApp. Cancelamentos devem ser informados com no mínimo 24 horas de antecedência.</p>
-                  </>
+                      <h4 className="font-black text-slate-800 text-base mt-6">3. Agendamentos e Serviços</h4>
+                      <p>Para prestação de serviços, o agendamento está sujeito à confirmação de nossa equipe via WhatsApp. Cancelamentos devem ser informados com no mínimo 24 horas de antecedência.</p>
+                    </>
+                  )
                 )}
               </div>
               

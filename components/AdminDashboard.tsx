@@ -458,6 +458,8 @@ const [termoIA, setTermoIA] = useState('');
         cnpj: settingsForm.cnpj || '',
         metaPhoneId: settingsForm.metaPhoneId || '',
         metaApiToken: settingsForm.metaApiToken || '',
+        privacyPolicy: settingsForm.privacyPolicy || '',
+        termsOfUse: settingsForm.termsOfUse || '',
         adminPhones: settingsForm.whatsappNumber ? [settingsForm.whatsappNumber.replace(/\D/g, '')] : []
       }, { merge: true });
       
@@ -2302,6 +2304,36 @@ const [termoIA, setTermoIA] = useState('');
                             />
                           </div>
                         ))}
+                      </div>
+                    </div>
+
+                    {/* NOVO CAMPO: TERMOS E PRIVACIDADE */}
+                    <div className="space-y-4 md:col-span-2 pt-4 border-t border-gray-100">
+                      <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                          <ShieldCheck className="w-3.5 h-3.5 text-blue-500" /> Política de Privacidade (Opcional)
+                        </label>
+                        <p className="text-[10px] text-slate-400 font-medium -mt-1 mb-2">Deixe em branco para usar nosso texto padrão (já aprovado pelo Google).</p>
+                        <textarea
+                          value={(settingsForm as any).privacyPolicy || ''}
+                          onChange={(e) => setSettingsForm({...settingsForm, privacyPolicy: e.target.value} as any)}
+                          className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-blue-500 transition-colors resize-y custom-scrollbar"
+                          rows={4}
+                          placeholder="Digite sua política de privacidade personalizada..."
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                          <FileCheck className="w-3.5 h-3.5 text-blue-500" /> Termos e Reembolso (Opcional)
+                        </label>
+                        <p className="text-[10px] text-slate-400 font-medium -mt-1 mb-2">Deixe em branco para usar as regras padrão (Direito de Arrependimento de 7 dias).</p>
+                        <textarea
+                          value={(settingsForm as any).termsOfUse || ''}
+                          onChange={(e) => setSettingsForm({...settingsForm, termsOfUse: e.target.value} as any)}
+                          className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-blue-500 transition-colors resize-y custom-scrollbar"
+                          rows={4}
+                          placeholder="Digite seus termos de uso e política de devolução..."
+                        />
                       </div>
                     </div>
 
