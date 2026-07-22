@@ -66,12 +66,15 @@ export default function AdminDashboard() {
   };
 const handleLogout = async () => {
     if (window.confirm('Tem certeza que deseja sair da sua conta?')) {
-      const { getAuth, signOut } = require('firebase/auth');
-      const auth = getAuth();
       try {
+        // Importação dinâmica segura no Next.js
+        const { getAuth, signOut } = await import('firebase/auth');
+        const { auth } = await import('../services/firebase');
+        
         await signOut(auth);
         window.location.href = '/login';
       } catch (error) {
+        console.error(error);
         alert("Erro ao sair da conta.");
       }
     }
@@ -1919,7 +1922,10 @@ const [termoIA, setTermoIA] = useState('');
                           Recomendado: <b>800x400px</b> (Formato Celular). Máximo de <b>2MB</b> por imagem.
                         </p>
 
-                        <div className="flex gap-2 overflow-x-auto py-2 custom-scrollbar">
+                        {/* NOVO: classes modificadas para esconder a scrollbar nativa */}
+                        <div className="flex gap-2 overflow-x-auto py-2 snap-x snap-mandatory scrollbar-hide" style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+                          <style dangerouslySetInnerHTML={{__html: `::-webkit-scrollbar { display: none; }`}} />
+                          
                           {/* Lista de Banners Atuais */}
                           {(settingsForm.banners || []).map((bannerUrl: string, idx: number) => (
                             <div key={idx} className="h-16 w-auto min-w-[4rem] max-w-[12rem] bg-gray-100 rounded-lg border border-gray-200 flex-shrink-0 relative group flex items-center justify-center overflow-hidden">

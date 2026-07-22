@@ -676,7 +676,9 @@ export default function CustomerCatalog({
                   ) : null}
 
                   <div className={`p-4 pb-2 shadow-sm mb-4 ${templateId === 'barbearia_dark' ? 'bg-black rounded-b-3xl' : templateId === 'beleza_masonry' ? 'bg-transparent' : 'bg-white rounded-b-3xl'}`}>
-                    <div className="w-full h-40 md:h-48 rounded-2xl overflow-hidden relative shadow-md group flex overflow-x-auto snap-x snap-mandatory no-scrollbar">
+                    {/* NOVO: Injeção de estilo inline para forçar o sumiço da scrollbar no Safari/Chrome/iOS */}
+                    <div className="w-full h-40 md:h-48 rounded-2xl overflow-hidden relative shadow-md group flex overflow-x-auto snap-x snap-mandatory" style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+                      <style dangerouslySetInnerHTML={{__html: `::-webkit-scrollbar { display: none !important; }`}} />
                       
                       {storeBanners && storeBanners.length > 0 ? (
                         storeBanners.map((bannerUrl: string, idx: number) => (
