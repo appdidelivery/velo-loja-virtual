@@ -676,14 +676,14 @@ export default function CustomerCatalog({
                   ) : null}
 
                   <div className={`p-4 pb-2 shadow-sm mb-4 ${templateId === 'barbearia_dark' ? 'bg-black rounded-b-3xl' : templateId === 'beleza_masonry' ? 'bg-transparent' : 'bg-white rounded-b-3xl'}`}>
-                    {/* NOVO: Injeção de estilo inline para forçar o sumiço da scrollbar no Safari/Chrome/iOS */}
-                    <div className="w-full h-40 md:h-48 rounded-2xl overflow-hidden relative shadow-md group flex overflow-x-auto snap-x snap-mandatory" style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+                    {/* NOVO: Altura dobrada e flexível (h-[350px] no mobile) para banners verticais aparecerem grandes e legíveis */}
+                    <div className="w-full h-[350px] md:h-[450px] rounded-2xl overflow-hidden relative shadow-md group flex overflow-x-auto snap-x snap-mandatory" style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
                       <style dangerouslySetInnerHTML={{__html: `::-webkit-scrollbar { display: none !important; }`}} />
                       
                       {storeBanners && storeBanners.length > 0 ? (
                         storeBanners.map((bannerUrl: string, idx: number) => (
-                          <div key={idx} className={`w-full h-full flex-shrink-0 snap-center relative flex items-center justify-center ${templateId === 'barbearia_dark' ? 'bg-[#1a1a1a]' : 'bg-gray-50/50'}`}>
-                            <img src={bannerUrl} loading={idx === 0 ? "eager" : "lazy"} className="max-w-full max-h-full object-contain drop-shadow-sm" alt={`Oferta ${idx + 1} - ${storeName}`} />
+                          <div key={idx} className={`w-full h-full flex-shrink-0 snap-center relative flex items-center justify-center ${templateId === 'barbearia_dark' ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
+                            <img src={bannerUrl} loading={idx === 0 ? "eager" : "lazy"} className="w-full h-full object-contain drop-shadow-sm" alt={`Oferta ${idx + 1} - ${storeName}`} />
                           </div>
                         ))
                       ) : (
