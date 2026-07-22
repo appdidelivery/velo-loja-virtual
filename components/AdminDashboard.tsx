@@ -1007,29 +1007,43 @@ const [termoIA, setTermoIA] = useState('');
               <form onSubmit={saveProduct} className="p-6 space-y-5 overflow-y-auto custom-scrollbar bg-gray-50/30">
                 
                 {/* UPLOAD DE IMAGEM */}
-                <div className="flex flex-col items-center gap-4 mb-2">
-                  <div className="relative w-32 h-32 rounded-3xl border-4 border-white shadow-lg bg-gray-100 flex items-center justify-center overflow-hidden group">
-                    {productForm.imageUrl ? (
-                      <img src={productForm.imageUrl} alt="Produto" className="w-full h-full object-cover" />
-                    ) : (
-                      <ShoppingBag className="w-10 h-10 text-gray-300" />
-                    )}
-                    
-                    {/* Overlay Escuro com Loading ou Botão de Envio */}
-                    <label className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                      {isUploadingProductImage ? (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div className="flex flex-col items-center gap-3 mb-2">
+                  <div className="relative">
+                    <div className="relative w-32 h-32 rounded-3xl border-4 border-white shadow-lg bg-gray-100 flex items-center justify-center overflow-hidden group">
+                      {productForm.imageUrl ? (
+                        <img src={productForm.imageUrl} alt="Produto" className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-white text-[10px] font-black uppercase tracking-widest text-center px-2">Trocar<br/>Imagem</span>
+                        <ShoppingBag className="w-10 h-10 text-gray-300" />
                       )}
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={handleProductImageUpload} 
-                        disabled={isUploadingProductImage}
-                        className="hidden" 
-                      />
-                    </label>
+                      
+                      {/* Overlay Escuro com Loading ou Botão de Envio */}
+                      <label className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                        {isUploadingProductImage ? (
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          <span className="text-white text-[10px] font-black uppercase tracking-widest text-center px-2">Trocar<br/>Imagem</span>
+                        )}
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={handleProductImageUpload} 
+                          disabled={isUploadingProductImage}
+                          className="hidden" 
+                        />
+                      </label>
+                    </div>
+                    
+                    {/* BOTÃO REMOVER FOTO VISÍVEL NO MOBILE */}
+                    {productForm.imageUrl && (
+                        <button 
+                            type="button" 
+                            onClick={() => setProductForm({ ...productForm, imageUrl: '' })} 
+                            className="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-transform active:scale-90 z-20"
+                            title="Remover Imagem"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    )}
                   </div>
                   <p className="text-[10px] font-bold text-slate-400">Clique na caixa acima para subir a foto.</p>
                 </div>
@@ -2538,29 +2552,43 @@ const [termoIA, setTermoIA] = useState('');
               <form onSubmit={saveProduct} className="p-6 space-y-5 overflow-y-auto custom-scrollbar bg-gray-50/30">
                 
                 {/* UPLOAD DE IMAGEM */}
-                <div className="flex flex-col items-center gap-4 mb-2">
-                  <div className="relative w-32 h-32 rounded-3xl border-4 border-white shadow-lg bg-gray-100 flex items-center justify-center overflow-hidden group">
-                    {productForm.imageUrl ? (
-                      <img src={productForm.imageUrl} alt="Produto" className="w-full h-full object-cover" />
-                    ) : (
-                      <ShoppingBag className="w-10 h-10 text-gray-300" />
-                    )}
-                    
-                    {/* Overlay Escuro com Loading ou Botão de Envio */}
-                    <label className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                      {isUploadingProductImage ? (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div className="flex flex-col items-center gap-3 mb-2">
+                  <div className="relative">
+                    <div className="relative w-32 h-32 rounded-3xl border-4 border-white shadow-lg bg-gray-100 flex items-center justify-center overflow-hidden group">
+                      {productForm.imageUrl ? (
+                        <img src={productForm.imageUrl} alt="Produto" className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-white text-[10px] font-black uppercase tracking-widest text-center px-2">Trocar<br/>Imagem</span>
+                        <ShoppingBag className="w-10 h-10 text-gray-300" />
                       )}
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={handleProductImageUpload} 
-                        disabled={isUploadingProductImage}
-                        className="hidden" 
-                      />
-                    </label>
+                      
+                      {/* Overlay Escuro com Loading ou Botão de Envio */}
+                      <label className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                        {isUploadingProductImage ? (
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          <span className="text-white text-[10px] font-black uppercase tracking-widest text-center px-2">Trocar<br/>Imagem</span>
+                        )}
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={handleProductImageUpload} 
+                          disabled={isUploadingProductImage}
+                          className="hidden" 
+                        />
+                      </label>
+                    </div>
+                    
+                    {/* BOTÃO REMOVER FOTO VISÍVEL NO MOBILE */}
+                    {productForm.imageUrl && (
+                        <button 
+                            type="button" 
+                            onClick={() => setProductForm({ ...productForm, imageUrl: '' })} 
+                            className="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-transform active:scale-90 z-20"
+                            title="Remover Imagem"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    )}
                   </div>
                   <p className="text-[10px] font-bold text-slate-400">Clique na caixa acima para subir a foto.</p>
                 </div>
@@ -2570,12 +2598,20 @@ const [termoIA, setTermoIA] = useState('');
                     <label className="text-xs font-black text-blue-600 uppercase tracking-widest ml-2 flex items-center gap-2 mb-3">
                         🎥 Vídeo do Produto (Estilo Reels)
                     </label>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         {productForm.videoUrl && (
-                            <div className="relative rounded-2xl overflow-hidden border-2 border-blue-100 aspect-[9/16] w-32 mx-auto bg-slate-900">
-                                <video src={productForm.videoUrl} muted autoPlay loop playsInline className="w-full h-full object-cover opacity-60" />
-                                <button type="button" onClick={() => setProductForm({ ...productForm, videoUrl: '' })} className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 text-white font-black text-[10px] uppercase hover:bg-red-600/80 transition-all">
-                                    <Trash2 size={16} className="mb-1" /> Remover
+                            <div className="relative w-max mx-auto">
+                                <div className="rounded-2xl overflow-hidden border-2 border-blue-100 aspect-[9/16] w-32 bg-slate-900 shadow-md">
+                                    <video src={productForm.videoUrl} muted autoPlay loop playsInline className="w-full h-full object-cover" />
+                                </div>
+                                {/* BOTÃO REMOVER VÍDEO VISÍVEL NO MOBILE */}
+                                <button 
+                                    type="button" 
+                                    onClick={() => setProductForm({ ...productForm, videoUrl: '' })} 
+                                    className="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-transform active:scale-90 z-20"
+                                    title="Remover Vídeo"
+                                >
+                                    <Trash2 size={16} />
                                 </button>
                             </div>
                         )}
