@@ -703,16 +703,19 @@ const [termoIA, setTermoIA] = useState('');
               <span className="text-left truncate leading-tight">Google Meu<br/>Negócio</span>
             </button>
 
-            <button 
-              onClick={() => setActivePanel('chats')} 
-              className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activePanel === 'chats' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
-            >
-              <div className="flex items-center justify-start gap-3 overflow-hidden">
-                <MessageSquare className="w-5 h-5 shrink-0" /> 
-                <span className="text-left truncate">Atendimento</span>
-              </div>
-              {unreadChatsCount > 0 && <span className="shrink-0 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center shadow-sm animate-pulse">{unreadChatsCount}</span>}
-            </button>
+            {/* Oculta o menu de Atendimento se a API da Meta não estiver configurada no Firebase */}
+            {((settings as any)?.metaPhoneId && (settings as any)?.metaApiToken) && (
+              <button 
+                onClick={() => setActivePanel('chats')} 
+                className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activePanel === 'chats' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
+              >
+                <div className="flex items-center justify-start gap-3 overflow-hidden">
+                  <MessageSquare className="w-5 h-5 shrink-0" /> 
+                  <span className="text-left truncate">Atendimento</span>
+                </div>
+                {unreadChatsCount > 0 && <span className="shrink-0 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center shadow-sm animate-pulse">{unreadChatsCount}</span>}
+              </button>
+            )}
 
             <div className="pt-2 border-t border-slate-100 mt-2">
               {showFinanceTab && (
@@ -1721,14 +1724,34 @@ const [termoIA, setTermoIA] = useState('');
           )}
 
           {activePanel === 'chats' && (
-            <div className="space-y-6 max-w-6xl mx-auto">
-              <div className="flex justify-between items-end">
-                <div>
-                  <h2 className="text-3xl font-black italic uppercase text-[#111827]">Atendimento (WhatsApp)</h2>
-                  <p className="text-slate-500 font-bold mt-1 text-sm">Responda seus clientes conectando sua conta da Meta.</p>
+            <div className="space-y-6 max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-4">
+              {((settings as any)?.metaPhoneId && (settings as any)?.metaApiToken) ? (
+                <>
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <h2 className="text-3xl font-black italic uppercase text-[#111827]">Atendimento (WhatsApp)</h2>
+                      <p className="text-slate-500 font-bold mt-1 text-sm">Responda seus clientes conectando sua conta da Meta.</p>
+                    </div>
+                  </div>
+                  <AdminChat />
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center bg-white border-2 border-dashed border-gray-200 rounded-[2.5rem] py-20 px-4 text-center mt-10 shadow-sm">
+                  <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                    <MessageSquare size={40} />
+                  </div>
+                  <h2 className="text-2xl font-black italic uppercase text-slate-800 mb-2">Central de Atendimento Oculta</h2>
+                  <p className="text-sm font-bold text-slate-500 max-w-lg mb-8">
+                    Para habilitar o painel de chat e responder clientes por aqui, você precisa conectar a API Oficial da Meta (WhatsApp).
+                  </p>
+                  <button 
+                    onClick={() => { setActivePanel('settings'); setSettingsSubPanel('integracoes'); }}
+                    className="px-8 py-4 bg-[#111827] text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg hover:bg-black transition-all active:scale-95"
+                  >
+                    Ir para Integrações
+                  </button>
                 </div>
-              </div>
-              <AdminChat />
+              )}
             </div>
           )}
 
