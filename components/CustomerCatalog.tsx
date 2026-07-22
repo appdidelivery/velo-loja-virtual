@@ -774,8 +774,13 @@ export default function CustomerCatalog({
                               onClick={() => { if(hasStock) { setSelectedVariationIndex(0); setSelectedProduct(product); } }} 
                               className={`break-inside-avoid relative group cursor-pointer mb-3 rounded-[2rem] overflow-hidden bg-white shadow-sm border border-pink-50 ${!hasStock ? 'opacity-60 grayscale' : ''}`}
                             >
-                              <img src={product.imageUrl} className="w-full object-cover" style={{ minHeight: '140px' }} alt={product.name}/>
-                              <div className="p-3 bg-white/90 backdrop-blur-sm absolute bottom-0 w-full border-t border-white/50">
+{product.imageUrl ? (
+                                <img src={product.imageUrl} className="w-full object-cover" style={{ minHeight: '140px' }} alt={product.name}/>
+                              ) : (
+                                <div className="w-full bg-slate-100 flex flex-col items-center justify-center text-slate-300" style={{ minHeight: '140px' }}>
+                                  {storeLogo ? <img src={storeLogo} className="w-1/2 h-1/2 object-contain opacity-20 grayscale" alt={storeName} /> : <ShoppingBag size={32} />}
+                                </div>
+                              )}                              <div className="p-3 bg-white/90 backdrop-blur-sm absolute bottom-0 w-full border-t border-white/50">
                                 <h3 className="text-[11px] font-bold text-slate-800 leading-tight line-clamp-2">{product.name}</h3>
                                 <p style={{ color: themeColor }} className="font-black text-sm mt-1">R$ {Number(product.price).toFixed(2)}</p>
                               </div>
@@ -792,8 +797,13 @@ export default function CustomerCatalog({
                                 <Star className="text-yellow-400 w-3 h-3 fill-current" />
                                 <span className="text-white text-[10px] font-bold">5.0</span>
                               </div>
-                              <img src={product.imageUrl} className="w-full h-36 object-cover rounded-[1.5rem]" alt={product.name}/>
-                              <div className="px-1 mt-1">
+{product.imageUrl ? (
+                                <img src={product.imageUrl} className="w-full h-36 object-cover rounded-[1.5rem]" alt={product.name}/>
+                              ) : (
+                                <div className="w-full h-36 bg-[#222] rounded-[1.5rem] flex flex-col items-center justify-center text-gray-600">
+                                  {storeLogo ? <img src={storeLogo} className="w-1/2 h-1/2 object-contain opacity-20 grayscale" alt={storeName} /> : <ShoppingBag size={32} />}
+                                </div>
+                              )}                              <div className="px-1 mt-1">
                                 <h3 className="font-black text-white text-sm uppercase tracking-tight">{product.name}</h3>
                                 <p className="text-gray-400 text-[10px] uppercase font-bold mt-1">R$ {Number(product.price).toFixed(2)}</p>
                               </div>
@@ -830,7 +840,13 @@ export default function CustomerCatalog({
                                 </div>
                               ) : (
                                 <div className={`${(productLayout === 'grid' || currentTemplate.category === 'servicos') ? 'w-full aspect-square' : 'w-[88px] h-[88px] flex-shrink-0'} relative rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 p-1 flex items-center justify-center`}>
-                                  <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
+                                  {product.imageUrl ? (
+                                    <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center p-2 opacity-30 grayscale">
+                                      {storeLogo ? <img src={storeLogo} className="max-w-full max-h-full object-contain" alt="Sem Imagem" /> : <ShoppingBag className="w-6 h-6 text-slate-400" />}
+                                    </div>
+                                  )}
                                   {(product as any).promotionalPrice > 0 && (
                                     <div className="absolute top-0 left-0 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-br-lg shadow-sm z-10">OFERTA</div>
                                   )}
@@ -1250,12 +1266,19 @@ export default function CustomerCatalog({
                       className="w-full h-full object-contain" 
                     />
                   ) : (
-                    <img 
-                      /* @ts-ignore */
-                      src={(selectedProduct as any).images && (selectedProduct as any).images.length > 0 ? (selectedProduct as any).images[selectedImageIndex] : selectedProduct.imageUrl} 
-                      alt={selectedProduct.name} 
-                      className="w-full h-full object-cover sm:object-contain transition-opacity duration-300 bg-white" 
-                    />
+                    ((selectedProduct as any).images && (selectedProduct as any).images.length > 0 ? (selectedProduct as any).images[selectedImageIndex] : selectedProduct.imageUrl) ? (
+                      <img 
+                        /* @ts-ignore */
+                        src={(selectedProduct as any).images && (selectedProduct as any).images.length > 0 ? (selectedProduct as any).images[selectedImageIndex] : selectedProduct.imageUrl} 
+                        alt={selectedProduct.name} 
+                        className="w-full h-full object-cover sm:object-contain transition-opacity duration-300 bg-white" 
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-slate-50 flex flex-col items-center justify-center">
+                        {storeLogo ? <img src={storeLogo} className="w-32 h-32 object-contain opacity-20 grayscale" alt="Sem Imagem" /> : <ShoppingBag className="w-16 h-16 text-slate-300" />}
+                        <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-4">Imagem Indisponível</span>
+                      </div>
+                    )
                   )}
                 </div>
                 
