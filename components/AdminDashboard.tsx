@@ -158,7 +158,7 @@ const handleLogout = async () => {
   const [settings, setSettings] = useState<TenantSettings>(INITIAL_SETTINGS);
 
   const [isSettingsExpanded, setIsSettingsExpanded] = useState(false);
-  const [settingsSubPanel, setSettingsSubPanel] = useState('gerais');
+  const [settingsSubPanel, setSettingsSubPanel] = useState('visual');
     
   const [isXmlModalOpen, setIsXmlModalOpen] = useState(false);
   const [xmlUrl, setXmlUrl] = useState(''); 
@@ -742,7 +742,6 @@ const [termoIA, setTermoIA] = useState('');
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                     <div className="pl-12 pr-3 py-2 space-y-1">
                       <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('visual'); }} className={`block w-full text-left text-[10px] uppercase tracking-widest py-2.5 font-bold rounded-xl px-4 transition-colors ${settingsSubPanel === 'visual' && activePanel === 'settings' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Visual da loja</button>
-                      <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('gerais'); }} className={`block w-full text-left text-[10px] uppercase tracking-widest py-2.5 font-bold rounded-xl px-4 transition-colors ${settingsSubPanel === 'gerais' && activePanel === 'settings' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Gerais</button>
                       <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('dados'); }} className={`block w-full text-left text-[10px] uppercase tracking-widest py-2.5 font-bold rounded-xl px-4 transition-colors ${settingsSubPanel === 'dados' && activePanel === 'settings' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Dados da Loja</button>
                       <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('equipe'); }} className={`block w-full text-left text-[10px] uppercase tracking-widest py-2.5 font-bold rounded-xl px-4 transition-colors ${settingsSubPanel === 'equipe' && activePanel === 'settings' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Acesso e Equipe</button>
                       <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('integracoes'); }} className={`block w-full text-left text-[10px] uppercase tracking-widest py-2.5 font-bold rounded-xl px-4 transition-colors ${settingsSubPanel === 'integracoes' && activePanel === 'settings' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Integrações e APIs</button>
@@ -1818,8 +1817,10 @@ const [termoIA, setTermoIA] = useState('');
     <div className="flex items-center justify-between">
       <div>
         <h2 className="text-2xl font-black italic uppercase text-[#111827] flex items-center gap-2">
-                    {settingsSubPanel === 'gerais' && 'Configurações Gerais'}
-                    {settingsSubPanel === 'dados' && 'Dados da Loja'}
+                    {settingsSubPanel === 'visual' && 'Aparência da Vitrine'}
+                    {settingsSubPanel === 'dados' && 'Identidade da Loja'}
+                    {settingsSubPanel === 'equipe' && 'Controle de Acessos'}
+                    {settingsSubPanel === 'integracoes' && 'Integrações Externas'}
                   </h2>
                 </div>
                 <button onClick={saveSettings} className="px-6 py-3 bg-[#111827] hover:bg-black text-white font-black uppercase tracking-wider rounded-full shadow-lg shadow-black/20 transition-colors text-[11px]">
@@ -1827,35 +1828,7 @@ const [termoIA, setTermoIA] = useState('');
                 </button>
               </div>
 
-              {settingsSubPanel === 'gerais' && (
-                <div className="space-y-6">
-                  {/* Bloco 1: Gerenciamento */}
-                  <div className="bg-white border-2 border-gray-100 rounded-[2rem] overflow-hidden shadow-sm">
-                    <div className="bg-gray-50 px-8 py-5 border-b-2 border-gray-100">
-                      <h3 className="text-slate-800 font-black uppercase tracking-wider text-sm">Gerenciamento (Básico)</h3>
-                    </div>
-                    <div className="p-8">
-                      <div className="space-y-2 max-w-md">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Usarei minha loja como:</label>
-                        <select 
-                          value={settingsForm.storeMode || 'orcamento'}
-                          onChange={(e) => setSettingsForm({...settingsForm, storeMode: e.target.value})}
-                          className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-[#0055ff] transition-colors cursor-pointer"
-                        >
-                          <option value="ecommerce">Loja virtual Completa</option>
-                          <option value="catalogo">Catálogo (Sem preço)</option>
-                          <option value="orcamento">Orçamento (B2B Atacado)</option>
-                        </select>
-                        <p className="text-[10px] text-slate-400 font-medium mt-2 leading-relaxed">
-                          Define o comportamento da vitrine. <strong>E-commerce</strong> envia os pedidos para o painel de "Pedidos" e aceita pagamento online. <strong>Orçamento</strong> envia o pedido direto para o seu WhatsApp. <strong>Catálogo</strong> oculta os preços e o botão de comprar.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-             {settingsSubPanel === 'visual' && (
+              {settingsSubPanel === 'visual' && (
                 <div className="space-y-8">
                   
                   {/* --- NOVA SEÇÃO: GALERIA DE TEMPLATES DINÂMICOS --- */}
