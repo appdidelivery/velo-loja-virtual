@@ -2252,6 +2252,50 @@ const [termoIA, setTermoIA] = useState('');
                       </select>
                     </div>
 
+                    {/* --- NOVO CAMPO: FORMAS DE PAGAMENTO ACEITAS --- */}
+                    <div className="space-y-2 md:col-span-2 pt-4 border-t border-gray-100">
+                      <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                        <CreditCard className="w-4 h-4 text-blue-600" /> Opções de Pagamento (Orçamento/Carrinho)
+                      </label>
+                      <p className="text-[10px] text-slate-500 font-bold -mt-1 leading-tight mb-3">
+                        Selecione as formas de pagamento que aparecerão para o seu cliente escolher na hora de enviar o pedido pelo WhatsApp.
+                      </p>
+                      
+                      <div className="flex flex-wrap gap-3">
+                        {['Pix', 'Cartão de Crédito', 'Cartão de Débito', 'Dinheiro no local', 'Boleto a prazo', 'Link de Pagamento'].map(method => {
+                          // Lógica de fallback para não quebrar caso seja loja velha
+                          const currentMethods = settingsForm.paymentMethods || ['Pix', 'Cartão de Crédito', 'Dinheiro no local', 'Boleto a prazo'];
+                          const isChecked = currentMethods.includes(method);
+
+                          return (
+                            <label key={method} className={`flex items-center gap-2 border-2 px-4 py-3 rounded-xl cursor-pointer transition-all shadow-sm ${isChecked ? 'bg-blue-50 border-blue-400' : 'bg-white border-gray-200 hover:border-blue-200'}`}>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  const updated = e.target.checked
+                                    ? [...currentMethods, method]
+                                    : currentMethods.filter((m: string) => m !== method);
+                                  
+                                  // Se o cara tentar desmarcar tudo, forçamos o Pix pelo menos
+                                  if (updated.length === 0) {
+                                    alert("Você precisa aceitar pelo menos 1 forma de pagamento!");
+                                    return;
+                                  }
+
+                                  setSettingsForm({ ...settingsForm, paymentMethods: updated });
+                                }}
+                                className="w-4 h-4 accent-blue-600"
+                              />
+                              <span className={`text-xs font-black ${isChecked ? 'text-blue-800' : 'text-slate-600'}`}>
+                                {method}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                     {/* NOVO CAMPO: ENDEREÇO FÍSICO (MAPA) */}
                     <div className="space-y-2 md:col-span-2 pt-4 border-t border-gray-100">
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
