@@ -376,7 +376,7 @@ const [storeSupportHours, setStoreSupportHours] = useState(initialData?.supportH
     message += `*Dados do Cliente:*\n`;
     message += `👤 Nome: ${customerName}\n`;
     message += `📱 WhatsApp: ${customerPhone}\n`;
-    if (!isService) message += `📄 CNPJ: ${customerCnpj}\n`;
+    if (!isService) message += `📄 CPF/CNPJ: ${customerCnpj}\n`;
     message += `💳 Pagamento Desejado: ${paymentMethod}\n\n`;
     
     if (isService) {
@@ -410,7 +410,7 @@ const [storeSupportHours, setStoreSupportHours] = useState(initialData?.supportH
     if (isService) {
         orderNotes += ` | 🗓️ Agendamento: ${serviceDate.split('-').reverse().join('/')} às ${serviceTime}`;
     } else {
-        orderNotes += ` | CEP: ${cep} | CNPJ: ${customerCnpj}`;
+        orderNotes += ` | CEP: ${cep} | CPF/CNPJ: ${customerCnpj}`;
     }
 
     addOrder({
@@ -1593,7 +1593,7 @@ const [storeSupportHours, setStoreSupportHours] = useState(initialData?.supportH
                     <input type="tel" placeholder="WhatsApp / Celular *" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ''))} maxLength={11} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all mb-2" />
                     {currentTemplate.category !== 'servicos' && (
                       <div className="grid grid-cols-2 gap-2">
-                        <input type="text" placeholder="CNPJ *" value={customerCnpj} onChange={(e) => setCustomerCnpj(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all" />
+                        <input type="text" placeholder="CPF ou CNPJ *" value={customerCnpj} onChange={(e) => setCustomerCnpj(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all" />
                         <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all text-gray-700">
                           <option value="Pix">Pix</option>
                           <option value="Cartão de Crédito">Cartão de Crédito</option>
