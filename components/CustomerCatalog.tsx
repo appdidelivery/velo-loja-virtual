@@ -109,8 +109,18 @@ export default function CustomerCatalog({
   const [storeBanners, setStoreBanners] = useState<string[]>(initialData?.banners || []);
   const [storePrivacyPolicy, setStorePrivacyPolicy] = useState(initialData?.privacyPolicy || '');
   const [storeTermsOfUse, setStoreTermsOfUse] = useState(initialData?.termsOfUse || '');
-const [storeSupportHours, setStoreSupportHours] = useState(initialData?.supportHours || STORE_TRUST_DATA.supportHours);
+  const [storeSupportHours, setStoreSupportHours] = useState(initialData?.supportHours || STORE_TRUST_DATA.supportHours);
   const [storeGoogleReviewUrl, setStoreGoogleReviewUrl] = useState(initialData?.googleReviewUrl || '');
+  
+  // CORREÇÃO: Declarando os estados de pagamento
+  const [storePaymentMethods, setStorePaymentMethods] = useState<string[]>(initialData?.paymentMethods || ['Pix', 'Cartão de Crédito', 'Dinheiro no local', 'Boleto a prazo']);
+  
+  // Efeito de segurança: garante que o método selecionado exista na lista
+  useEffect(() => {
+    if (storePaymentMethods.length > 0 && !storePaymentMethods.includes(paymentMethod)) {
+      setPaymentMethod(storePaymentMethods[0]);
+    }
+  }, [storePaymentMethods, paymentMethod]);
 
   // DESTRUIDOR DE CACHE: Força a Logo do Lojista na Vitrine
   useEffect(() => {
@@ -232,7 +242,15 @@ const [storeSupportHours, setStoreSupportHours] = useState(initialData?.supportH
               setStorePrivacyPolicy(data.privacyPolicy || '');
               setStoreTermsOfUse(data.termsOfUse || '');
               setStoreSupportHours(data.supportHours || STORE_TRUST_DATA.supportHours);
+              setStorePrivacyPolicy(data.privacyPolicy || '');
+              setStoreTermsOfUse(data.termsOfUse || '');
+              setStoreSupportHours(data.supportHours || STORE_TRUST_DATA.supportHours);
               setStoreGoogleReviewUrl(data.googleReviewUrl || '');
+              
+              // CORREÇÃO: Atualiza os pagamentos baseados no banco de dados
+              if (data.paymentMethods && data.paymentMethods.length > 0) {
+                setStorePaymentMethods(data.paymentMethods);
+              }
                              
               // PRIORIDADE ABSOLUTA: Firebase (Evita vazamento de dados entre lojas)
               // O Cache local agora é amarrado EXATAMENTE ao ID da loja atual.
@@ -394,6 +412,7 @@ const [storeSupportHours, setStoreSupportHours] = useState(initialData?.supportH
 
     cart.forEach((item, index) => {
       message += `${index + 1}. *${item.product.name}*\n`;
+      if (item.product.sku) message += `   SKU: ${item.product.sku}\n`;
       message += `   Qtd: ${item.quantity} un\n`;
       message += `   Subtotal: R$ ${(item.quantity * item.product.price).toFixed(2)}\n\n`;
     });
@@ -1595,10 +1614,10 @@ const [storeSupportHours, setStoreSupportHours] = useState(initialData?.supportH
                       <div className="grid grid-cols-2 gap-2">
                         <input type="text" placeholder="CPF ou CNPJ *" value={customerCnpj} onChange={(e) => setCustomerCnpj(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all" />
                         <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="w-full h-9 px-3 text-xs bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all text-gray-700">
-                          <option value="Pix">Pix</option>
-                          <option value="Cartão de Crédito">Cartão de Crédito</option>
-                          <option value="Dinheiro">Dinheiro no local</option>
-                          <option value="Boleto">Boleto a prazo</option>
+                          {/* CORREÇÃO: Adicionado o tipo ': string' para satisfazer o TypeScript */}
+                          {storePaymentMethods.map((method: string) => (
+                            <option key={method} value={method}>{method}</option>
+                          ))}
                         </select>
                       </div>
                     )}

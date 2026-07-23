@@ -476,6 +476,7 @@ const [termoIA, setTermoIA] = useState('');
         storeMode: settingsForm.storeMode,
         maintenanceMode: settingsForm.maintenanceMode,
         productLayout: settingsForm.productLayout,
+        paymentMethods: settingsForm.paymentMethods || ['Pix', 'Cartão de Crédito', 'Dinheiro no local', 'Boleto a prazo'],
         templateId: settingsForm.templateId,
         banners: settingsForm.banners || [], // <-- SALVA OS BANNERS
         announcementTexts: settingsForm.announcementTexts || ['', '', ''],
