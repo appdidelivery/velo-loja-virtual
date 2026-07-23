@@ -128,7 +128,7 @@ const handleLogout = async () => {
         if (typeof window !== 'undefined') {
             const host = window.location.hostname;
             if (host.includes('mamedes.com.br')) resolvedTenantId = 'mamedes';
-            else if (host.includes('sacolaonline.com.br')) resolvedTenantId = 'sacola';
+            else if (host.includes('sacolaonline.com.br')) resolvedTenantId = 'app.sacolaonline.com.br';
             else if (host === 'localhost' || host === '127.0.0.1') resolvedTenantId = 'loja_teste_local';
         }
 
@@ -371,10 +371,18 @@ const handleLogout = async () => {
   const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 2 * 1024 * 1024) return alert("⚠️ Imagem muito pesada! Máximo de 2MB.");
+    
     setIsUploadingProductImage(true);
     try {
       const url = await uploadImageToCloudinary(file);
-      setProductForm({ ...productForm, imageUrl: url });
+      const newImages = [...(productForm.images || []), url];
+      
+      setProductForm({ 
+        ...productForm, 
+        images: newImages,
+        imageUrl: newImages[0] // A primeira imagem do array é sempre a Capa oficial
+      });
     } catch (error) {
       alert("Falha de conexão com a nuvem de imagens.");
     } finally {
@@ -602,13 +610,16 @@ const [termoIA, setTermoIA] = useState('');
 
   const openNewProductModal = () => {
     setEditingProduct(null);
-    setProductForm({ name: '', description: '', price: 0, imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600', videoUrl: '', category: 'Geral', stock: 12, sku: `PROD-${Math.floor(Math.random() * 9000 + 1000)}`, isActive: true, ean: '', ncm: '', weight: 0, seoTitle: '', seoDescription: '' });
+    setProductForm({ name: '', description: '', price: 0, imageUrl: '', images: [], videoUrl: '', category: 'Geral', stock: 12, sku: `PROD-${Math.floor(Math.random() * 9000 + 1000)}`, isActive: true, ean: '', ncm: '', weight: 0, seoTitle: '', seoDescription: '' });
     setIsProductModalOpen(true);
   };
 
   const openEditProductModal = (prod: Product) => {
     setEditingProduct(prod);
-    setProductForm({ name: prod.name, description: prod.description, price: prod.price, imageUrl: prod.imageUrl, videoUrl: (prod as any).videoUrl || '', category: prod.category, stock: prod.stock, sku: prod.sku, isActive: prod.isActive, ean: prod.ean || '', ncm: prod.ncm || '', weight: prod.weight || 0, seoTitle: prod.seoTitle || '', seoDescription: prod.seoDescription || '' });
+    // Recupera o array de imagens. Se for um produto antigo que só tem 1 foto, converte ela pra array.
+    const currentImages = (prod as any).images?.length > 0 ? (prod as any).images : (prod.imageUrl && prod.imageUrl !== 'https://cdn-icons-png.flaticon.com/512/8636/8636813.png' ? [prod.imageUrl] : []);
+    
+    setProductForm({ name: prod.name, description: prod.description, price: prod.price, imageUrl: prod.imageUrl, images: currentImages, videoUrl: (prod as any).videoUrl || '', category: prod.category, stock: prod.stock, sku: prod.sku, isActive: prod.isActive, ean: prod.ean || '', ncm: prod.ncm || '', weight: prod.weight || 0, seoTitle: prod.seoTitle || '', seoDescription: prod.seoDescription || '' });
     setIsProductModalOpen(true);
   };
 
@@ -1043,46 +1054,70 @@ const [termoIA, setTermoIA] = useState('');
               
               <form onSubmit={saveProduct} className="p-6 space-y-5 overflow-y-auto custom-scrollbar bg-gray-50/30">
                 
-                {/* UPLOAD DE IMAGEM */}
-                <div className="flex flex-col items-center gap-3 mb-2">
-                  <div className="relative">
-                    <div className="relative w-32 h-32 rounded-3xl border-4 border-white shadow-lg bg-gray-100 flex items-center justify-center overflow-hidden group">
-                      {productForm.imageUrl ? (
-                        <img src={productForm.imageUrl} alt="Produto" className="w-full h-full object-cover" />
-                      ) : (
-                        <ShoppingBag className="w-10 h-10 text-gray-300" />
-                      )}
-                      
-                      {/* Overlay Escuro com Loading ou Botão de Envio */}
-                      <label className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                {/* UPLOAD DE IMAGENS (GALERIA MULTIPLA) */}
+                <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden p-4 space-y-3 mb-2 shadow-sm">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-black uppercase text-slate-700 flex items-center gap-2">
+                      <ShoppingBag size={16} className="text-blue-600"/> Galeria de Fotos
+                    </label>
+                    <span className="text-[10px] font-black text-slate-400 bg-gray-100 px-2 py-1 rounded-md">
+                      {(productForm.images || []).length}/10
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 font-medium -mt-2">
+                    A primeira foto será a capa do produto. (Máx 2MB por imagem).
+                  </p>
+
+                  <div className="flex gap-3 overflow-x-auto py-2 snap-x snap-mandatory scrollbar-hide" style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+                    <style dangerouslySetInnerHTML={{__html: `::-webkit-scrollbar { display: none; }`}} />
+                    
+                    {/* Renderiza as fotos atuais do Array */}
+                    {(productForm.images || []).map((imgUrl: string, idx: number) => (
+                      <div key={idx} className="h-28 w-28 bg-gray-50 rounded-xl border border-gray-200 flex-shrink-0 relative group flex items-center justify-center overflow-hidden shadow-sm">
+                        {idx === 0 && (
+                          <span className="absolute bottom-0 inset-x-0 bg-blue-600/90 backdrop-blur-sm text-white text-[9px] text-center font-black py-1 z-10">CAPA</span>
+                        )}
+                        <img src={imgUrl} alt={`Foto ${idx}`} className="max-w-full max-h-full object-contain" />
+                        
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            const newImages = [...productForm.images];
+                            newImages.splice(idx, 1);
+                            setProductForm({ 
+                              ...productForm, 
+                              images: newImages,
+                              imageUrl: newImages.length > 0 ? newImages[0] : '' 
+                            });
+                          }}
+                          className="absolute top-1 right-1 bg-red-500 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600 z-20"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    ))}
+
+                    {/* Botão de Adicionar Nova Foto */}
+                    {(productForm.images || []).length < 10 && (
+                      <label className="h-28 w-28 flex-shrink-0 cursor-pointer bg-gray-50 border-2 border-dashed border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-colors rounded-xl flex flex-col items-center justify-center relative">
                         {isUploadingProductImage ? (
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                         ) : (
-                          <span className="text-white text-[10px] font-black uppercase tracking-widest text-center px-2">Trocar<br/>Imagem</span>
+                          <>
+                            <Plus className="w-6 h-6 text-slate-400 mb-1" />
+                            <span className="text-[9px] font-black uppercase text-slate-500">Add Foto</span>
+                          </>
                         )}
                         <input 
                           type="file" 
-                          accept="image/*" 
-                          onChange={handleProductImageUpload} 
-                          disabled={isUploadingProductImage}
+                          accept="image/jpeg, image/png, image/webp" 
+                          disabled={isUploadingProductImage} 
                           className="hidden" 
+                          onChange={handleProductImageUpload}
                         />
                       </label>
-                    </div>
-                    
-                    {/* BOTÃO REMOVER FOTO VISÍVEL NO MOBILE */}
-                    {productForm.imageUrl && (
-                        <button 
-                            type="button" 
-                            onClick={() => setProductForm({ ...productForm, imageUrl: '' })} 
-                            className="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-transform active:scale-90 z-20"
-                            title="Remover Imagem"
-                        >
-                            <Trash2 size={16} />
-                        </button>
                     )}
                   </div>
-                  <p className="text-[10px] font-bold text-slate-400">Clique na caixa acima para subir a foto.</p>
                 </div>
 
                 {/* --- GERADOR DE IA (VELO COPY) --- */}
@@ -2739,46 +2774,70 @@ const [termoIA, setTermoIA] = useState('');
               
               <form onSubmit={saveProduct} className="p-6 space-y-5 overflow-y-auto custom-scrollbar bg-gray-50/30">
                 
-                {/* UPLOAD DE IMAGEM */}
-                <div className="flex flex-col items-center gap-3 mb-2">
-                  <div className="relative">
-                    <div className="relative w-32 h-32 rounded-3xl border-4 border-white shadow-lg bg-gray-100 flex items-center justify-center overflow-hidden group">
-                      {productForm.imageUrl ? (
-                        <img src={productForm.imageUrl} alt="Produto" className="w-full h-full object-cover" />
-                      ) : (
-                        <ShoppingBag className="w-10 h-10 text-gray-300" />
-                      )}
-                      
-                      {/* Overlay Escuro com Loading ou Botão de Envio */}
-                      <label className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                {/* UPLOAD DE IMAGENS (GALERIA MULTIPLA) */}
+                <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden p-4 space-y-3 mb-2 shadow-sm">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-black uppercase text-slate-700 flex items-center gap-2">
+                      <ShoppingBag size={16} className="text-blue-600"/> Galeria de Fotos
+                    </label>
+                    <span className="text-[10px] font-black text-slate-400 bg-gray-100 px-2 py-1 rounded-md">
+                      {(productForm.images || []).length}/10
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 font-medium -mt-2">
+                    A primeira foto será a capa do produto. (Máx 2MB por imagem).
+                  </p>
+
+                  <div className="flex gap-3 overflow-x-auto py-2 snap-x snap-mandatory scrollbar-hide" style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+                    <style dangerouslySetInnerHTML={{__html: `::-webkit-scrollbar { display: none; }`}} />
+                    
+                    {/* Renderiza as fotos atuais do Array */}
+                    {(productForm.images || []).map((imgUrl: string, idx: number) => (
+                      <div key={idx} className="h-28 w-28 bg-gray-50 rounded-xl border border-gray-200 flex-shrink-0 relative group flex items-center justify-center overflow-hidden shadow-sm">
+                        {idx === 0 && (
+                          <span className="absolute bottom-0 inset-x-0 bg-blue-600/90 backdrop-blur-sm text-white text-[9px] text-center font-black py-1 z-10">CAPA</span>
+                        )}
+                        <img src={imgUrl} alt={`Foto ${idx}`} className="max-w-full max-h-full object-contain" />
+                        
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            const newImages = [...productForm.images];
+                            newImages.splice(idx, 1);
+                            setProductForm({ 
+                              ...productForm, 
+                              images: newImages,
+                              imageUrl: newImages.length > 0 ? newImages[0] : '' 
+                            });
+                          }}
+                          className="absolute top-1 right-1 bg-red-500 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600 z-20"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    ))}
+
+                    {/* Botão de Adicionar Nova Foto */}
+                    {(productForm.images || []).length < 10 && (
+                      <label className="h-28 w-28 flex-shrink-0 cursor-pointer bg-gray-50 border-2 border-dashed border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-colors rounded-xl flex flex-col items-center justify-center relative">
                         {isUploadingProductImage ? (
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                         ) : (
-                          <span className="text-white text-[10px] font-black uppercase tracking-widest text-center px-2">Trocar<br/>Imagem</span>
+                          <>
+                            <Plus className="w-6 h-6 text-slate-400 mb-1" />
+                            <span className="text-[9px] font-black uppercase text-slate-500">Add Foto</span>
+                          </>
                         )}
                         <input 
                           type="file" 
-                          accept="image/*" 
-                          onChange={handleProductImageUpload} 
-                          disabled={isUploadingProductImage}
+                          accept="image/jpeg, image/png, image/webp" 
+                          disabled={isUploadingProductImage} 
                           className="hidden" 
+                          onChange={handleProductImageUpload}
                         />
                       </label>
-                    </div>
-                    
-                    {/* BOTÃO REMOVER FOTO VISÍVEL NO MOBILE */}
-                    {productForm.imageUrl && (
-                        <button 
-                            type="button" 
-                            onClick={() => setProductForm({ ...productForm, imageUrl: '' })} 
-                            className="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-transform active:scale-90 z-20"
-                            title="Remover Imagem"
-                        >
-                            <Trash2 size={16} />
-                        </button>
                     )}
                   </div>
-                  <p className="text-[10px] font-bold text-slate-400">Clique na caixa acima para subir a foto.</p>
                 </div>
 
                 {/* --- UPLOAD DE VÍDEO VERTICAL (REELS/TIKTOK) --- */}
