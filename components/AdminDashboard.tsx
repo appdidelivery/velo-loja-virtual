@@ -267,9 +267,20 @@ const handleLogout = async () => {
   const criticalProducts = products.filter(p => p.stock !== undefined && p.stock !== null && String(p.stock) !== '' && Number(p.stock) <= 5);
 
   const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(productSearch.toLowerCase()) || p.sku.toLowerCase().includes(productSearch.toLowerCase());
+    const safeName = (p.name || '').toLowerCase();
+    const safeSku = (p.sku || '').toLowerCase();
+    const searchLower = (productSearch || '').toLowerCase();
+    
+    const matchesSearch = safeName.includes(searchLower) || safeSku.includes(searchLower);
     const matchesCategory = productCategoryFilter === 'all' || p.category === productCategoryFilter;
-    const matchesStatus = productStatusFilter === 'all' || (productStatusFilter === 'active' && p.isActive) || (productStatusFilter === 'inactive' && !p.isActive);
+    
+    // Blindagem: Aceita o padrão boolean (isActive) e o padrão em string legado (status: 'ativo')
+    const isProdActive = p.isActive === true || (p as any).status === 'ativo' || String(p.isActive) === 'true';
+    
+    const matchesStatus = productStatusFilter === 'all' || 
+                          (productStatusFilter === 'active' && isProdActive) || 
+                          (productStatusFilter === 'inactive' && !isProdActive);
+                          
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
