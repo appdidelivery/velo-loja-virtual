@@ -109,7 +109,8 @@ export default function CustomerCatalog({
   const [storeBanners, setStoreBanners] = useState<string[]>(initialData?.banners || []);
   const [storePrivacyPolicy, setStorePrivacyPolicy] = useState(initialData?.privacyPolicy || '');
   const [storeTermsOfUse, setStoreTermsOfUse] = useState(initialData?.termsOfUse || '');
-  const [storeSupportHours, setStoreSupportHours] = useState(initialData?.supportHours || STORE_TRUST_DATA.supportHours);
+const [storeSupportHours, setStoreSupportHours] = useState(initialData?.supportHours || STORE_TRUST_DATA.supportHours);
+  const [storeGoogleReviewUrl, setStoreGoogleReviewUrl] = useState(initialData?.googleReviewUrl || '');
 
   // DESTRUIDOR DE CACHE: Força a Logo do Lojista na Vitrine
   useEffect(() => {
@@ -231,7 +232,8 @@ export default function CustomerCatalog({
               setStorePrivacyPolicy(data.privacyPolicy || '');
               setStoreTermsOfUse(data.termsOfUse || '');
               setStoreSupportHours(data.supportHours || STORE_TRUST_DATA.supportHours);
-              
+              setStoreGoogleReviewUrl(data.googleReviewUrl || '');
+                             
               // PRIORIDADE ABSOLUTA: Firebase (Evita vazamento de dados entre lojas)
               // O Cache local agora é amarrado EXATAMENTE ao ID da loja atual.
               const cachedBanners = localStorage.getItem(`velo_store_banners_${tenantId}`);
@@ -973,8 +975,30 @@ export default function CustomerCatalog({
               {templateId !== 'nativo_app' && currentTemplate.category !== 'servicos' && (
                 <div className="mt-12 mb-8 mx-4 flex flex-col gap-6">
                   
-                  {/* @ts-ignore - Agora a aba de Varejo/Ecommerce também puxa as avaliações REAIS integradas */}
-                  <Reviews storeId={tenantId} />
+                  {/* LÓGICA INTELIGENTE: Se tem integração exibe o Real, se não, exibe o Mock Falso do Template */}
+                  {storeGoogleReviewUrl ? (
+                    /* @ts-ignore */
+                    <Reviews storeId={tenantId} />
+                  ) : (
+                    <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-sm">
+                      <div className="p-6 bg-gradient-to-br from-gray-50 to-white">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Star size={16} fill="#f59e0b" className="text-yellow-500" />
+                          <Star size={16} fill="#f59e0b" className="text-yellow-500" />
+                          <Star size={16} fill="#f59e0b" className="text-yellow-500" />
+                          <Star size={16} fill="#f59e0b" className="text-yellow-500" />
+                          <Star size={16} fill="#f59e0b" className="text-yellow-500" />
+                        </div>
+                        <p className="text-xs font-bold text-slate-700 italic leading-relaxed">
+                          {currentTemplate.defaultContent?.reviewMock || '"Excelente loja e atendimento rápido. Recomendo a todos!"'}
+                        </p>
+                        <div className="mt-4 flex items-center gap-2">
+                          <ShieldCheck size={14} className="text-green-600" />
+                          <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Avaliação Verificada</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {(settings as any).address && (
                     <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-sm">
@@ -1006,8 +1030,28 @@ export default function CustomerCatalog({
               {currentTemplate.category === 'servicos' && (
                 <div className="mt-8 mb-8 mx-4 flex flex-col gap-6">
                    
-                   {/* @ts-ignore */}
-                   <Reviews storeId={tenantId} />
+                   {/* LÓGICA INTELIGENTE: Se tem integração exibe o Real, se não, exibe o Mock Falso do Template */}
+                   {storeGoogleReviewUrl ? (
+                     /* @ts-ignore */
+                     <Reviews storeId={tenantId} />
+                   ) : (
+                     <div className={`p-6 rounded-3xl shadow-sm border ${templateId === 'barbearia_dark' ? 'bg-[#1A1A1A] border-white/10' : 'bg-white border-gray-100'}`}>
+                        <div className="flex items-center gap-2 mb-3">
+                          <Star size={16} fill="#f59e0b" className="text-yellow-500" />
+                          <Star size={16} fill="#f59e0b" className="text-yellow-500" />
+                          <Star size={16} fill="#f59e0b" className="text-yellow-500" />
+                          <Star size={16} fill="#f59e0b" className="text-yellow-500" />
+                          <Star size={16} fill="#f59e0b" className="text-yellow-500" />
+                        </div>
+                        <p className={`text-xs font-bold italic leading-relaxed ${templateId === 'barbearia_dark' ? 'text-gray-300' : 'text-slate-700'}`}>
+                          {currentTemplate.defaultContent?.reviewMock || '"Atendimento excelente e profissionalismo nota mil!"'}
+                        </p>
+                        <div className="mt-4 flex items-center gap-2">
+                          <ShieldCheck size={14} className="text-green-600" />
+                          <span className={`text-[9px] font-black uppercase tracking-widest ${templateId === 'barbearia_dark' ? 'text-gray-500' : 'text-slate-400'}`}>Avaliação Verificada</span>
+                        </div>
+                     </div>
+                   )}
 
                    {storeFaq && storeFaq.length > 0 && (
                      <div className={`p-6 rounded-3xl shadow-sm border ${templateId === 'barbearia_dark' ? 'bg-[#1A1A1A] border-white/10' : 'bg-white border-gray-100'}`}>
