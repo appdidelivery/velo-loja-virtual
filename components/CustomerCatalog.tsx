@@ -971,44 +971,33 @@ export default function CustomerCatalog({
 
               {/* REVIEWS E MAPA MOCK/REAL */}
               {templateId !== 'nativo_app' && currentTemplate.category !== 'servicos' && (
-                <div className="mt-12 mb-8 mx-4 bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-sm">
-                  <div className="p-6 border-b border-gray-100 bg-gradient-to-br from-gray-50 to-white">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Star size={16} fill="#f59e0b" className="text-yellow-500" />
-                      <Star size={16} fill="#f59e0b" className="text-yellow-500" />
-                      <Star size={16} fill="#f59e0b" className="text-yellow-500" />
-                      <Star size={16} fill="#f59e0b" className="text-yellow-500" />
-                      <Star size={16} fill="#f59e0b" className="text-yellow-500" />
-                    </div>
-                    <p className="text-xs font-bold text-slate-700 italic leading-relaxed">
-                      {currentTemplate.defaultContent.reviewMock}
-                    </p>
-                    <div className="mt-4 flex items-center gap-2">
-                      <ShieldCheck size={14} className="text-green-600" />
-                      <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Avaliação Verificada</span>
-                    </div>
-                  </div>
+                <div className="mt-12 mb-8 mx-4 flex flex-col gap-6">
+                  
+                  {/* @ts-ignore - Agora a aba de Varejo/Ecommerce também puxa as avaliações REAIS integradas */}
+                  <Reviews storeId={tenantId} />
 
                   {(settings as any).address && (
-                    <div className="p-6 bg-slate-900 text-white">
-                        <h3 className="text-[11px] font-black uppercase text-slate-300 tracking-widest flex items-center gap-2 mb-4">
-                          <MapPin size={16} style={{ color: themeColor }}/> Onde Estamos
-                        </h3>
-                        <div className="w-full h-32 rounded-xl overflow-hidden border border-slate-700 mb-4 bg-slate-800">
-                          <iframe 
-                            width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen 
-                            src={`https://maps.google.com/maps?q=${encodeURIComponent((settings as any).address)}&output=embed`}
-                          ></iframe>
-                        </div>
-                        <p className="text-[10px] font-bold text-slate-300 mb-2 leading-tight">
-                          {(settings as any).address}
-                        </p>
-                        {((settings as any).cnpj || STORE_TRUST_DATA.cnpj) && (
-                          <p className="text-[10px] font-bold text-slate-400">
-                            CNPJ: {(settings as any).cnpj || STORE_TRUST_DATA.cnpj}
+                    <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-sm">
+                      <div className="p-6 bg-slate-900 text-white">
+                          <h3 className="text-[11px] font-black uppercase text-slate-300 tracking-widest flex items-center gap-2 mb-4">
+                            <MapPin size={16} style={{ color: themeColor }}/> Onde Estamos
+                          </h3>
+                          <div className="w-full h-32 rounded-xl overflow-hidden border border-slate-700 mb-4 bg-slate-800">
+                            <iframe 
+                              width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen 
+                              src={`https://maps.google.com/maps?q=${encodeURIComponent((settings as any).address)}&output=embed`}
+                            ></iframe>
+                          </div>
+                          <p className="text-[10px] font-bold text-slate-300 mb-2 leading-tight">
+                            {(settings as any).address}
                           </p>
-                        )}
+                          {((settings as any).cnpj || STORE_TRUST_DATA.cnpj) && (
+                            <p className="text-[10px] font-bold text-slate-400">
+                              CNPJ: {(settings as any).cnpj || STORE_TRUST_DATA.cnpj}
+                            </p>
+                          )}
                       </div>
+                    </div>
                   )}
                 </div>
               )}
