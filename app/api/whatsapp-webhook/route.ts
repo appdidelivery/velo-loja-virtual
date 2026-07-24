@@ -48,19 +48,38 @@ export async function POST(request: Request) {
 
                 if (!tenantId || !tenantData) return new NextResponse('OK', { status: 200 });
 
-                // PROMPT CRU E DIRETO
-                const prompt = `Extraia os dados da mensagem. Responda APENAS com um JSON. Não escreva mais nada.
-Se for cadastro: {"acao": "cadastrar", "nome": "nome", "preco": 150.00, "categoria": "Estética"}
-Se não for: {"acao": "conversar", "resposta": "oi"}
-Mensagem: "${messageText}"`;
+               // 1. DECLARAÇÃO DA FERRAMENTA (FUNCTION CALLING)
+                const tools = [{
+                    functionDeclarations: [{
+                        name: "cadastrar_produto",
+                        description: "Cadastra um novo produto no banco de dados da loja. Use esta função apenas quando o usuário solicitar a criação/adição de um produto ou serviço.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                nome: { type: "STRING", description: "Nome completo do produto" },
+                                preco: { type: "NUMBER", description: "Preço do produto em formato numérico. Ex: 50.00" },
+                                categoria: { type: "STRING", description: "Categoria do produto (Ex: Eletrônicos, Roupas, Estética, Geral)" },
+                                descricao: { type: "STRING", description: "Descrição opcional do produto ou serviço" }
+                            },
+                            required: ["nome", "preco"]
+                        }
+                    }]
+                }];
 
-                // USANDO O GEMINI-PRO (O mais antigo e estável, impossível dar erro 404)
+                const prompt = `Você é o assistente virtual da loja. O usuário enviou: "${messageText}".
+Aja naturalmente. Se ele pediu para cadastrar ou criar um produto, acione a ferramenta cadastrar_produto.
+Se for apenas conversa, responda de forma prestativa.`;
+
                 const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
+                // 2. PRIMEIRA CHAMADA (ENVIANDO O CONTEXTO E A FERRAMENTA)
                 const geminiResponse = await fetch(geminiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    body: JSON.stringify({ 
+                        contents: [{ role: "user", parts: [{ text: prompt }] }],
+                        tools: tools
+                    })
                 });
 
                 const geminiData = await geminiResponse.json();
@@ -70,23 +89,62 @@ Mensagem: "${messageText}"`;
                     console.error("🚨 ERRO GOOGLE API:", geminiData.error);
                     replyText = `Erro no Google: ${geminiData.error.message}`;
                 } else {
-                    const responseText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
-                    try {
-                        const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-                        const dados = JSON.parse(cleanedText);
+                    const firstPart = geminiData.candidates?.[0]?.content?.parts?.[0];
+                    
+                    // 3. INTERCEPTAÇÃO DA CHAMADA (A IA DECIDIU USAR A FERRAMENTA?)
+                    if (firstPart && firstPart.functionCall) {
+                        const functionName = firstPart.functionCall.name;
+                        const args = firstPart.functionCall.args;
 
-                        if (dados.acao === 'cadastrar') {
-                            await addDoc(collection(db, 'products'), {
-                                name: dados.nome, price: Number(dados.preco), category: dados.categoria || 'Geral',
-                                description: 'Cadastrado via IA', imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600',
-                                stock: 99, sku: `IA-${Date.now()}`, isActive: true, tenantId: tenantId
-                            });
-                            replyText = `✅ Sucesso! "${dados.nome}" (R$ ${dados.preco}) foi cadastrado no seu painel!`;
-                        } else {
-                            replyText = dados.resposta || "Comando não reconhecido.";
+                        if (functionName === "cadastrar_produto") {
+                            try {
+                                // 4. EXECUÇÃO NO FIREBASE VINCULANDO O TENANT ID (AÇÃO REAL)
+                                const docRef = await addDoc(collection(db, 'products'), {
+                                    name: args.nome,
+                                    price: Number(args.preco),
+                                    category: args.categoria || 'Geral',
+                                    description: args.descricao || 'Cadastrado via IA pelo WhatsApp',
+                                    imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600',
+                                    stock: 99,
+                                    sku: `IA-${Date.now()}`,
+                                    isActive: true,
+                                    tenantId: tenantId // Vinculando à loja correta
+                                });
+
+                                // 5. RETORNO PARA A IA (FECHANDO O LOOP)
+                                // Devolvemos o sucesso para o modelo terminar o fluxo gerando a mensagem final
+                                const funcResponse = await fetch(geminiUrl, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        contents: [
+                                            { role: "user", parts: [{ text: prompt }] },
+                                            { role: "model", parts: [{ functionCall: firstPart.functionCall }] },
+                                            { 
+                                                role: "function", 
+                                                parts: [{ 
+                                                    functionResponse: { 
+                                                        name: "cadastrar_produto", 
+                                                        response: { name: "cadastrar_produto", content: { status: "success", productId: docRef.id, message: "Produto inserido no banco com sucesso." } } 
+                                                    } 
+                                                }] 
+                                            }
+                                        ]
+                                    })
+                                });
+
+                                const funcData = await funcResponse.json();
+                                // Captura a mensagem final natural gerada pela IA após o sucesso
+                                replyText = funcData.candidates?.[0]?.content?.parts?.[0]?.text || `✅ Sucesso! "${args.nome}" (R$ ${args.preco}) foi cadastrado!`;
+
+                            } catch (e) {
+                                console.error("Erro Firebase IA:", e);
+                                replyText = "Houve um problema técnico ao tentar gravar o produto no banco de dados.";
+                            }
                         }
-                    } catch (e) {
-                        replyText = "A IA falhou ao gerar o formato correto.";
+                    } else {
+                        // Se não for requisição de ferramenta, é apenas texto normal (conversa)
+                        replyText = firstPart?.text || "Não consegui formular uma resposta, desculpe.";
                     }
                 }
 
