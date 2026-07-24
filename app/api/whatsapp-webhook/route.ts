@@ -70,7 +70,8 @@ export async function POST(request: Request) {
 Aja naturalmente. Se ele pediu para cadastrar ou criar um produto, acione a ferramenta cadastrar_produto.
 Se for apenas conversa, responda de forma prestativa.`;
 
-                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
+                // ATUALIZADO: Usando o gemini-1.5-flash (Obrigatório nas novas regras da API do Google para Function Calling)
+                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
                 // 2. PRIMEIRA CHAMADA (ENVIANDO O CONTEXTO E A FERRAMENTA)
                 const geminiResponse = await fetch(geminiUrl, {
