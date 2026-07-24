@@ -86,7 +86,7 @@ Atue como um assessor executivo brilhante. Se ele pedir uma ação que você nã
                     });
                 }
 
-const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
+const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
                 
                 const requestBody: any = {
                     contents: [{ role: "user", parts: [{ text: systemPrompt }] }]

@@ -69,7 +69,7 @@ Aja naturalmente. Se ele pediu para cadastrar ou criar um produto, acione a ferr
 Se for apenas conversa, responda de forma prestativa.`;
 
                 // ATUALIZADO: Usando o gemini-1.5-flash OBRIGATÓRIO
-const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
+const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
                 // 2. PRIMEIRA CHAMADA (ENVIANDO O CONTEXTO E A FERRAMENTA)
                 const geminiResponse = await fetch(geminiUrl, {
