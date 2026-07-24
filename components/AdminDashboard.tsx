@@ -30,7 +30,7 @@ import GoogleIntegrationDashboard from './GoogleIntegrationDashboard';
 import { FaGoogle } from 'react-icons/fa6';
 
 export default function AdminDashboard() {
-  const [activePanel, setActivePanel] = useState<'dashboard' | 'manual' | 'products' | 'categories' | 'orders' | 'customers' | 'chats' | 'settings' | 'google_business' | 'finance'>('dashboard');
+const [activePanel, setActivePanel] = useState<'dashboard' | 'manual' | 'products' | 'categories' | 'orders' | 'customers' | 'chats' | 'settings' | 'google_business' | 'finance' | 'ai_agent'>('dashboard');
 
   // Estado que controla se o usuário vê o Wizard ou o Dashboard clássico
   const [showOnboarding, setShowOnboarding] = useState(true); 
@@ -191,8 +191,8 @@ const handleLogout = async () => {
     ...settings, 
     templateId: 'nativo_app', 
     primaryColor: '#0ea5e9',
-    announcementTexts: ['', '', ''], // Textos da Tarja
-    announcementColor: '#e11d48', // Cor da Tarja
+    announcementTexts: ['', '', ''], 
+    announcementColor: '#e11d48', 
     storeNiche: 'varejo',
     logoUrl: '',
     slogan: 'Catálogo Exclusivo',
@@ -208,7 +208,10 @@ const handleLogout = async () => {
     aboutText: '',
     faq: [],
     googleReviewUrl: '',
-    cnpj: ''
+    cnpj: '',
+    agentName: 'Velo Bot',
+    agentTone: 'profissional',
+    agentSkills: ['cadastrar_produtos']
   });
   
   const [settingsSuccess, setSettingsSuccess] = useState(false);
@@ -324,7 +327,10 @@ const handleLogout = async () => {
           storeNiche: dbData.storeNiche || 'varejo',
           cnpj: dbData.cnpj || '',
           metaPhoneId: dbData.metaPhoneId || '',
-          metaApiToken: dbData.metaApiToken || ''
+          metaApiToken: dbData.metaApiToken || '',
+          agentName: dbData.agentName || 'Velo Bot',
+          agentTone: dbData.agentTone || 'profissional',
+          agentSkills: dbData.agentSkills || ['cadastrar_produtos']
         }));
       }
     });
@@ -501,7 +507,10 @@ const [termoIA, setTermoIA] = useState('');
         supportHours: settingsForm.supportHours || '',
         seoDescription: settingsForm.seoDescription || '',
         seoCategory: settingsForm.seoCategory || 'Store',
-        adminPhones: settingsForm.whatsappNumber ? [settingsForm.whatsappNumber.replace(/\D/g, '')] : []
+        adminPhones: settingsForm.whatsappNumber ? [settingsForm.whatsappNumber.replace(/\D/g, '')] : [],
+        agentName: settingsForm.agentName || 'Velo Bot',
+        agentTone: settingsForm.agentTone || 'profissional',
+        agentSkills: settingsForm.agentSkills || []
       }, { merge: true });
       
       alert("✅ SUCESSO! Dados salvos no Firebase.");
@@ -751,6 +760,14 @@ const [termoIA, setTermoIA] = useState('');
                   <span className="text-left truncate leading-tight">Planos &<br/>Assinatura</span>
                 </button>
               )}
+
+              <button
+                onClick={() => setActivePanel('ai_agent')} 
+                className={`w-full flex items-center justify-start gap-3 px-4 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all mt-2 bg-gradient-to-r ${activePanel === 'ai_agent' ? 'from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
+              >
+                <Sparkles className="w-5 h-5 shrink-0" /> 
+                <span className="text-left truncate">Meu Agente IA</span>
+              </button>
 
               <button
                 onClick={() => { setIsSettingsExpanded(!isSettingsExpanded); setActivePanel('settings'); }} 
@@ -1855,6 +1872,91 @@ const [termoIA, setTermoIA] = useState('');
                 <button className="px-6 py-3.5 bg-gray-50 hover:bg-gray-100 text-slate-700 font-black uppercase tracking-wider rounded-full border-2 border-gray-200 transition-colors text-[11px] whitespace-nowrap">
                   Precisa de ajuda? Fale com suporte
                 </button>
+              </div>
+            </div>
+          )}
+
+          {activePanel === 'ai_agent' && (
+            <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-3xl font-black italic uppercase text-[#111827] flex items-center gap-3">
+                    <Sparkles className="text-purple-600" size={32} /> Meu Agente IA
+                  </h2>
+                  <p className="text-sm font-bold text-slate-500 mt-2 max-w-2xl">
+                    Configure como o seu assistente virtual deve agir quando você enviar comandos pelo WhatsApp da Velo Loja.
+                  </p>
+                </div>
+                <button onClick={saveSettings} className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-black uppercase tracking-wider rounded-full shadow-lg shadow-purple-200 transition-colors text-[11px]">
+                  Salvar Configuração IA
+                </button>
+              </div>
+
+              <div className="bg-white border-2 border-gray-100 rounded-[2.5rem] p-8 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-slate-500 uppercase tracking-wider">Nome do seu Agente</label>
+                    <input 
+                      type="text" 
+                      value={settingsForm.agentName}
+                      onChange={(e) => setSettingsForm({...settingsForm, agentName: e.target.value})}
+                      className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-purple-500 transition-colors"
+                      placeholder="Ex: Bot da Loja, Jarvis..."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-slate-500 uppercase tracking-wider">Personalidade / Tom de Voz</label>
+                    <select 
+                      value={settingsForm.agentTone}
+                      onChange={(e) => setSettingsForm({...settingsForm, agentTone: e.target.value})}
+                      className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-purple-500 transition-colors cursor-pointer"
+                    >
+                      <option value="profissional">👔 Profissional e Direto</option>
+                      <option value="descontraido">😎 Descontraído e Amigável</option>
+                      <option value="fofo">✨ Fofo e Entusiasmado</option>
+                      <option value="agressivo">🚀 Agressivo para Vendas</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <label className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-purple-600" /> Habilidades Concedidas ao Agente
+                  </label>
+                  <p className="text-[10px] text-slate-500 font-bold -mt-2 leading-tight mb-4">
+                    Marque o que o seu Agente está autorizado a fazer quando você mandar uma mensagem pelo WhatsApp Master.
+                  </p>
+
+                  <div className="space-y-3">
+                    {[
+                      { id: 'cadastrar_produtos', label: 'Cadastrar e Editar Produtos' },
+                      { id: 'disparo_marketing', label: 'Disparo de Marketing via Meta API' },
+                      { id: 'gestao_pedidos', label: 'Alterar Status de Pedidos' },
+                      { id: 'relatorios_financeiros', label: 'Fornecer Relatórios Financeiros' }
+                    ].map(skill => {
+                      const isChecked = settingsForm.agentSkills.includes(skill.id);
+                      return (
+                        <label key={skill.id} className={`flex items-center gap-3 border-2 px-4 py-3.5 rounded-xl cursor-pointer transition-all shadow-sm ${isChecked ? 'bg-purple-50 border-purple-400' : 'bg-white border-gray-200 hover:border-purple-200'}`}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const updated = e.target.checked
+                                ? [...settingsForm.agentSkills, skill.id]
+                                : settingsForm.agentSkills.filter((s: string) => s !== skill.id);
+                              setSettingsForm({ ...settingsForm, agentSkills: updated });
+                            }}
+                            className="w-4 h-4 accent-purple-600"
+                          />
+                          <span className={`text-xs font-black uppercase tracking-wider ${isChecked ? 'text-purple-900' : 'text-slate-600'}`}>
+                            {skill.label}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           )}
