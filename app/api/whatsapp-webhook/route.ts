@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 
         if (messages && messages.length > 0) {
             const message = messages[0];
-            const fromPhoneRaw = message.from; 
+            const fromPhoneRaw = message.from; // Pega o número exato que a Meta usou
             const messageText = message.text?.body;
 
             if (fromPhoneRaw && messageText) {
@@ -34,7 +34,6 @@ export async function POST(request: Request) {
                 
                 let tenantId: string | null = null;
                 let tenantData: any = null;
-                let numeroOficialDoPainel = '';
 
                 allTenantsSnap.forEach(doc => {
                     const data = doc.data();
@@ -42,7 +41,6 @@ export async function POST(request: Request) {
                     if (phones.some((p: string) => p.slice(-8) === last8Incoming)) {
                         tenantId = doc.id;
                         tenantData = data;
-                        numeroOficialDoPainel = phones[0]; 
                     }
                 });
 
@@ -70,7 +68,7 @@ export async function POST(request: Request) {
 Aja naturalmente. Se ele pediu para cadastrar ou criar um produto, acione a ferramenta cadastrar_produto.
 Se for apenas conversa, responda de forma prestativa.`;
 
-                // ATUALIZADO: Usando o gemini-1.5-flash (Obrigatório nas novas regras da API do Google para Function Calling)
+                // ATUALIZADO: Usando o gemini-1.5-flash OBRIGATÓRIO
                 const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
                 // 2. PRIMEIRA CHAMADA (ENVIANDO O CONTEXTO E A FERRAMENTA)
@@ -88,7 +86,7 @@ Se for apenas conversa, responda de forma prestativa.`;
 
                 if (geminiData.error) {
                     console.error("🚨 ERRO GOOGLE API:", geminiData.error);
-                    replyText = `Erro no Google: ${geminiData.error.message}`;
+                    replyText = `Erro na IA: ${geminiData.error.message}`;
                 } else {
                     const firstPart = geminiData.candidates?.[0]?.content?.parts?.[0];
                     
@@ -99,7 +97,7 @@ Se for apenas conversa, responda de forma prestativa.`;
 
                         if (functionName === "cadastrar_produto") {
                             try {
-                                // 4. EXECUÇÃO NO FIREBASE VINCULANDO O TENANT ID (AÇÃO REAL)
+                                // 4. EXECUÇÃO NO FIREBASE
                                 const docRef = await addDoc(collection(db, 'products'), {
                                     name: args.nome,
                                     price: Number(args.preco),
@@ -113,7 +111,6 @@ Se for apenas conversa, responda de forma prestativa.`;
                                 });
 
                                 // 5. RETORNO PARA A IA (FECHANDO O LOOP)
-                                // Devolvemos o sucesso para o modelo terminar o fluxo gerando a mensagem final
                                 const funcResponse = await fetch(geminiUrl, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -126,7 +123,7 @@ Se for apenas conversa, responda de forma prestativa.`;
                                                 parts: [{ 
                                                     functionResponse: { 
                                                         name: "cadastrar_produto", 
-                                                        response: { name: "cadastrar_produto", content: { status: "success", productId: docRef.id, message: "Produto inserido no banco com sucesso." } } 
+                                                        response: { name: "cadastrar_produto", content: { status: "success", productId: docRef.id, message: "Produto salvo com sucesso." } } 
                                                     } 
                                                 }] 
                                             }
@@ -135,36 +132,44 @@ Se for apenas conversa, responda de forma prestativa.`;
                                 });
 
                                 const funcData = await funcResponse.json();
-                                // Captura a mensagem final natural gerada pela IA após o sucesso
                                 replyText = funcData.candidates?.[0]?.content?.parts?.[0]?.text || `✅ Sucesso! "${args.nome}" (R$ ${args.preco}) foi cadastrado!`;
 
                             } catch (e) {
-                                console.error("Erro Firebase IA:", e);
+                                console.error("🚨 Erro Firebase IA:", e);
                                 replyText = "Houve um problema técnico ao tentar gravar o produto no banco de dados.";
                             }
                         }
                     } else {
-                        // Se não for requisição de ferramenta, é apenas texto normal (conversa)
+                        // Resposta normal de chat
                         replyText = firstPart?.text || "Não consegui formular uma resposta, desculpe.";
                     }
                 }
 
-                if (tenantData.metaApiToken && tenantData.metaPhoneId && numeroOficialDoPainel) {
-                    await fetch(`https://graph.facebook.com/v17.0/${tenantData.metaPhoneId}/messages`, {
+                // 6. ENVIO PARA O WHATSAPP (CORRIGIDO)
+                if (tenantData.metaApiToken && tenantData.metaPhoneId) {
+                    const metaRequest = await fetch(`https://graph.facebook.com/v19.0/${tenantData.metaPhoneId}/messages`, {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${tenantData.metaApiToken}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             messaging_product: 'whatsapp',
-                            to: numeroOficialDoPainel,
+                            recipient_type: 'individual',
+                            to: fromPhoneRaw, // ATENÇÃO: Agora devolve EXATAMENTE para o número de onde a mensagem veio
                             type: 'text',
                             text: { body: replyText }
                         })
                     });
+                    
+                    const metaResponseData = await metaRequest.json();
+                    
+                    if (!metaRequest.ok) {
+                        console.error("🚨 ERRO REJEIÇÃO META API:", metaResponseData);
+                    }
                 }
             }
         }
         return new NextResponse('OK', { status: 200 });
     } catch (error) {
+        console.error("🚨 ERRO FATAL WEBHOOK:", error);
         return new NextResponse('OK', { status: 200 });
     }
 }
