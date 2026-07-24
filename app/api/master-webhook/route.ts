@@ -64,25 +64,107 @@ Suas habilidades ativadas são: ${agentSkills.join(', ')}.
 O usuário acabou de mandar a seguinte mensagem pelo WhatsApp: "${messageText}".
 Atue como um assessor executivo brilhante. Se ele pedir uma ação que você não tem habilidade para fazer, informe educadamente.`;
 
-                // 4. Chamada para a IA (Usando Gemini 1.5 Flash)
-                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+               // 4. DEFINIÇÃO DE FERRAMENTAS E CHAMADA DA IA
+                const tools = [];
+
+                // Verifica se o lojista deu permissão para cadastrar produtos
+                if (agentSkills.includes('cadastrar_produtos')) {
+                    tools.push({
+                        functionDeclarations: [{
+                            name: "cadastrar_produto",
+                            description: "Cadastra um novo produto no banco de dados da loja. Use esta função apenas quando o usuário pedir explicitamente para adicionar/criar um produto.",
+                            parameters: {
+                                type: "OBJECT",
+                                properties: {
+                                    nome: { type: "STRING", description: "Nome completo do produto" },
+                                    preco: { type: "NUMBER", description: "Preço do produto em formato numérico. Ex: 50.00" },
+                                    categoria: { type: "STRING", description: "Categoria do produto (Ex: Eletrônicos, Roupas, Estética, Geral)" }
+                                },
+                                required: ["nome", "preco"]
+                            }
+                        }]
+                    });
+                }
+
+const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
+                
+                const requestBody: any = {
+                    contents: [{ role: "user", parts: [{ text: systemPrompt }] }]
+                };
+
+                // Só envia a ferramenta se o array não estiver vazio (evita erro da API do Google)
+                if (tools.length > 0) {
+                    requestBody.tools = tools;
+                }
 
                 const geminiResponse = await fetch(geminiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        contents: [{ role: "user", parts: [{ text: systemPrompt }] }]
-                        // NOTA DO ARQUITETO: O Tool Calling (Function Calling) entrará no Sprint 3 aqui.
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
                 const geminiData = await geminiResponse.json();
                 let replyText = "";
 
                 if (geminiData.error) {
+                    console.error("🚨 ERRO GOOGLE API:", geminiData.error);
                     replyText = `Erro na IA: ${geminiData.error.message}`;
                 } else {
-                    replyText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "Não consegui processar, chefe.";
+                    const firstPart = geminiData.candidates?.[0]?.content?.parts?.[0];
+                    
+                    // INTERCEPTAÇÃO: A IA decidiu usar alguma ferramenta?
+                    if (firstPart && firstPart.functionCall) {
+                        const functionName = firstPart.functionCall.name;
+                        const args = firstPart.functionCall.args;
+
+                        if (functionName === "cadastrar_produto") {
+                            try {
+                                const { addDoc, collection } = await import('firebase/firestore');
+                                const docRef = await addDoc(collection(db, 'products'), {
+                                    name: args.nome,
+                                    price: Number(args.preco),
+                                    category: args.categoria || 'Geral',
+                                    description: 'Cadastrado pelo Agente IA (Master)',
+                                    imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600',
+                                    stock: 99,
+                                    sku: `IA-${Date.now()}`,
+                                    isActive: true,
+                                    tenantId: tenantId // Vinculando à loja do cliente
+                                });
+
+                                // AVISANDO A IA QUE O CADASTRO DEU CERTO
+                                const funcResponse = await fetch(geminiUrl, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        contents: [
+                                            { role: "user", parts: [{ text: systemPrompt }] },
+                                            { role: "model", parts: [{ functionCall: firstPart.functionCall }] },
+                                            { 
+                                                role: "function", 
+                                                parts: [{ 
+                                                    functionResponse: { 
+                                                        name: "cadastrar_produto", 
+                                                        response: { name: "cadastrar_produto", content: { status: "success", productId: docRef.id } } 
+                                                    } 
+                                                }] 
+                                            }
+                                        ]
+                                    })
+                                });
+
+                                const funcData = await funcResponse.json();
+                                replyText = funcData.candidates?.[0]?.content?.parts?.[0]?.text || `Pronto! "${args.nome}" cadastrado com sucesso.`;
+
+                            } catch (e) {
+                                console.error("🚨 Erro Firebase IA:", e);
+                                replyText = "Houve um erro no servidor ao tentar salvar o produto.";
+                            }
+                        }
+                    } else {
+                        // Se não for requisição de ferramenta, é conversa normal
+                        replyText = firstPart?.text || "Desculpe, não entendi o que você quis dizer.";
+                    }
                 }
 
                 // 5. Devolve a resposta usando o NÚMERO MASTER DA VELO LOJA
