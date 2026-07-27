@@ -5,65 +5,79 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { storeName, storeNiche, productName, productDesc, productPrice } = body;
 
-        // A Velo usa nativamente o Gemini da Google
         const apiKey = process.env.GEMINI_API_KEY;
 
         if (!apiKey) {
             return NextResponse.json({ success: false, error: "Chave GEMINI_API_KEY não configurada no servidor." }, { status: 500 });
         }
 
-        // Prompt Velo Delivery - Focado em SEO Local e Conversão
-        const promptText = `
-Você é um especialista em Marketing Digital e Vendas focado em SEO Local (Google Meu Negócio).
-Sua missão é escrever uma postagem altamente persuasiva e chamativa para a aba "Atualizações/Ofertas" do Google Meu Negócio da seguinte empresa:
+        // 🚀 PROMPT E-E-A-T (Especialidade e Autoridade Local)
+        const promptText = `Atue como um Especialista em SEO Local (E-E-A-T) e Copywriter de Alta Conversão.
+Sua missão é criar uma postagem orgânica, autêntica e rica em detalhes para o Google Meu Negócio.
+O texto NÃO PODE parecer gerado por IA (proibido usar clichês de robô como "mergulhe", "descubra", "eleve sua experiência", "jornada de sabor").
 
-- Nome da Loja: ${storeName}
-- Segmento/Nicho: ${storeNiche}
-
-Dados do Produto/Serviço em destaque:
+DADOS DA LOJA E PRODUTO:
+- Loja: ${storeName}
+- Nicho: ${storeNiche}
 - Produto: ${productName}
-- Preço Promocional: R$ ${productPrice}
-- Detalhes adicionais: ${productDesc || 'Nenhum detalhe extra fornecido.'}
+- Preço: R$ ${productPrice ? Number(productPrice).toFixed(2) : 'Consultar'}
+- Detalhes: ${productDesc || 'Sem detalhes extras.'}
 
-Regras estritas para a criação do texto:
-1. Comece com uma frase de impacto ou pergunta que gere desejo imediato.
-2. Destaque os benefícios do produto e o preço de forma clara.
-3. Use emojis estratégicos para chamar atenção, mas não polua o texto.
-4. O texto deve ser curto, direto ao ponto e persuasivo (máximo 700 caracteres).
-5. Termine OBRIGATORIAMENTE com uma Forte Chamada para Ação (CTA) convidando o cliente a clicar no botão abaixo, visitar a loja, ou pedir agora.
-        `;
+REGRAS DE CONTEÚDO:
+1. "postagem": Escreva 1 parágrafo (máximo de 350 caracteres). Aplique E-E-A-T: demonstre especialidade mencionando sutilmente a qualidade ou o estado ideal do produto (Ex: trincando de gelado, recém-preparado). Posicione a loja como a melhor opção da região.
+2. "hashtags": 4 a 5 hashtags focadas no produto e no nicho.
 
-        // Chamada direta para a API do Google Gemini (usando o modelo rápido 1.5 flash)
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{ text: promptText }]
-                }]
-            })
-        });
+Retorne APENAS um JSON válido.
+Formato exigido:
+{"postagem": "texto da postagem aqui", "hashtags": "#tag1 #tag2"}`;
 
-        const data = await response.json();
+        // 🚀 MOTOR DE AUTO-CURA (Roleta de Modelos Testados e Baratos)
+        const modelsToTry = ['gemini-3.5-flash', 'gemini-3-pro', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+        let aiData: any = null;
+        let responseOk = false;
 
-        if (!response.ok) {
-            console.error("Erro detalhado do Gemini:", data);
-            throw new Error(data.error?.message || "Erro de conexão com o Google Gemini.");
+        for (const model of modelsToTry) {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: promptText }] }]
+                })
+            });
+
+            aiData = await response.json();
+
+            if (response.ok) {
+                responseOk = true;
+                console.log(`✅ Sucesso IA (Velo Varejo) com o modelo: ${model}`);
+                break;
+            }
         }
 
-        // Extrai a resposta gerada pelo Gemini
-        const generatedText = data.candidates[0].content.parts[0].text.trim();
+        if (!responseOk) {
+            console.error("🚨 Erro detalhado do Gemini (Velo Varejo):", JSON.stringify(aiData, null, 2));
+            throw new Error(aiData.error?.message || "O Google recusou a requisição em todos os modelos testados.");
+        }
 
-        // O Frontend Velo espera a variável "instagram" (pois a lógica foi herdada do feed social)
+        const rawJsonText = aiData.candidates[0].content.parts[0].text.trim();
+        
+        // Limpador de formatação para evitar quebra do JSON
+        const cleanJsonText = rawJsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const parsedResult = JSON.parse(cleanJsonText);
+
+        // O Frontend Velo Varejo espera a variável "instagram" preenchida com o texto final.
+        // A gente junta o texto + as hashtags magicamente aqui no backend!
+        const finalCopy = `${parsedResult.postagem}\n\n${parsedResult.hashtags}`;
+
         return NextResponse.json({ 
             success: true, 
-            instagram: generatedText 
+            instagram: finalCopy 
         });
 
     } catch (error: any) {
-        console.error("Erro ao gerar copy IA (Gemini):", error);
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        console.error("🔴 Erro ao gerar copy IA (Gemini):", error);
+        // Retornamos status 200 com success: false para o frontend exibir a mensagem no alert 
+        // e não estourar a tela do navegador com erro 500.
+        return NextResponse.json({ success: false, error: error.message });
     }
 }
