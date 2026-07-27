@@ -200,7 +200,9 @@ const handleLogout = async () => {
     mpAccessToken: '',
     metaPhoneId: '',
     metaApiToken: '',
-    storeMode: 'orcamento', 
+    binanceApiKey: '',
+    binanceSecretKey: '',
+    storeMode: 'orcamento',
     maintenanceMode: false,
     enableAbandonedCart: false,
     abandonedCartDiscount: 5,
@@ -328,6 +330,8 @@ const handleLogout = async () => {
           cnpj: dbData.cnpj || '',
           metaPhoneId: dbData.metaPhoneId || '',
           metaApiToken: dbData.metaApiToken || '',
+          binanceApiKey: dbData.binanceApiKey || '',
+          binanceSecretKey: dbData.binanceSecretKey || '',
           agentName: dbData.agentName || 'Velo Bot',
           agentTone: dbData.agentTone || 'profissional',
           agentSkills: dbData.agentSkills || ['cadastrar_produtos']
@@ -502,6 +506,8 @@ const [termoIA, setTermoIA] = useState('');
         cnpj: settingsForm.cnpj || '',
         metaPhoneId: settingsForm.metaPhoneId || '',
         metaApiToken: settingsForm.metaApiToken || '',
+        binanceApiKey: settingsForm.binanceApiKey || '',
+        binanceSecretKey: settingsForm.binanceSecretKey || '',
         privacyPolicy: settingsForm.privacyPolicy || '',
         termsOfUse: settingsForm.termsOfUse || '',
         supportHours: settingsForm.supportHours || '',
@@ -2399,7 +2405,7 @@ const [termoIA, setTermoIA] = useState('');
                       </p>
                       
                       <div className="flex flex-wrap gap-3">
-                        {['Pix', 'Cartão de Crédito', 'Cartão de Débito', 'Dinheiro no local', 'Boleto a prazo', 'Link de Pagamento'].map(method => {
+                        {['Pix', 'Cartão de Crédito', 'Cartão de Débito', 'Dinheiro no local', 'Boleto a prazo', 'Link de Pagamento', 'Binance Pay (Criptomoedas)'].map(method => {
                           // Lógica de fallback para não quebrar caso seja loja velha
                           const currentMethods = settingsForm.paymentMethods || ['Pix', 'Cartão de Crédito', 'Dinheiro no local', 'Boleto a prazo'];
                           const isChecked = currentMethods.includes(method);
@@ -2710,6 +2716,51 @@ const [termoIA, setTermoIA] = useState('');
 {/* TELA DE INTEGRAÇÕES */}
               {settingsSubPanel === 'integracoes' && (
                 <div className="space-y-6">
+                  
+                  {/* --- NOVO: INTEGRAÇÃO BINANCE PAY (CRIPTOMOEDAS) --- */}
+                  <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-8 shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400 rounded-bl-[100%] opacity-10 pointer-events-none"></div>
+                    
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h3 className="text-slate-800 font-black uppercase tracking-wider text-sm mb-2 flex items-center gap-2">
+                                <DollarSign className="text-yellow-500" size={24}/> Binance Pay (Criptomoedas)
+                            </h3>
+                            <p className="text-xs text-slate-500 font-medium mb-6 max-w-lg">
+                                Destaque-se no mercado e receba pagamentos globais (USDT, BTC, ETH) diretamente na sua conta da Binance. Processamento automático na vitrine.
+                            </p>
+                        </div>
+                        {settingsForm.binanceApiKey && settingsForm.binanceSecretKey && (
+                            <span className="bg-green-100 text-green-700 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-sm flex items-center gap-1">
+                                <CheckCircle2 size={12} /> Configurado
+                            </span>
+                        )}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">API Key (Binance Merchant)</label>
+                        <input 
+                          type="text" 
+                          value={settingsForm.binanceApiKey || ''}
+                          onChange={(e) => setSettingsForm({...settingsForm, binanceApiKey: e.target.value})}
+                          placeholder="Cole sua API Key gerada no painel Binance..."
+                          className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-yellow-500 transition-colors mt-1"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Secret Key</label>
+                        <input 
+                          type="password" 
+                          value={settingsForm.binanceSecretKey || ''}
+                          onChange={(e) => setSettingsForm({...settingsForm, binanceSecretKey: e.target.value})}
+                          placeholder="••••••••••••••••••••••••"
+                          className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 p-3.5 rounded-xl outline-none focus:border-yellow-500 transition-colors mt-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Mercado Pago (OAuth Inteligente) */}
                   <div className="bg-white border-2 border-gray-100 rounded-[2rem] p-8 shadow-sm">
                     <h3 className="text-slate-800 font-black uppercase tracking-wider text-sm mb-2 flex items-center gap-2">

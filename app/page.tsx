@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Rocket, Store, MessageSquare, BarChart3, CheckCircle2, 
-  ChevronRight, Menu, X, Sparkles, MapPin, Smartphone, ShieldCheck
+Rocket, Store, MessageSquare, BarChart3, CheckCircle2, 
+  ChevronRight, Menu, X, Sparkles, MapPin, Smartphone, ShieldCheck, Bitcoin, DollarSign
 } from 'lucide-react';
 import { FaGoogle } from 'react-icons/fa6';
 import Link from 'next/link';
@@ -42,6 +42,11 @@ export default function LandingPage() {
       icon: <BarChart3 className="text-purple-500" size={32} />,
       title: 'Velo Insights (Consultoria IA)',
       desc: 'Seu painel analisa as métricas de vendas e visitas, e uma Inteligência Artificial gera um plano de ação diário para você crescer.'
+    },
+    {
+      icon: <DollarSign className="text-yellow-500" size={32} />,
+      title: 'Receba em Criptomoedas',
+      desc: 'Um diferencial absurdo! Seja pioneiro no Brasil aceitando pagamentos instantâneos globais via Binance Pay direto no seu catálogo.'
     }
   ];
 
@@ -64,7 +69,7 @@ export default function LandingPage() {
       name: 'Business',
       desc: 'Foco total em conversão e recuperação de vendas.',
       price: '199,90',
-      features: ['Tudo do Plano Pro', 'Layouts Inteligentes (Temas Especiais)', 'Recuperação de Carrinho Abandonado (Bot)', 'PDV Frente de Caixa Integrado'],
+      features: ['Tudo do Plano Pro', 'Layouts Inteligentes (Temas Especiais)', 'Integração Binance Pay (Cripto)', 'PDV Frente de Caixa Integrado'],
       highlight: true
     },
     {

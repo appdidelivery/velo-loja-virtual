@@ -7,7 +7,7 @@ import {
   ChevronDown, Star, ShieldCheck, MapPin, Phone, 
   X, Plus, Minus, Trash2, LayoutGrid, ClipboardList, ShoppingBag,
   Scissors, Smartphone, Sofa, Wrench, Shirt, Gem, Beer, ChevronRight, Sparkles,
-  Store, Calendar, UploadCloud, Heart, Share2
+  Store, Calendar, UploadCloud, Heart, Share2, Bitcoin
 } from 'lucide-react';
 
 import { Product, TenantSettings } from '../types';
@@ -84,8 +84,12 @@ export default function CustomerCatalog({
   const [address, setAddress] = useState({ street: '', neighborhood: '', city: '', state: '' });
   const [addressNumber, setAddressNumber] = useState('');
   const [complement, setComplement] = useState('');
-  const [isLoadingCep, setIsLoadingCep] = useState(false);
+const [isLoadingCep, setIsLoadingCep] = useState(false);
   
+  // ESTADOS BINANCE PAY
+  const [isProcessingBinance, setIsProcessingBinance] = useState(false);
+  const [binanceResult, setBinanceResult] = useState<{checkoutUrl: string, qrcodeLink: string} | null>(null);
+
   const [serviceDate, setServiceDate] = useState('');
   const [serviceTime, setServiceTime] = useState('');
   const [serviceAddress, setServiceAddress] = useState('');
@@ -380,6 +384,71 @@ export default function CustomerCatalog({
 
   const handleRemoveItem = (productId: string) => {
     setCart(prev => prev.filter(item => item.product.id !== productId));
+  };
+
+  // --- CHECKOUT BINANCE PAY ---
+  const handleBinanceCheckout = async () => {
+    const isService = (TEMPLATES.find((t: any) => t.id === templateId) || TEMPLATES[9]).category === 'servicos';
+    
+    if (cart.length === 0 || !customerName.trim() || !customerPhone.trim()) return alert("Preencha Nome e WhatsApp.");
+    if (!isService && (!customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim())) return alert("Preencha os dados de entrega.");
+    if (isService && (!serviceDate || !serviceTime)) return alert("Preencha os dados do agendamento.");
+
+    setIsProcessingBinance(true);
+    try {
+      // Cria um ID único para este pedido transacionar na Binance
+      const uniqueOrderId = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      
+      let orderNotes = `Pagamento: Binance Pay (Criptomoedas)`;
+      if (isService) {
+          orderNotes += ` | 🗓️ Agendamento: ${serviceDate.split('-').reverse().join('/')} às ${serviceTime}`;
+      } else {
+          orderNotes += ` | CEP: ${cep} | CPF/CNPJ: ${customerCnpj}`;
+      }
+
+      // 1. Salva o pedido como PENDENTE no Firebase
+      addOrder({
+        id: uniqueOrderId,
+        customerName: customerName,
+        customerPhone: customerPhone, 
+        items: cart.map(item => ({
+          productId: item.product.id,
+          name: item.product.name,
+          price: item.product.price,
+          quantity: item.quantity
+        })),
+        total: cartTotalValue,
+        status: 'pending',
+        paymentStatus: 'pending',
+        createdAt: new Date().toISOString(),
+        tenantId: tenantId,
+        notes: orderNotes + ` | OrderID: ${uniqueOrderId}`
+      } as any); // Adicionado 'as any' aqui para silenciar a tipagem estrita do Omit<Order, "id">
+
+      // 2. Chama a API que criamos no Passo 1
+      const res = await fetch('/api/binance-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId: tenantId,
+          orderId: uniqueOrderId,
+          totalAmount: cartTotalValue
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setBinanceResult({ checkoutUrl: data.checkoutUrl, qrcodeLink: data.qrcodeLink });
+        setIsCartOpen(false); // Fecha o carrinho para abrir o Modal
+      } else {
+        alert("Erro ao gerar pagamento Binance: " + (data.error || "Desconhecido"));
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Erro de conexão ao processar Binance Pay.");
+    } finally {
+      setIsProcessingBinance(false);
+    }
   };
 
   const handleWhatsAppCheckout = () => {
@@ -1655,30 +1724,34 @@ export default function CustomerCatalog({
                 <div className="flex justify-between text-lg font-black text-gray-900 mb-4 border-t border-gray-100 pt-2"><span>Total s/ Frete</span><span className="text-[#357b64]">R$ {cartTotalValue.toFixed(2)}</span></div>
                 
                 <button 
-                  onClick={handleWhatsAppCheckout}
+                  onClick={paymentMethod === 'Binance Pay (Criptomoedas)' ? handleBinanceCheckout : handleWhatsAppCheckout}
                   disabled={
-                    cart.length === 0 || !customerName.trim() || 
+                    isProcessingBinance || cart.length === 0 || !customerName.trim() || 
                     (currentTemplate.category !== 'servicos' && (!customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim())) ||
                     (currentTemplate.category === 'servicos' && (!serviceDate || !serviceTime))
                   }
                   style={
-                    (cart.length > 0 && customerName.trim() && (
+                    (!isProcessingBinance && cart.length > 0 && customerName.trim() && (
                       (currentTemplate.category !== 'servicos' && customerCnpj.trim() && cep.length === 8 && addressNumber.trim()) ||
                       (currentTemplate.category === 'servicos' && serviceDate && serviceTime)
-                    )) ? { backgroundColor: currentTemplate.primaryColor } : {}
+                    )) ? { backgroundColor: paymentMethod === 'Binance Pay (Criptomoedas)' ? '#eab308' : currentTemplate.primaryColor, color: paymentMethod === 'Binance Pay (Criptomoedas)' ? '#000' : '#fff' } : {}
                   }
                   className={`w-full py-4 font-black rounded-xl text-xs flex items-center justify-center gap-2 transition-all uppercase tracking-widest ${
-                    (cart.length === 0 || !customerName.trim() || 
+                    (isProcessingBinance || cart.length === 0 || !customerName.trim() || 
                     (currentTemplate.category !== 'servicos' && (!customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim())) ||
                     (currentTemplate.category === 'servicos' && (!serviceDate || !serviceTime)))
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'text-white shadow-xl hover:scale-[0.98]'
+                      : 'shadow-xl hover:scale-[0.98]'
                   }`}
                 >
-                  <Phone className="w-4 h-4 fill-current" />
-                  {currentTemplate.category === 'servicos' 
-                    ? 'Confirmar Agendamento' 
-                    : (storeMode === 'ecommerce' ? 'Finalizar Pedido (WhatsApp)' : 'Solicitar Orçamento')}
+                  {paymentMethod === 'Binance Pay (Criptomoedas)' ? <Bitcoin className="w-5 h-5" /> : <Phone className="w-4 h-4 fill-current" />}
+                  {isProcessingBinance 
+                    ? 'Processando Cripto...' 
+                    : (paymentMethod === 'Binance Pay (Criptomoedas)' 
+                        ? 'Pagar com Cripto' 
+                        : (currentTemplate.category === 'servicos' 
+                            ? 'Confirmar Agendamento' 
+                            : (storeMode === 'ecommerce' ? 'Finalizar Pedido (WhatsApp)' : 'Solicitar Orçamento')))}
                 </button>
 
               </div>
@@ -1698,6 +1771,41 @@ export default function CustomerCatalog({
                 {categories.map(cat => (<a key={cat} href={`#${cat}`} className="block px-4 py-3 border-b border-gray-100 text-sm font-medium text-gray-700">{cat}</a>))}
               </nav>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* =========================================
+          MODAL BINANCE PAY (QR CODE E CHECKOUT)
+          ========================================= */}
+      <AnimatePresence>
+        {binanceResult && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 backdrop-blur-md z-[600] flex items-center justify-center p-4">
+              <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white w-full max-w-md rounded-[3rem] p-8 sm:p-10 relative text-center shadow-2xl flex flex-col items-center">
+                  <button onClick={() => { setBinanceResult(null); setCart([]); }} className="absolute top-6 right-6 text-slate-400 hover:text-red-500 transition-colors"><X size={24}/></button>
+                  
+                  <div className="w-16 h-16 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                    <Bitcoin size={32} />
+                  </div>
+                  <h2 className="text-2xl font-black italic uppercase text-slate-900 mb-2">Binance Pay</h2>
+                  <p className="text-slate-500 font-bold mb-6 text-xs leading-relaxed">Escaneie o QR Code abaixo com o aplicativo da Binance para concluir o pagamento em Criptomoedas.</p>
+
+                  <div className="bg-white p-3 rounded-3xl border-4 border-yellow-100 shadow-md mb-6 w-48 h-48 sm:w-56 sm:h-56">
+                      <img src={binanceResult.qrcodeLink} alt="QR Code Binance Pay" className="w-full h-full object-contain rounded-2xl" />
+                  </div>
+                  
+                  <a href={binanceResult.checkoutUrl} target="_blank" rel="noopener noreferrer" className="w-full bg-yellow-400 text-black py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-yellow-500 active:scale-95 transition-all text-xs mb-4 flex items-center justify-center gap-2">
+                      <Bitcoin size={18} /> Abrir App da Binance
+                  </a>
+
+                  <button onClick={() => {
+                      setBinanceResult(null);
+                      setCart([]);
+                      alert("Assim que o pagamento for confirmado pela rede blockchain, o lojista receberá o aviso automático e seu pedido será separado!");
+                  }} className="text-[10px] font-black uppercase text-slate-400 hover:text-slate-700 tracking-widest underline transition-colors">
+                      Já realizei o pagamento
+                  </button>
+              </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
