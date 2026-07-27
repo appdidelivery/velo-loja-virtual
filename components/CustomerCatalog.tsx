@@ -597,7 +597,7 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
         "addressRegion": region,
         "addressCountry": "BR"
       },
-      "paymentAccepted": "Dinheiro, Cartão de Crédito, Cartão de Débito, Pix",
+      "paymentAccepted": "Dinheiro, Cartão de Crédito, Cartão de Débito, Pix, Criptomoedas (Binance Pay, Bitcoin, USDT)",
       "openingHours": "Mo,Tu,We,Th,Fr 08:00-18:00",
       "aggregateRating": {
         "ratingValue": "5.0",

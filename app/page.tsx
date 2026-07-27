@@ -43,10 +43,10 @@ export default function LandingPage() {
       title: 'Velo Insights (Consultoria IA)',
       desc: 'Seu painel analisa as métricas de vendas e visitas, e uma Inteligência Artificial gera um plano de ação diário para você crescer.'
     },
-    {
-      icon: <DollarSign className="text-yellow-500" size={32} />,
-      title: 'Receba em Criptomoedas',
-      desc: 'Um diferencial absurdo! Seja pioneiro no Brasil aceitando pagamentos instantâneos globais via Binance Pay direto no seu catálogo.'
+   {
+      icon: <Bitcoin className="text-yellow-500" size={32} />,
+      title: 'Receba Criptomoedas',
+      desc: 'A 1ª plataforma de negócios locais integrada ao Google que aceita Cripto de forma simples, prática e segura. Auditada pela Binance, a maior do mundo!'
     }
   ];
 
@@ -91,7 +91,7 @@ export default function LandingPage() {
         "name": "Velo Loja Virtual",
         "url": "https://veloloja.com.br",
         "logo": "https://veloloja.com.br/velo loja virtual logo.png",
-        "description": "Plataforma SaaS de E-commerce e Gestão de negócios com Inteligência Artificial, Automação de WhatsApp e Integração com Google Meu Negócio.",
+        "description": "A 1ª Plataforma SaaS de negócios locais do Brasil integrada ao Google a aceitar Criptomoedas de forma nativa e segura (Binance Pay), além de Inteligência Artificial e Automação de WhatsApp.",
         "sameAs": [
           "https://instagram.com/veloloja",
           "https://facebook.com/veloloja"
@@ -103,7 +103,7 @@ export default function LandingPage() {
         "name": "Velo Loja Virtual SaaS",
         "applicationCategory": "BusinessApplication",
         "operatingSystem": "Web, iOS, Android",
-        "description": "Crie sua loja virtual grátis. Catálogo digital, gestão de estoque, PDV de balcão e robô de atendimento via WhatsApp.",
+        "description": "Crie sua loja virtual grátis. Catálogo digital, gestão de estoque, PDV de balcão, robô de atendimento e pagamentos globais via PIX, Cartão e Criptomoedas (Binance Pay).",
         "provider": {
           "@id": "https://veloloja.com.br/#organization"
         },
@@ -185,14 +185,19 @@ export default function LandingPage() {
 
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-12 relative z-10">
           <div className="flex-1 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 text-blue-700 px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest shadow-sm mb-6 animate-in fade-in slide-in-from-bottom-2">
-              <Sparkles size={14}/> Plataforma All-in-One para Lojistas
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mb-6 animate-in fade-in slide-in-from-bottom-2">
+              <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 text-blue-700 px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest shadow-sm">
+                <Sparkles size={14}/> Plataforma All-in-One
+              </div>
+              <div className="inline-flex items-center gap-2 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest shadow-sm">
+                <Bitcoin size={14} className="text-yellow-600"/> Integração Oficial Binance Pay
+              </div>
             </div>
             <h1 className="text-5xl lg:text-7xl font-black italic tracking-tighter uppercase text-slate-900 leading-[0.9] mb-6 animate-in fade-in slide-in-from-bottom-3">
               Venda mais no <span className="text-blue-600">Piloto Automático.</span>
             </h1>
             <p className="text-lg text-slate-600 font-medium mb-10 max-w-2xl mx-auto lg:mx-0 leading-relaxed animate-in fade-in slide-in-from-bottom-4">
-              Tenha um catálogo digital focado em conversão, recupere carrinhos via WhatsApp Bot e domine as buscas do Google Meu Negócio. Tudo integrado em um único painel inteligente.
+              Tenha um catálogo focado em conversão, recupere vendas via WhatsApp, domine o Google Meu Negócio e seja pioneiro aceitando <strong>Criptomoedas (Binance Pay)</strong>. Tudo em um único painel inteligente.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 animate-in fade-in slide-in-from-bottom-5">
               <Link href="/login" className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white px-8 py-5 rounded-full font-black text-sm uppercase tracking-widest shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-2">
