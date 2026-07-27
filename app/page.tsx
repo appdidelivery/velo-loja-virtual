@@ -293,6 +293,93 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* --- SEÇÃO BINANCE PAY DESTAQUE DE AUTORIDADE --- */}
+      <section className="py-24 bg-[#0B0E11] relative overflow-hidden border-y-[8px] border-[#FCD535]">
+        {/* Glow Effects */}
+        <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] bg-[#FCD535] rounded-full blur-[150px] opacity-10 pointer-events-none"></div>
+        <div className="absolute bottom-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-600 rounded-full blur-[150px] opacity-10 pointer-events-none"></div>
+
+        <div className="max-w-7xl mx-auto px-6 relative z-10 flex flex-col lg:flex-row items-center gap-16">
+          
+          {/* Copywriting Agressivo */}
+          <div className="flex-1 text-center lg:text-left">
+            <div className="inline-flex items-center gap-2 bg-[#FCD535]/10 border border-[#FCD535]/30 text-[#FCD535] px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest mb-6">
+              <ShieldCheck size={16} /> Parceria Estratégica & Segurança Institucional
+            </div>
+            <h2 className="text-4xl lg:text-6xl font-black italic tracking-tighter uppercase text-white mb-6 leading-[1.1]">
+              O Futuro do Dinheiro. <br/><span className="text-[#FCD535]">Na sua Vitrine.</span>
+            </h2>
+            <p className="text-gray-400 font-medium text-lg leading-relaxed mb-8 max-w-2xl mx-auto lg:mx-0">
+              Não seja apenas mais uma loja, seja uma <strong className="text-white">referência inovadora</strong>. A Velo Varejo é a 1ª plataforma do Brasil a trazer o ecossistema de pagamentos da <strong className="text-[#FCD535]">Binance</strong> (A maior corretora do mundo) para o comércio local.
+            </p>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-10">
+              <div className="bg-white/5 border border-white/10 p-5 rounded-2xl text-left hover:bg-white/10 transition-colors">
+                <ShieldCheck className="text-[#FCD535] mb-3" size={28} />
+                <h4 className="text-white font-black uppercase tracking-wider text-sm mb-2">Zero Chargeback</h4>
+                <p className="text-gray-400 text-xs font-medium">Pagamentos criptografados na blockchain não sofrem estorno por fraude de cartão. Vendeu, tá no bolso.</p>
+              </div>
+              <div className="bg-white/5 border border-white/10 p-5 rounded-2xl text-left hover:bg-white/10 transition-colors">
+                <Bitcoin className="text-[#FCD535] mb-3" size={28} />
+                <h4 className="text-white font-black uppercase tracking-wider text-sm mb-2">Liquidez Global</h4>
+                <p className="text-gray-400 text-xs font-medium">Receba em USDT (Dólar pareado), Bitcoin ou Ethereum em segundos, caindo direto na sua conta oficial da corretora.</p>
+              </div>
+              <div className="bg-white/5 border border-white/10 p-5 rounded-2xl text-left hover:bg-white/10 transition-colors">
+                <Rocket className="text-[#FCD535] mb-3" size={28} />
+                <h4 className="text-white font-black uppercase tracking-wider text-sm mb-2">Público Classe A</h4>
+                <p className="text-gray-400 text-xs font-medium">Atraia investidores e entusiastas de tecnologia da sua região com alto poder aquisitivo.</p>
+              </div>
+              <div className="bg-[#FCD535] p-5 rounded-2xl text-[#0B0E11] text-left hover:scale-105 transition-transform shadow-[0_0_20px_rgba(252,213,53,0.2)]">
+                <CheckCircle2 className="text-[#0B0E11] mb-3" size={28} />
+                <h4 className="font-black uppercase tracking-wider text-sm mb-2">100% Legal e Auditado</h4>
+                <p className="text-[#0B0E11]/80 text-xs font-black">Homologado nativamente via API Binance Merchant. Padrão de segurança de nível bancário internacional.</p>
+              </div>
+            </div>
+
+            <a href="#planos" className="inline-block bg-[#FCD535] hover:bg-white text-[#0B0E11] px-8 py-5 rounded-full font-black text-sm uppercase tracking-widest shadow-[0_0_30px_rgba(252,213,53,0.3)] transition-all active:scale-95">
+              Ver Planos c/ Integração Cripto
+            </a>
+          </div>
+          
+          {/* Arte Visual (UI Mockup) */}
+          <div className="flex-1 w-full flex justify-center lg:justify-end relative mt-12 lg:mt-0">
+             <div className="w-full max-w-sm aspect-square bg-gradient-to-br from-gray-800 to-[#0B0E11] rounded-full border border-gray-700 flex items-center justify-center relative shadow-2xl">
+                
+                {/* Interface Simulada do Lojista Recebendo */}
+                <div className="w-64 bg-white rounded-[2rem] p-6 shadow-2xl relative z-10 rotate-[-5deg] hover:rotate-0 transition-transform duration-500">
+                    <div className="flex justify-between items-center mb-6">
+                        <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                            <Bitcoin className="text-yellow-600 w-5 h-5"/>
+                        </div>
+                        <span className="text-[10px] font-black uppercase bg-green-100 text-green-700 px-2 py-1 rounded">Sucesso</span>
+                    </div>
+                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest text-left">Novo Pedido Pago</p>
+                    <h3 className="text-3xl font-black italic text-gray-900 mb-1 leading-none mt-1 text-left">150.00 <span className="text-lg">USDT</span></h3>
+                    <p className="text-xs font-bold text-green-500 mb-6 text-left">≈ R$ 850,00</p>
+                    
+                    <div className="bg-gray-50 border border-gray-100 rounded-xl p-3 mb-2 text-left">
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">De: Cliente Local Verificado</p>
+                        <p className="text-[10px] font-mono font-black text-gray-700 mt-1 truncate">TXID: 0x8f...4a2c91b</p>
+                    </div>
+                    <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-gray-100 text-[#FCD535]">
+                        <ShieldCheck size={16} className="text-yellow-500" /> <span className="text-[10px] font-black uppercase text-gray-900">Auditado por Binance</span>
+                    </div>
+                </div>
+
+                {/* Selos Flutuantes Dinâmicos */}
+                <div className="absolute top-10 left-[-20px] bg-[#0B0E11] border border-gray-700 text-white p-3 rounded-2xl shadow-xl flex items-center gap-3 animate-bounce">
+                    <img src="https://cryptologos.cc/logos/tether-usdt-logo.png" className="w-6 h-6 object-contain" alt="USDT"/>
+                    <span className="font-black text-xs uppercase">USDT Aceito</span>
+                </div>
+                <div className="absolute bottom-10 right-[-20px] bg-[#0B0E11] border border-gray-700 text-white p-3 rounded-2xl shadow-xl flex items-center gap-3 animate-bounce" style={{animationDelay: '1s'}}>
+                    <img src="https://cryptologos.cc/logos/bitcoin-btc-logo.png" className="w-6 h-6 object-contain" alt="BTC"/>
+                    <span className="font-black text-xs uppercase">BTC Aceito</span>
+                </div>
+             </div>
+          </div>
+        </div>
+      </section>
+
       {/* PLANOS DE ASSINATURA */}
       <section id="planos" className="py-24 bg-slate-50">
         <div className="max-w-7xl mx-auto px-6">
