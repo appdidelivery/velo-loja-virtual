@@ -311,6 +311,11 @@ const handleLogout = async () => {
         const dbData = docSnap.data();
         
         setSettings(dbData as any);
+
+        // BLINDAGEM: Lê do banco se o usuário já pulou/concluiu o Setup
+        if (dbData.onboardingCompleted) {
+          setShowOnboarding(false);
+        }
         
         // Sobrescreve o formulário com a verdade absoluta do banco de dados
         setSettingsForm((prev: any) => ({
@@ -321,9 +326,9 @@ const handleLogout = async () => {
           whatsappNumber: dbData.whatsappNumber || '',
           primaryColor: dbData.primaryColor || '#0ea5e9',
           templateId: dbData.templateId || 'nativo_app',
-          banners: dbData.banners || [], // <-- LÊ OS BANNERS DO BANCO
+          banners: dbData.banners || [], 
           storeMode: dbData.storeMode || 'ecommerce',
-          slug: dbData.slug || '', // <-- CORRIGIDO: Se não tem slug, deixa vazio
+          slug: dbData.slug || '',
           address: dbData.address || '',
           aboutText: dbData.aboutText || '',
           storeNiche: dbData.storeNiche || 'varejo',
@@ -689,7 +694,7 @@ const [termoIA, setTermoIA] = useState('');
             
             {authRole.businessType === 'ecommerce' && (
               <button 
-                onClick={() => setActivePanel('dashboard')} 
+                onClick={() => { setActivePanel('dashboard'); setIsMobileMenuOpen(false); }} 
                 className={`w-full flex items-center justify-start gap-3 px-4 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activePanel === 'dashboard' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
               >
                 <TrendingUp className="w-5 h-5 shrink-0" /> 
@@ -698,7 +703,7 @@ const [termoIA, setTermoIA] = useState('');
             )}
 
             <button 
-              onClick={() => setActivePanel('products')} 
+              onClick={() => { setActivePanel('products'); setIsMobileMenuOpen(false); }} 
               className={`w-full flex items-center justify-start gap-3 px-4 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activePanel === 'products' || activePanel === 'categories' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
             >
               <ShoppingBag className="w-5 h-5 shrink-0" /> 
@@ -708,21 +713,21 @@ const [termoIA, setTermoIA] = useState('');
             {authRole.businessType === 'ecommerce' && (
               <>
                 <button 
-                  onClick={() => setActivePanel('manual')} 
+                  onClick={() => { setActivePanel('manual'); setIsMobileMenuOpen(false); }} 
                   className={`w-full flex items-center justify-start gap-3 px-4 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activePanel === 'manual' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
                 >
                   <Store className="w-5 h-5 shrink-0" /> 
                   <span className="text-left truncate">Frente de Caixa</span>
                 </button>
                 <button 
-                  onClick={() => setActivePanel('orders')} 
+                  onClick={() => { setActivePanel('orders'); setIsMobileMenuOpen(false); }} 
                   className={`w-full flex items-center justify-start gap-3 px-4 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activePanel === 'orders' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
                 >
                   <FileCheck className="w-5 h-5 shrink-0" /> 
                   <span className="text-left truncate">Pedidos</span>
                 </button>
                 <button 
-                  onClick={() => setActivePanel('customers')} 
+                  onClick={() => { setActivePanel('customers'); setIsMobileMenuOpen(false); }} 
                   className={`w-full flex items-center justify-start gap-3 px-4 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activePanel === 'customers' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
                 >
                   <User className="w-5 h-5 shrink-0" /> 
@@ -732,7 +737,7 @@ const [termoIA, setTermoIA] = useState('');
             )}
 
             <button 
-              onClick={() => setActivePanel('google_business')}
+              onClick={() => { setActivePanel('google_business'); setIsMobileMenuOpen(false); }}
               className={`w-full flex items-center justify-start gap-3 px-4 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all relative overflow-hidden ${activePanel === 'google_business' ? 'bg-white text-slate-900 shadow-[0_0_15px_rgba(66,133,244,0.15)] border border-slate-200 z-10' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
             >
               {activePanel === 'google_business' && (
@@ -745,7 +750,7 @@ const [termoIA, setTermoIA] = useState('');
             {/* Oculta o menu de Atendimento se a API da Meta não estiver configurada no Firebase */}
             {((settings as any)?.metaPhoneId && (settings as any)?.metaApiToken) && (
               <button 
-                onClick={() => setActivePanel('chats')} 
+                onClick={() => { setActivePanel('chats'); setIsMobileMenuOpen(false); }} 
                 className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activePanel === 'chats' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
               >
                 <div className="flex items-center justify-start gap-3 overflow-hidden">
@@ -759,7 +764,7 @@ const [termoIA, setTermoIA] = useState('');
             <div className="pt-2 border-t border-slate-100 mt-2">
               {showFinanceTab && (
                 <button 
-                  onClick={() => setActivePanel('finance')} 
+                  onClick={() => { setActivePanel('finance'); setIsMobileMenuOpen(false); }} 
                   className={`w-full flex items-center justify-start gap-3 px-4 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activePanel === 'finance' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
                 >
                   <CreditCard className="w-5 h-5 shrink-0" /> 
@@ -768,7 +773,7 @@ const [termoIA, setTermoIA] = useState('');
               )}
 
               <button
-                onClick={() => setActivePanel('ai_agent')} 
+                onClick={() => { setActivePanel('ai_agent'); setIsMobileMenuOpen(false); }} 
                 className={`w-full flex items-center justify-start gap-3 px-4 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all mt-2 bg-gradient-to-r ${activePanel === 'ai_agent' ? 'from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
               >
                 <Sparkles className="w-5 h-5 shrink-0" /> 
@@ -787,10 +792,10 @@ const [termoIA, setTermoIA] = useState('');
                 {isSettingsExpanded && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                     <div className="pl-12 pr-3 py-2 space-y-1">
-                      <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('visual'); }} className={`block w-full text-left text-[10px] uppercase tracking-widest py-2.5 font-bold rounded-xl px-4 transition-colors ${settingsSubPanel === 'visual' && activePanel === 'settings' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Visual da loja</button>
-                      <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('dados'); }} className={`block w-full text-left text-[10px] uppercase tracking-widest py-2.5 font-bold rounded-xl px-4 transition-colors ${settingsSubPanel === 'dados' && activePanel === 'settings' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Dados da Loja</button>
-                      <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('equipe'); }} className={`block w-full text-left text-[10px] uppercase tracking-widest py-2.5 font-bold rounded-xl px-4 transition-colors ${settingsSubPanel === 'equipe' && activePanel === 'settings' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Acesso e Equipe</button>
-                      <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('integracoes'); }} className={`block w-full text-left text-[10px] uppercase tracking-widest py-2.5 font-bold rounded-xl px-4 transition-colors ${settingsSubPanel === 'integracoes' && activePanel === 'settings' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Integrações e APIs</button>
+                      <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('visual'); setIsMobileMenuOpen(false); }} className={`block w-full text-left text-[10px] uppercase tracking-widest py-2.5 font-bold rounded-xl px-4 transition-colors ${settingsSubPanel === 'visual' && activePanel === 'settings' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Visual da loja</button>
+                      <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('dados'); setIsMobileMenuOpen(false); }} className={`block w-full text-left text-[10px] uppercase tracking-widest py-2.5 font-bold rounded-xl px-4 transition-colors ${settingsSubPanel === 'dados' && activePanel === 'settings' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Dados da Loja</button>
+                      <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('equipe'); setIsMobileMenuOpen(false); }} className={`block w-full text-left text-[10px] uppercase tracking-widest py-2.5 font-bold rounded-xl px-4 transition-colors ${settingsSubPanel === 'equipe' && activePanel === 'settings' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Acesso e Equipe</button>
+                      <button onClick={() => { setActivePanel('settings'); setSettingsSubPanel('integracoes'); setIsMobileMenuOpen(false); }} className={`block w-full text-left text-[10px] uppercase tracking-widest py-2.5 font-bold rounded-xl px-4 transition-colors ${settingsSubPanel === 'integracoes' && activePanel === 'settings' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}>Integrações e APIs</button>
                     </div>
                   </motion.div>
                 )}
@@ -854,7 +859,20 @@ const [termoIA, setTermoIA] = useState('');
             {activePanel === 'dashboard' && (
             <>
               {showOnboarding ? (
-                <div className="max-w-[1200px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="max-w-[1200px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
+                  <div className="flex justify-end mb-4">
+                    <button 
+                      onClick={async () => {
+                        setShowOnboarding(false);
+                        if (authRole.tenantId && authRole.tenantId !== 'loading') {
+                          await setDoc(doc(db, 'tenants', authRole.tenantId), { onboardingCompleted: true }, { merge: true });
+                        }
+                      }}
+                      className="text-xs font-black uppercase tracking-widest text-slate-500 hover:text-red-500 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200 transition-colors flex items-center gap-2"
+                    >
+                      <X size={14}/> Pular Setup Inicial
+                    </button>
+                  </div>
                   <VeloOnboarding 
                     settingsForm={settingsForm}
                     setSettingsForm={setSettingsForm}
@@ -862,7 +880,12 @@ const [termoIA, setTermoIA] = useState('');
                     setActivePanel={setActivePanel}
                     handleLogoUpload={handleLogoUpload}
                     isUploadingLogo={isUploadingLogo}
-                    onFinish={() => setShowOnboarding(false)}
+                    onFinish={async () => {
+                      setShowOnboarding(false);
+                      if (authRole.tenantId && authRole.tenantId !== 'loading') {
+                        await setDoc(doc(db, 'tenants', authRole.tenantId), { onboardingCompleted: true }, { merge: true });
+                      }
+                    }}
                     addProduct={addProduct}
                     uploadImageToCloudinary={uploadImageToCloudinary}
                   />
@@ -1113,7 +1136,7 @@ const [termoIA, setTermoIA] = useState('');
                               imageUrl: newImages.length > 0 ? newImages[0] : '' 
                             });
                           }}
-                          className="absolute top-1 right-1 bg-red-500 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600 z-20"
+className="absolute top-1 right-1 bg-red-500 text-white p-2 lg:p-1.5 rounded-lg opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600 z-20"
                         >
                           <Trash2 size={12} />
                         </button>
@@ -1671,14 +1694,31 @@ const [termoIA, setTermoIA] = useState('');
                           </span>
                         </div>
                         
-                        <div>
+                        <div className="flex flex-col gap-1">
                           <div className="text-sm text-slate-600 font-medium">Cliente: <strong className="text-slate-900 font-black text-lg">{ord.customerName}</strong></div>
-                          {ord.customerPhone && (
-                             <a href={`https://wa.me/55${ord.customerPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-green-600 hover:underline flex items-center gap-1 mt-1">
-                               <MessageSquare size={12}/> {ord.customerPhone}
-                             </a>
-                          )}
+                          
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-1">
+                            {ord.customerPhone && (
+                               <a href={`https://wa.me/55${ord.customerPhone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-lg hover:bg-green-100 transition-colors flex items-center gap-1.5 w-max">
+                                 <MessageSquare size={14}/> {ord.customerPhone}
+                               </a>
+                            )}
+                            
+                            {ord.createdAt && (
+                              <span className="text-xs font-bold text-slate-500 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100 flex items-center gap-1.5 w-max">
+                                <Calendar size={14}/> 
+                                {new Date(ord.createdAt).toLocaleDateString('pt-BR')} às {new Date(ord.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            )}
+                          </div>
                         </div>
+
+                        {/* Validador de Pedido Mínimo (Lógica Genérica SaaS) */}
+                        {Number(ord.total) < 20 && (
+                            <div className="text-[10px] font-black uppercase text-red-600 bg-red-50 border border-red-100 px-3 py-1.5 rounded-lg w-max flex items-center gap-1">
+                                <AlertCircle size={12}/> Atenção: Valor abaixo do pedido mínimo sugerido.
+                            </div>
+                        )}
 
                         {/* EXIBE A DATA DO AGENDAMENTO (Ou Endereço) */}
                         {ord.notes && (
@@ -2963,7 +3003,7 @@ const [termoIA, setTermoIA] = useState('');
                               imageUrl: newImages.length > 0 ? newImages[0] : '' 
                             });
                           }}
-                          className="absolute top-1 right-1 bg-red-500 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600 z-20"
+className="absolute top-1 right-1 bg-red-500 text-white p-2 lg:p-1.5 rounded-lg opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600 z-20"
                         >
                           <Trash2 size={12} />
                         </button>
