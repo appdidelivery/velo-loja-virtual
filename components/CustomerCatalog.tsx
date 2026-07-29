@@ -1194,14 +1194,21 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                   )}
                   <p className="text-[10px] font-bold text-slate-400 mb-4">Atendimento: {storeSupportHours}</p>
                   
-                  <div className="flex gap-4 justify-center text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-6">
+                  <div className="flex flex-wrap gap-4 justify-center text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-6 px-4">
                       <button onClick={() => setLegalModal('privacy')} className="hover:text-slate-600 transition-colors cursor-pointer">Privacidade</button>
                       <button onClick={() => setLegalModal('terms')} className="hover:text-slate-600 transition-colors cursor-pointer">Termos</button>
+                      
+                      {/* NOVO LINK PARA A PÁGINA DE SEO */}
+                      <a href={`/${tenantId}/avaliacoes`} className="hover:text-blue-500 transition-colors flex items-center gap-1">
+                          <Star size={10} className="text-amber-400" fill="currentColor"/> Avaliações da Loja
+                      </a>
                   </div>
-                  <a href="https://veloloja.com.br" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center opacity-40 hover:opacity-100 grayscale hover:grayscale-0 transition-all">
-                      <img src="/velo loja virtual logo.png" alt="Velo Loja Virtual" className="h-5 w-auto mb-1.5" />
-                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Powered by Velo</p>
-                  </a>
+                  <a 
+                          href={`/${initialData?.slug || tenantId}/avaliacoes`} 
+                          className="hover:text-blue-500 transition-colors flex items-center gap-1"
+                      >
+                          <Star size={10} className="text-amber-400" fill="currentColor"/> Avaliações da Loja
+                      </a>
               </div>
 
             </main>
