@@ -45,6 +45,8 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'manual' | 'product
   const [manualDiscount, setManualDiscount] = useState<number>(0);
   const [isSubmittingPDV, setIsSubmittingPDV] = useState(false);
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
+  // ESTADO DO PIX NO PDV
+  const [pdvPixData, setPdvPixData] = useState<{qrCodeBase64: string, pixEmv: string, transactionId: string} | null>(null);
 
   const [isClearingCache, setIsClearingCache] = useState(false);
 
@@ -1617,54 +1619,109 @@ className="absolute top-1 right-1 bg-red-500 text-white p-2 lg:p-1.5 rounded-lg 
                             </span>
                         </div>
 
-                        <button 
-                            onClick={async () => {
-                                if (manualCart.length === 0 || !manualCustomer.name || !manualCustomer.phone) return alert("Preencha o Nome, WhatsApp e adicione itens.");
-                                if (manualCustomer.isService && (!manualCustomer.date || !manualCustomer.time)) return alert("Preencha a Data e Hora do agendamento.");
-                                
-                                setIsSubmittingPDV(true);
-                                try {
-                                    const finalTotal = Math.max(0, manualCart.reduce((a, b) => a + (b.currentPrice * b.quantity), 0) - manualDiscount);
-                                    let notes = manualCustomer.isService ? `Agendamento: ${manualCustomer.date.split('-').reverse().join('/')} às ${manualCustomer.time}` : 'Venda (PDV)';
-                                    
-                                    if (addOrder) {
-                                        await addOrder({
-                                            customerName: manualCustomer.name,
-                                            customerPhone: manualCustomer.phone,
-                                            items: manualCart.map(i => ({
-                                                productId: i.id,
-                                                name: i.name,
-                                                price: i.currentPrice,
-                                                quantity: i.quantity
-                                            })),
-                                            total: finalTotal,
-                                            status: (manualCustomer.isService ? 'pending' : 'completed'),
-                                            paymentStatus: 'paid', 
-                                            source: 'manual_pdv',
-                                            notes: notes,
-                                            tenantId: tenantForHooks,
-                                            createdAt: new Date().toISOString()
-                                        } as any);
+                        {/* LÓGICA INTELIGENTE DO BOTÃO (PIX OU LANÇAMENTO NORMAL) */}
+                        {(() => {
+                            // 1. Verifica se o lojista tem o MP ativo no banco de dados
+                            const hasMercadoPago = !!(settings?.integrations?.mercadopago?.accessToken || (settings as any)?.mpAccessToken);
+                            // 2. Verifica se o valor da venda é maior que zero
+                            const currentTotal = Math.max(0, manualCart.reduce((a, b) => a + (b.currentPrice * b.quantity), 0) - manualDiscount);
+
+                            return (
+                                <button 
+                                    onClick={async () => {
+                                        if (manualCart.length === 0 || !manualCustomer.name || !manualCustomer.phone) return alert("Preencha o Nome, WhatsApp e adicione itens.");
+                                        if (manualCustomer.isService && (!manualCustomer.date || !manualCustomer.time)) return alert("Preencha a Data e Hora do agendamento.");
                                         
-                                        alert("✅ Pedido/Agendamento lançado com sucesso!");
-                                        setManualCart([]);
-                                        setManualCustomer({ name: '', phone: '', date: '', time: '', isService: false });
-                                        setManualDiscount(0);
-                                        setIsMobileCartOpen(false);
-                                    } else {
-                                        alert("A função addOrder não está mapeada corretamente.");
-                                    }
-                                } catch (error) {
-                                    alert("Erro ao lançar pedido.");
-                                } finally {
-                                    setIsSubmittingPDV(false);
-                                }
-                            }}
-                            disabled={manualCart.length === 0 || isSubmittingPDV}
-                            className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
-                        >
-                            {isSubmittingPDV ? 'Processando...' : 'Lançar no Sistema'}
-                        </button>
+                                        setIsSubmittingPDV(true);
+                                        try {
+                                            let notes = manualCustomer.isService ? `Agendamento: ${manualCustomer.date.split('-').reverse().join('/')} às ${manualCustomer.time}` : 'Venda (PDV)';
+                                            
+                                            // SÓ CHAMA A API DO PIX SE TIVER MP ATIVADO E VALOR > 0
+                                            if (hasMercadoPago && currentTotal > 0) {
+                                                try {
+                                                    const pixResponse = await fetch('/api/generate-pix', {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({
+                                                            valor: currentTotal,
+                                                            descricao: `Venda PDV - ${manualCustomer.name}`,
+                                                            tenantId: tenantForHooks,
+                                                            customerEmail: "cliente@velodelivery.com.br"
+                                                        })
+                                                    });
+                                                    
+                                                    const pixData = await pixResponse.json();
+                                                    
+                                                    if (pixData.success) {
+                                                        // ABRE A TELA DO QR CODE PARA O CLIENTE
+                                                        setPdvPixData({
+                                                            qrCodeBase64: pixData.qrCodeBase64,
+                                                            pixEmv: pixData.pixEmv,
+                                                            transactionId: pixData.transactionId
+                                                        });
+                                                    } else {
+                                                        alert(`Erro ao gerar PIX: ${pixData.error}`);
+                                                        setIsSubmittingPDV(false);
+                                                        return; // Para o fluxo, não deixa lançar pedido sem pagar
+                                                    }
+                                                } catch (pixErr) {
+                                                    alert("Falha de conexão com a API de PIX do Mercado Pago.");
+                                                    setIsSubmittingPDV(false);
+                                                    return;
+                                                }
+                                            }
+
+                                            // SALVA O PEDIDO NO FIREBASE (Roda em ambos os casos)
+                                            if (addOrder) {
+                                                await addOrder({
+                                                    customerName: manualCustomer.name,
+                                                    customerPhone: manualCustomer.phone,
+                                                    items: manualCart.map(i => ({
+                                                        productId: i.id,
+                                                        name: i.name,
+                                                        price: i.currentPrice,
+                                                        quantity: i.quantity
+                                                    })),
+                                                    total: currentTotal,
+                                                    // Se gerou PIX, entra como pendente. Se foi manual ou R$0, entra como concluído
+                                                    status: (hasMercadoPago && currentTotal > 0) ? 'pending' : 'completed',
+                                                    paymentStatus: (hasMercadoPago && currentTotal > 0) ? 'pending' : 'paid', 
+                                                    source: 'manual_pdv',
+                                                    notes: notes,
+                                                    tenantId: tenantForHooks,
+                                                    createdAt: new Date().toISOString()
+                                                } as any);
+                                                
+                                                // Se não for PIX, dá o alerta normal de sucesso
+                                                if (!hasMercadoPago || currentTotal === 0) {
+                                                    alert("✅ Pedido lançado no sistema!");
+                                                }
+                                                
+                                                // Limpa a tela
+                                                setManualCart([]);
+                                                setManualCustomer({ name: '', phone: '', date: '', time: '', isService: false });
+                                                setManualDiscount(0);
+                                                setIsMobileCartOpen(false);
+                                            }
+                                        } catch (error) {
+                                            alert("Erro ao lançar pedido.");
+                                        } finally {
+                                            setIsSubmittingPDV(false);
+                                        }
+                                    }}
+                                    disabled={manualCart.length === 0 || isSubmittingPDV}
+                                    className={`w-full text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 ${
+                                        (hasMercadoPago && currentTotal > 0) ? 'bg-[#009ee3] hover:bg-[#008bcf]' : 'bg-slate-900 hover:bg-black'
+                                    }`}
+                                >
+                                    {isSubmittingPDV ? (
+                                        <> <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Processando... </>
+                                    ) : (
+                                        (hasMercadoPago && currentTotal > 0) ? 'Cobrar via PIX (MP)' : 'Lançar no Sistema'
+                                    )}
+                                </button>
+                            );
+                        })()}
                     </div>
                 </div>
             </div>
@@ -3268,7 +3325,64 @@ className="absolute top-1 right-1 bg-red-500 text-white p-2 lg:p-1.5 rounded-lg 
           </div>
         </div>
       )}
+{/* --- MODAL DE COBRANÇA PIX (PDV) --- */}
+      <AnimatePresence>
+        {pdvPixData && (
+          <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl relative flex flex-col items-center text-center">
+              
+              <button onClick={() => setPdvPixData(null)} className="absolute top-6 right-6 p-2 bg-gray-50 rounded-full hover:bg-red-50 hover:text-red-500 text-gray-400 transition-colors">
+                <X size={18}/>
+              </button>
+              
+              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                <DollarSign size={32} />
+              </div>
+              
+              <h2 className="text-2xl font-black italic uppercase text-slate-900 leading-none mb-2">
+                Pagamento PIX
+              </h2>
+              <p className="text-xs font-bold text-slate-500 mb-6">Peça para o cliente escanear o QR Code abaixo com o app do banco.</p>
+              
+              {/* QR CODE GERADO PELO MERCADO PAGO */}
+              <div className="bg-white p-2 rounded-2xl border-4 border-emerald-100 shadow-md mb-6 w-48 h-48">
+                <img 
+                  src={`data:image/png;base64,${pdvPixData.qrCodeBase64}`} 
+                  alt="QR Code PIX" 
+                  className="w-full h-full object-contain rounded-xl" 
+                />
+              </div>
 
+              <div className="w-full space-y-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ou utilize o Copia e Cola:</p>
+                <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
+                  <input 
+                    type="text" 
+                    readOnly 
+                    value={pdvPixData.pixEmv} 
+                    className="w-full bg-transparent text-xs font-bold text-slate-600 outline-none truncate" 
+                  />
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(pdvPixData.pixEmv);
+                      alert("Código PIX Copiado!");
+                    }} 
+                    className="p-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors shadow-sm"
+                    title="Copiar PIX"
+                  >
+                    <CheckCircle2 size={16} />
+                  </button>
+                </div>
+              </div>
+
+              <button onClick={() => setPdvPixData(null)} className="w-full mt-6 bg-slate-900 hover:bg-black text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all active:scale-95">
+                Fechar Janela
+              </button>
+
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
       {/* WIDGET DE SUPORTE VELO SAAS */}
       <VeloSupportWidget
         tenantId={authRole.tenantId} 

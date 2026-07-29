@@ -1720,41 +1720,59 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                     )}
                   </div>
                 )}
-                <div className="flex justify-between text-sm text-gray-600 mb-1"><span>Subtotal ({cartTotalItems} itens)</span><span className="font-medium">R$ {cartTotalValue.toFixed(2)}</span></div>
-                <div className="flex justify-between text-lg font-black text-gray-900 mb-4 border-t border-gray-100 pt-2"><span>Total s/ Frete</span><span className="text-[#357b64]">R$ {cartTotalValue.toFixed(2)}</span></div>
+               <div className="flex justify-between text-sm text-gray-600 mb-1">
+                  <span>Subtotal ({cartTotalItems} itens)</span>
+                  <span className="font-medium">R$ {cartTotalValue.toFixed(2)}</span>
+                </div>
                 
-                <button 
-                  onClick={paymentMethod === 'Binance Pay (Criptomoedas)' ? handleBinanceCheckout : handleWhatsAppCheckout}
-                  disabled={
-                    isProcessingBinance || cart.length === 0 || !customerName.trim() || 
-                    (currentTemplate.category !== 'servicos' && (!customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim())) ||
-                    (currentTemplate.category === 'servicos' && (!serviceDate || !serviceTime))
-                  }
-                  style={
-                    (!isProcessingBinance && cart.length > 0 && customerName.trim() && (
-                      (currentTemplate.category !== 'servicos' && customerCnpj.trim() && cep.length === 8 && addressNumber.trim()) ||
-                      (currentTemplate.category === 'servicos' && serviceDate && serviceTime)
-                    )) ? { backgroundColor: paymentMethod === 'Binance Pay (Criptomoedas)' ? '#eab308' : currentTemplate.primaryColor, color: paymentMethod === 'Binance Pay (Criptomoedas)' ? '#000' : '#fff' } : {}
-                  }
-                  className={`w-full py-4 font-black rounded-xl text-xs flex items-center justify-center gap-2 transition-all uppercase tracking-widest ${
-                    (isProcessingBinance || cart.length === 0 || !customerName.trim() || 
-                    (currentTemplate.category !== 'servicos' && (!customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim())) ||
-                    (currentTemplate.category === 'servicos' && (!serviceDate || !serviceTime)))
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'shadow-xl hover:scale-[0.98]'
-                  }`}
-                >
-                  {paymentMethod === 'Binance Pay (Criptomoedas)' ? <Bitcoin className="w-5 h-5" /> : <Phone className="w-4 h-4 fill-current" />}
-                  {isProcessingBinance 
-                    ? 'Processando Cripto...' 
-                    : (paymentMethod === 'Binance Pay (Criptomoedas)' 
-                        ? 'Pagar com Cripto' 
-                        : (currentTemplate.category === 'servicos' 
-                            ? 'Confirmar Agendamento' 
-                            : (storeMode === 'ecommerce' ? 'Finalizar Pedido (WhatsApp)' : 'Solicitar Orçamento')))}
-                </button>
+                <div className="flex justify-between text-lg font-black text-gray-900 mb-4 border-t border-gray-100 pt-2">
+                  {/* 1. CORREÇÃO: Remove a palavra Frete se for serviço */}
+                  <span>{currentTemplate.category === 'servicos' ? 'Valor Total' : 'Total s/ Frete'}</span>
+                  <span style={{ color: themeColor }}>R$ {cartTotalValue.toFixed(2)}</span>
+                </div>
+                
+                {/* Agrupamento dos botões */}
+                <div className="flex flex-col gap-2">
+                  <button 
+                    onClick={paymentMethod === 'Binance Pay (Criptomoedas)' ? handleBinanceCheckout : handleWhatsAppCheckout}
+                    disabled={
+                      isProcessingBinance || cart.length === 0 || !customerName.trim() || 
+                      (currentTemplate.category !== 'servicos' && (!customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim())) ||
+                      (currentTemplate.category === 'servicos' && (!serviceDate || !serviceTime))
+                    }
+                    style={
+                      (!isProcessingBinance && cart.length > 0 && customerName.trim() && (
+                        (currentTemplate.category !== 'servicos' && customerCnpj.trim() && cep.length === 8 && addressNumber.trim()) ||
+                        (currentTemplate.category === 'servicos' && serviceDate && serviceTime)
+                      )) ? { backgroundColor: paymentMethod === 'Binance Pay (Criptomoedas)' ? '#eab308' : currentTemplate.primaryColor, color: paymentMethod === 'Binance Pay (Criptomoedas)' ? '#000' : '#fff' } : {}
+                    }
+                    className={`w-full py-4 font-black rounded-xl text-xs flex items-center justify-center gap-2 transition-all uppercase tracking-widest ${
+                      (isProcessingBinance || cart.length === 0 || !customerName.trim() || 
+                      (currentTemplate.category !== 'servicos' && (!customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim())) ||
+                      (currentTemplate.category === 'servicos' && (!serviceDate || !serviceTime)))
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'shadow-xl hover:scale-[0.98]'
+                    }`}
+                  >
+                    {paymentMethod === 'Binance Pay (Criptomoedas)' ? <Bitcoin className="w-5 h-5" /> : <Phone className="w-4 h-4 fill-current" />}
+                    {isProcessingBinance 
+                      ? 'Processando...' 
+                      : (paymentMethod === 'Binance Pay (Criptomoedas)' 
+                          ? 'Pagar com Cripto' 
+                          : (currentTemplate.category === 'servicos' 
+                              ? 'Confirmar Agendamento' 
+                              : (storeMode === 'ecommerce' ? 'Finalizar Pedido' : 'Solicitar Orçamento')))}
+                  </button>
 
-              </div>
+                  {/* 2. NOVO BOTÃO: ADICIONAR MAIS ITENS */}
+                  <button 
+                    onClick={() => setIsCartOpen(false)}
+                    className="w-full py-3.5 font-bold rounded-xl text-xs text-gray-500 bg-white border-2 border-gray-200 hover:bg-gray-50 transition-colors uppercase tracking-widest flex items-center justify-center gap-2"
+                  >
+                    <Plus size={14} /> Adicionar mais itens
+                  </button>
+                </div>
+              </div> {/* 👈 BASTA ADICIONAR ESTE /div AQUI! */}
             </motion.div>
           </motion.div>
         )}
