@@ -7,7 +7,7 @@ import {
   ChevronDown, Star, ShieldCheck, MapPin, Phone, 
   X, Plus, Minus, Trash2, LayoutGrid, ClipboardList, ShoppingBag,
   Scissors, Smartphone, Sofa, Wrench, Shirt, Gem, Beer, ChevronRight, Sparkles,
-  Store, Calendar, UploadCloud, Heart, Share2, Bitcoin
+  Store, Calendar, UploadCloud, Heart, Share2, Bitcoin, CheckCircle
 } from 'lucide-react';
 
 import { Product, TenantSettings } from '../types';
@@ -75,6 +75,11 @@ export default function CustomerCatalog({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [legalModal, setLegalModal] = useState<'privacy' | 'terms' | null>(null);
+  // NOVO: ESTADO DO POPUP DE AVALIAÇÃO INTELIGENTE
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewStars, setReviewStars] = useState(5);
+  const [reviewText, setReviewText] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState(''); // NOVO: Captura do WhatsApp
@@ -523,6 +528,9 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
     
     setCart([]);
     setIsCartOpen(false);
+    // Dispara a Inteligência de Avaliação
+    setReviewText(`Excelente! O pedido pelo catálogo foi muito prático e o atendimento da ${storeName} é nota 10.`);
+    setShowReviewModal(true);
   };
 
   const generateStructuredData = () => {
@@ -1904,6 +1912,74 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                   Entendi e Concordo
                 </button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* =========================================
+          MODAL INTELIGENTE DE AVALIAÇÃO PÓS-COMPRA
+          ========================================= */}
+      <AnimatePresence>
+        {showReviewModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[900] flex items-center justify-center p-4">
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 relative flex flex-col text-center shadow-2xl overflow-hidden border border-slate-100">
+              
+              {/* Confete / Sucesso Animado */}
+              <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
+                <CheckCircle size={40} />
+              </div>
+              
+              <h2 className="text-xl font-black italic uppercase text-slate-800 leading-none mb-2">Pedido Recebido!</h2>
+              <p className="text-xs font-bold text-slate-500 mb-6">Enquanto preparamos tudo, o que você achou da facilidade de pedir por aqui?</p>
+
+              {/* Seletor de Estrelas */}
+              <div className="flex justify-center gap-2 mb-4">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button key={star} onClick={() => setReviewStars(star)} className="focus:outline-none transition-transform hover:scale-110 active:scale-90">
+                    <Star size={32} fill={star <= reviewStars ? "#f59e0b" : "transparent"} className={star <= reviewStars ? "text-amber-500" : "text-slate-200"} />
+                  </button>
+                ))}
+              </div>
+
+              {/* Texto Sugerido (Editável) */}
+              <textarea 
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700 p-4 rounded-2xl outline-none focus:border-amber-400 transition-colors resize-none mb-4 shadow-inner"
+                rows={3}
+              />
+
+              <button 
+                disabled={isSubmittingReview}
+                onClick={async () => {
+                  setIsSubmittingReview(true);
+                  try {
+                    const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
+                    await addDoc(collection(db, 'reviews'), {
+                      tenantId: tenantId,
+                      customerName: customerName || 'Cliente',
+                      rating: reviewStars,
+                      comment: reviewText,
+                      createdAt: serverTimestamp(),
+                      status: 'approved'
+                    });
+                    setShowReviewModal(false);
+                    alert("Obrigado pela sua avaliação! 🌟");
+                  } catch(e) {
+                    setShowReviewModal(false);
+                  } finally {
+                    setIsSubmittingReview(false);
+                  }
+                }}
+                className="w-full bg-amber-400 hover:bg-amber-500 text-amber-950 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-amber-400/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isSubmittingReview ? "Enviando..." : "Enviar Avaliação"}
+              </button>
+              
+              <button onClick={() => setShowReviewModal(false)} className="text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 tracking-widest mt-4">
+                Agora não
+              </button>
+
             </motion.div>
           </motion.div>
         )}
