@@ -795,7 +795,7 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
                           transition={{ duration: 0.4 }}
-                          className="text-[10px] font-black uppercase tracking-widest text-white leading-none flex items-center justify-center gap-2 drop-shadow-md whitespace-nowrap"
+                          className="text-xs font-black uppercase tracking-widest text-white leading-none flex items-center justify-center gap-2 drop-shadow-md whitespace-nowrap"
                         >
                           <Sparkles size={12} className="shrink-0"/> {announcementTexts[currentAnnounceIdx]}
                         </motion.span>
@@ -803,7 +803,7 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                     </div>
                   ) : currentTemplate.defaultContent?.announcementBar ? (
                     <div style={{ backgroundColor: currentTemplate.primaryColor }} className="w-full text-center py-2 px-4 shadow-inner border-b border-white/20">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-white leading-none flex items-center justify-center gap-2 drop-shadow-md">
+                      <span className="text-xs font-black uppercase tracking-widest text-white leading-none flex items-center justify-center gap-2 drop-shadow-md">
                         <Sparkles size={12}/> {currentTemplate.defaultContent.announcementBar}
                       </span>
                     </div>
@@ -837,7 +837,7 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                     </div>
                     
                     {storeBanners && storeBanners.length > 1 && (
-                      <p className="text-[8px] text-center font-bold text-slate-400 mt-1 uppercase tracking-widest animate-pulse">
+                      <p className="text-[10px] text-center font-bold text-slate-500 mt-1 uppercase tracking-widest animate-pulse">
                         Arraste para o lado 👉
                       </p>
                     )}
@@ -1257,13 +1257,13 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                   <LayoutGrid className="w-5 h-5" />
                   <span className="text-[9px] font-bold uppercase tracking-widest">Início</span>
                 </button>
-                <button onClick={() => alert('Em breve: Rastreio de Pedidos!')} className={`flex flex-col items-center gap-1 transition-colors w-16 ${templateId === 'barbearia_dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-800'}`}>
+                <button onClick={() => alert('Em breve: Rastreio de Pedidos!')} className={`flex flex-col items-center gap-1 transition-colors w-16 ${templateId === 'barbearia_dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-500 hover:text-gray-900'}`}>
                   <ClipboardList className="w-5 h-5" />
                   <span className="text-[9px] font-bold uppercase tracking-widest">Pedidos</span>
                 </button>
                 
                 {storeMode !== 'catalogo' && (
-                  <button onClick={() => setIsCartOpen(true)} className={`flex flex-col items-center gap-1 transition-colors relative w-16 ${templateId === 'barbearia_dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-800'}`}>
+                  <button onClick={() => setIsCartOpen(true)} className={`flex flex-col items-center gap-1 transition-colors relative w-16 ${templateId === 'barbearia_dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-500 hover:text-gray-900'}`}>
                     <ShoppingCart className="w-5 h-5" />
                     <span className="text-[9px] font-bold uppercase tracking-widest">{storeMode === 'orcamento' ? 'Orçamento' : 'Carrinho'}</span>
                     {cartTotalItems > 0 && (
@@ -1322,7 +1322,7 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
           <header style={{ backgroundColor: themeColor }} className="w-full sticky top-0 z-40 shadow-md">
             <div className="max-w-[1300px] mx-auto px-4 py-4 sm:py-5 flex items-center justify-between gap-4 sm:gap-8">
               <div className="flex items-center gap-3">
-                <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-1 text-white hover:bg-white/10 rounded"><Menu className="w-6 h-6" /></button>
+                <button aria-label="Abrir menu lateral" onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-1 text-white hover:bg-white/10 rounded"><Menu className="w-6 h-6" /></button>
                 <a href="/" className="flex flex-col text-white group outline-none">
                   <span className="text-2xl sm:text-4xl font-extrabold tracking-tighter leading-none group-hover:opacity-90">{storeName.split(' ')[0]}</span>
                   <span className="text-[9px] sm:text-[11px] uppercase tracking-[0.2em] opacity-80">{storeName.split(' ').slice(1).join(' ') || storeSlogan}</span>
@@ -1330,7 +1330,7 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
               </div>
               <div className="hidden sm:flex flex-1 max-w-2xl relative">
                 <input type="search" placeholder="Digite o que você procura" className="w-full h-11 pl-4 pr-12 rounded-full text-sm text-gray-900 bg-white border-none focus:ring-2 focus:ring-emerald-400 outline-none" />
-                <button className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#357b64]"><Search className="w-5 h-5" /></button>
+                <button aria-label="Pesquisar produtos" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#357b64]"><Search className="w-5 h-5" /></button>
               </div>
               <div className="flex items-center gap-4 sm:gap-6 text-white">
                 <button onClick={() => setLayoutMode('webview')} className="hidden lg:block text-[10px] font-bold border border-white/30 px-3 py-1.5 rounded-full hover:bg-white/10">Ver Webview</button>
