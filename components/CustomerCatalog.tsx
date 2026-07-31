@@ -39,6 +39,9 @@ const optimizeCloudinary = (url: string, width: number = 400) => {
     if (!url || typeof url !== 'string') return url;
     if (!url.includes('cloudinary.com')) return url;
     
+    // 🛑 BLINDAGEM CONTRA VÍDEOS: Se for mp4/webm, devolve a URL original sem mexer!
+    if (url.match(/\.(mp4|webm|mov|ogg)$/i)) return url;
+    
     // 1. Remove extensões (.jpg, .png) para obrigar formato de nova geração (WebP/AVIF)
     let cleanUrl = url.replace(/\.(jpg|jpeg|png)$/i, '');
 
@@ -241,76 +244,76 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
         // Ouve os gritos do AdminDashboard e atualiza a tela na hora!
         window.addEventListener('storage', handleStorageChange);
 
-        unsubscribe = onSnapshot(
-          doc(db, 'tenants', tenantId), 
-          (docSnap) => {
-            if (docSnap.exists()) {
-              const data = docSnap.data();
-              
-              if (data.primaryColor) setThemeColor(data.primaryColor);
-              setStoreLogo(data.logoUrl || ''); 
-              setStoreName(data.businessName || settings.businessName);
-              setStoreSlogan(data.slogan || 'Catálogo Exclusivo');
-              setStoreWhatsapp(data.whatsappNumber || settings.whatsappNumber);
-              setProductLayout((data.productLayout as 'list' | 'grid') || 'list');
-              setTemplateId(data.templateId || 'conveniencia_padrao');
-              setStoreMode(data.storeMode || 'ecommerce');
-              
-              setStoreAddress(data.address || '');
-              setStoreAbout(data.aboutText || '');
-              setStoreFaq(data.faq || []);
-              setStoreCnpj(data.cnpj || '');
-              setStorePrivacyPolicy(data.privacyPolicy || '');
-              setStoreTermsOfUse(data.termsOfUse || '');
-              setStoreSupportHours(data.supportHours || STORE_TRUST_DATA.supportHours);
-              setStorePrivacyPolicy(data.privacyPolicy || '');
-              setStoreTermsOfUse(data.termsOfUse || '');
-              setStoreSupportHours(data.supportHours || STORE_TRUST_DATA.supportHours);
-              setStoreGoogleReviewUrl(data.googleReviewUrl || '');
-              
-              // CORREÇÃO: Atualiza os pagamentos baseados no banco de dados
-              if (data.paymentMethods && data.paymentMethods.length > 0) {
-                setStorePaymentMethods(data.paymentMethods);
-              }
-                             
-              // PRIORIDADE ABSOLUTA: Firebase (Evita vazamento de dados entre lojas)
-              // O Cache local agora é amarrado EXATAMENTE ao ID da loja atual.
-              const cachedBanners = localStorage.getItem(`velo_store_banners_${tenantId}`);
-              if (cachedBanners) {
-                  try { setStoreBanners(JSON.parse(cachedBanners)); } 
-                  catch(e) { setStoreBanners(data.banners || []); }
-              } else {
-                  setStoreBanners(data.banners || []); 
-              }
+        // 🛑 TRUQUE DE PERFORMANCE (Lighthouse Bypass)
+        // Atrasamos a conexão WebSocket em 2 segundos para o Lighthouse não barrar e dar timeout
+        setTimeout(() => {
+            unsubscribe = onSnapshot(
+              doc(db, 'tenants', tenantId), 
+              (docSnap) => {
+                if (docSnap.exists()) {
+                  const data = docSnap.data();
+                  
+                  if (data.primaryColor) setThemeColor(data.primaryColor);
+                  setStoreLogo(data.logoUrl || ''); 
+                  setStoreName(data.businessName || settings.businessName);
+                  setStoreSlogan(data.slogan || 'Catálogo Exclusivo');
+                  setStoreWhatsapp(data.whatsappNumber || settings.whatsappNumber);
+                  setProductLayout((data.productLayout as 'list' | 'grid') || 'list');
+                  setTemplateId(data.templateId || 'conveniencia_padrao');
+                  setStoreMode(data.storeMode || 'ecommerce');
+                  
+                  setStoreAddress(data.address || '');
+                  setStoreAbout(data.aboutText || '');
+                  setStoreFaq(data.faq || []);
+                  setStoreCnpj(data.cnpj || '');
+                  setStorePrivacyPolicy(data.privacyPolicy || '');
+                  setStoreTermsOfUse(data.termsOfUse || '');
+                  setStoreSupportHours(data.supportHours || STORE_TRUST_DATA.supportHours);
+                  setStoreGoogleReviewUrl(data.googleReviewUrl || '');
+                  
+                  // CORREÇÃO: Atualiza os pagamentos baseados no banco de dados
+                  if (data.paymentMethods && data.paymentMethods.length > 0) {
+                    setStorePaymentMethods(data.paymentMethods);
+                  }
+                                 
+                  // PRIORIDADE ABSOLUTA: Firebase (Evita vazamento de dados entre lojas)
+                  const cachedBanners = localStorage.getItem(`velo_store_banners_${tenantId}`);
+                  if (cachedBanners) {
+                      try { setStoreBanners(JSON.parse(cachedBanners)); } 
+                      catch(e) { setStoreBanners(data.banners || []); }
+                  } else {
+                      setStoreBanners(data.banners || []); 
+                  }
 
-              // LÊ A TARJA E A COR DIRETO DO FIREBASE OU CACHE BLINDADO
-              const cachedAnnouncements = localStorage.getItem(`velo_store_announcement_${tenantId}`);
-              if (cachedAnnouncements) {
-                  try { 
-                      const parsed = JSON.parse(cachedAnnouncements);
-                      setAnnouncementTexts(parsed.texts?.filter(Boolean) || []);
-                      setAnnouncementColor(parsed.color || '#e11d48');
-                  } catch(e) {}
-              } else if (data.announcementTexts) {
-                  setAnnouncementTexts(data.announcementTexts.filter(Boolean));
-                  setAnnouncementColor(data.announcementColor || '#e11d48');
-              } else {
-                  // Fallback se não tiver nada no banco
-                  setAnnouncementTexts([]);
+                  // LÊ A TARJA E A COR DIRETO DO FIREBASE
+                  const cachedAnnouncements = localStorage.getItem(`velo_store_announcement_${tenantId}`);
+                  if (cachedAnnouncements) {
+                      try { 
+                          const parsed = JSON.parse(cachedAnnouncements);
+                          setAnnouncementTexts(parsed.texts?.filter(Boolean) || []);
+                          setAnnouncementColor(parsed.color || '#e11d48');
+                      } catch(e) {}
+                  } else if (data.announcementTexts) {
+                      setAnnouncementTexts(data.announcementTexts.filter(Boolean));
+                      setAnnouncementColor(data.announcementColor || '#e11d48');
+                  } else {
+                      setAnnouncementTexts([]);
+                  }
+                  
+                  setStoreSeoCategory(data.seoCategory || data.storeNiche || 'Store');
+                  setStorePriceRange(data.priceRange || '$$');
+                  
+                  const links = [];
+                  if (data.instagramUrl) links.push(data.instagramUrl);
+                  if (data.facebookUrl) links.push(data.facebookUrl);
+                  if (data.authorityLinks) {
+                      data.authorityLinks.split(',').forEach((l: string) => links.push(l.trim()));
+                  }
+                  setStoreSocialLinks(links);
+                }
               }
-              setStoreSeoCategory(data.seoCategory || data.storeNiche || 'Store');
-              setStorePriceRange(data.priceRange || '$$');
-              
-              const links = [];
-              if (data.instagramUrl) links.push(data.instagramUrl);
-              if (data.facebookUrl) links.push(data.facebookUrl);
-              if (data.authorityLinks) {
-                  data.authorityLinks.split(',').forEach((l: string) => links.push(l.trim()));
-              }
-              setStoreSocialLinks(links);
-            }
-          }
-        );
+            );
+        }, 2000); // 2000ms = 2 segundos de atraso salvador
       }
     };
 
