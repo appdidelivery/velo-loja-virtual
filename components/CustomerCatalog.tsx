@@ -34,6 +34,18 @@ const THEME = {
   dark: '#2a2a2a',
 };
 
+// --- OTIMIZADOR DE IMAGENS CLOUDINARY (Corta o peso de Megabytes para Kilobytes) ---
+const optimizeCloudinary = (url: string, width: number = 400) => {
+    if (!url || typeof url !== 'string') return url;
+    if (!url.includes('cloudinary.com')) return url;
+    
+    // 1. Remove extensões (.jpg, .png) para obrigar formato de nova geração (WebP/AVIF)
+    let cleanUrl = url.replace(/\.(jpg|jpeg|png)$/i, '');
+
+    // 2. Aplica qualidade inteligente e largura exata
+    return cleanUrl.replace(/\/upload\/([a-zA-Z0-9_,]+\/)?v/, `/upload/f_auto,q_auto:good,w_${width},c_limit/v`);
+};
+
 export default function CustomerCatalog({ 
   tenantId: propTenantId,
   initialData 
@@ -740,6 +752,7 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                 </div>
                 <button 
                   onClick={() => setIsSearchOpen(!isSearchOpen)} 
+                  aria-label="Abrir pesquisa"
                   className={`p-2.5 rounded-full transition-colors border ${templateId === 'nativo_app' ? 'border-white/30 text-white hover:bg-white/10' : templateId === 'barbearia_dark' ? 'bg-white/5 text-white border-white/10' : 'bg-gray-50 hover:bg-gray-100 text-slate-600 border-transparent'}`}
                 >
                   <Search className="w-4 h-4" />
@@ -759,7 +772,7 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                         style={{ '--tw-ring-color': templateId === 'nativo_app' ? '#00000020' : themeColor } as any}
                       />
                       {searchQuery && (
-                        <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"><X className="w-4 h-4" /></button>
+                        <button onClick={() => setSearchQuery('')} aria-label="Limpar pesquisa" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"><X className="w-4 h-4" /></button>
                       )}
                     </div>
                   </motion.div>
@@ -804,12 +817,12 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                       {storeBanners && storeBanners.length > 0 ? (
                         storeBanners.map((bannerUrl: string, idx: number) => (
                           <div key={idx} className={`w-full h-full flex-shrink-0 snap-center relative flex items-center justify-center ${templateId === 'barbearia_dark' ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
-                            <img src={bannerUrl} loading={idx === 0 ? "eager" : "lazy"} className="w-full h-full object-contain drop-shadow-sm" alt={`Oferta ${idx + 1} - ${storeName}`} />
+                            <img src={optimizeCloudinary(bannerUrl, 800)} loading={idx === 0 ? "eager" : "lazy"} fetchPriority={idx === 0 ? "high" : "auto"} className="w-full h-full object-contain drop-shadow-sm" alt={`Oferta ${idx + 1} - ${storeName}`} />
                           </div>
                         ))
                       ) : (
                         <div className="w-full h-full flex-shrink-0 snap-center relative">
-                          <img src={currentTemplate.heroImage} className="w-full h-full object-cover" alt="Banner Principal" />
+                          <img src={optimizeCloudinary(currentTemplate.heroImage, 800)} fetchPriority="high" loading="eager" className="w-full h-full object-cover" alt="Banner Principal" />
                           <div className={`absolute inset-0 ${currentTemplate.category === 'servicos' ? 'bg-black/60' : 'bg-gradient-to-r from-black/80 to-transparent'} flex flex-col justify-center p-6`}>
                             <h2 className="text-2xl font-black text-white leading-tight shadow-black drop-shadow-md max-w-[80%] uppercase">
                               {currentTemplate.defaultContent.heroTitle}
@@ -918,7 +931,7 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                               className={`break-inside-avoid relative group cursor-pointer mb-3 rounded-[2rem] overflow-hidden bg-white shadow-sm border border-pink-50 ${!hasStock ? 'opacity-60 grayscale' : ''}`}
                             >
 {product.imageUrl ? (
-                                <img src={product.imageUrl} className="w-full object-cover" style={{ minHeight: '140px' }} alt={product.name}/>
+                                <img src={optimizeCloudinary(product.imageUrl, 400)} className="w-full object-cover" style={{ minHeight: '140px' }} alt={product.name}/>
                               ) : (
                                 <div className="w-full bg-slate-100 flex flex-col items-center justify-center text-slate-300" style={{ minHeight: '140px' }}>
                                   {storeLogo ? <img src={storeLogo} className="w-1/2 h-1/2 object-contain opacity-20 grayscale" alt={storeName} /> : <ShoppingBag size={32} />}
@@ -941,7 +954,7 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                                 <span className="text-white text-[10px] font-bold">5.0</span>
                               </div>
 {product.imageUrl ? (
-                                <img src={product.imageUrl} className="w-full h-36 object-cover rounded-[1.5rem]" alt={product.name}/>
+                                <img src={optimizeCloudinary(product.imageUrl, 400)} className="w-full h-36 object-cover rounded-[1.5rem]" alt={product.name}/>
                               ) : (
                                 <div className="w-full h-36 bg-[#222] rounded-[1.5rem] flex flex-col items-center justify-center text-gray-600">
                                   {storeLogo ? <img src={storeLogo} className="w-1/2 h-1/2 object-contain opacity-20 grayscale" alt={storeName} /> : <ShoppingBag size={32} />}
@@ -984,7 +997,7 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                               ) : (
                                 <div className={`${(productLayout === 'grid' || currentTemplate.category === 'servicos') ? 'w-full aspect-square' : 'w-[88px] h-[88px] flex-shrink-0'} relative rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 p-1 flex items-center justify-center`}>
                                   {product.imageUrl ? (
-                                    <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
+                                    <img src={optimizeCloudinary(product.imageUrl, 200)} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
                                   ) : (
                                     <div className="w-full h-full flex items-center justify-center p-2 opacity-30 grayscale">
                                       {storeLogo ? <img src={storeLogo} className="max-w-full max-h-full object-contain" alt="Sem Imagem" /> : <ShoppingBag className="w-6 h-6 text-slate-400" />}
@@ -1104,6 +1117,7 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                           </h3>
                           <div className="w-full h-32 rounded-xl overflow-hidden border border-slate-700 mb-4 bg-slate-800">
                             <iframe 
+                              title="Mapa de localização da loja"
                               width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen 
                               src={`https://maps.google.com/maps?q=${encodeURIComponent((settings as any).address)}&output=embed`}
                             ></iframe>
@@ -1935,7 +1949,7 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
               {/* Seletor de Estrelas */}
               <div className="flex justify-center gap-2 mb-4">
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <button key={star} onClick={() => setReviewStars(star)} className="focus:outline-none transition-transform hover:scale-110 active:scale-90">
+                  <button key={star} onClick={() => setReviewStars(star)} aria-label={`Avaliar com ${star} estrelas`} className="focus:outline-none transition-transform hover:scale-110 active:scale-90">
                     <Star size={32} fill={star <= reviewStars ? "#f59e0b" : "transparent"} className={star <= reviewStars ? "text-amber-500" : "text-slate-200"} />
                   </button>
                 ))}

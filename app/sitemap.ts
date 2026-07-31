@@ -19,23 +19,41 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     
     tenantsSnap.forEach(doc => {
       const tenantData = doc.data();
-      const slug = tenantData.slug || doc.id; // Usa o link personalizado ou o ID padrão
+      
+      // TRAVA DE SAÚDE DE SEO: Ignora lojas suspensas/bloqueadas
+      if (tenantData.billingStatus !== 'bloqueado' && tenantData.isActive !== false) {
+        
+        // Limpeza de segurança para evitar quebras no XML
+        const rawSlug = tenantData.slug || doc.id;
+        const safeSlug = encodeURIComponent(rawSlug.trim().toLowerCase());
 
-      // Rota 1: O Catálogo da Loja
-      routes.push({
-        url: `${baseUrl}/${slug}`,
-        lastModified: new Date(),
-        changeFrequency: 'daily',
-        priority: 0.9,
-      });
+        // Extrai a data real de alteração, ou usa a data atual como fallback
+        let lastModDate = new Date();
+        if (tenantData.updatedAt) {
+          try {
+            // Suporta Timestamp do Firebase ou String ISO
+            lastModDate = typeof tenantData.updatedAt.toDate === 'function' 
+              ? tenantData.updatedAt.toDate() 
+              : new Date(tenantData.updatedAt);
+          } catch (e) {}
+        }
 
-      // Rota 2: A Página de Avaliações da Loja
-      routes.push({
-        url: `${baseUrl}/${slug}/avaliacoes`,
-        lastModified: new Date(),
-        changeFrequency: 'weekly',
-        priority: 0.7,
-      });
+        // Rota 1: O Catálogo da Loja
+        routes.push({
+          url: `${baseUrl}/${safeSlug}`,
+          lastModified: lastModDate,
+          changeFrequency: 'daily',
+          priority: 0.9,
+        });
+
+        // Rota 2: A Página de Avaliações da Loja
+        routes.push({
+          url: `${baseUrl}/${safeSlug}/avaliacoes`,
+          lastModified: lastModDate,
+          changeFrequency: 'weekly',
+          priority: 0.7,
+        });
+      }
     });
   } catch (error) {
     console.error("Erro ao gerar sitemap dinâmico:", error);
