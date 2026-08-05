@@ -10,6 +10,7 @@ export interface PricingPlan {
   isRecommended?: boolean;
   buttonText: string;
   buttonVariant: 'outline' | 'primary' | 'dark';
+  highlight?: boolean; // Adicionado para não dar erro com o PricingTable
 }
 
 export const pricingPlans: PricingPlan[] = [
@@ -28,6 +29,7 @@ export const pricingPlans: PricingPlan[] = [
     ],
     buttonText: 'Plano Atual',
     buttonVariant: 'outline',
+    highlight: false,
   },
   {
     id: 'pro',
@@ -44,6 +46,7 @@ export const pricingPlans: PricingPlan[] = [
     ],
     buttonText: 'Assinar Pro',
     buttonVariant: 'dark',
+    highlight: false,
   },
   {
     id: 'business',
@@ -53,6 +56,7 @@ export const pricingPlans: PricingPlan[] = [
     description: 'A solução completa para decolar suas vendas com ferramentas avançadas.',
     features: [
       'Tudo do plano Pro',
+      '⭐ INTEGRAÇÃO BINANCE PAY (Cripto)', // <-- AQUI ESTÁ A MÁGICA
       'Atendimento Meta API (WhatsApp Oficial)',
       'Carrinho abandonado (Recuperação)',
       'Múltiplos usuários e permissões',
@@ -60,6 +64,7 @@ export const pricingPlans: PricingPlan[] = [
       'PDV (Modo Garçom)'
     ],
     isRecommended: true,
+    highlight: true, // Garante que o PricingTable entenda o destaque
     buttonText: 'Assinar Business',
     buttonVariant: 'primary',
   },
@@ -79,5 +84,6 @@ export const pricingPlans: PricingPlan[] = [
     ],
     buttonText: 'Falar com Consultor',
     buttonVariant: 'dark',
+    highlight: false,
   }
 ];
