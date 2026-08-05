@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { CheckCircle2, Loader2, X, Copy } from 'lucide-react';
+import { CheckCircle2, Loader2, X, Copy, Bitcoin } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -127,12 +127,29 @@ export default function PricingTable({ plans, tenantId }: { plans: any[], tenant
               </div>
               
               <ul className="space-y-4 mb-8 flex-1">
-                {plan.features.map((feature: string, fIdx: number) => (
-                  <li key={fIdx} className="flex items-start gap-3 text-sm font-bold text-slate-600">
-                    <CheckCircle2 size={18} className={`${plan.highlight ? 'text-blue-600' : 'text-green-500'} flex-shrink-0 mt-0.5`} />
-                    <span className="leading-snug">{feature}</span>
-                  </li>
-                ))}
+                {plan.features.map((feature: any, fIdx: number) => {
+                  // Lógica Inteligente para detectar e destacar o Binance Pay (Cripto)
+                  const isBinance = typeof feature === 'string' && (feature.toUpperCase().includes('BINANCE') || feature.includes('⭐'));
+                  
+                  if (isBinance) {
+                    const cleanText = feature.replace('⭐', '').trim();
+                    return (
+                      <li key={fIdx} className="flex items-start gap-3 text-sm font-bold text-slate-600">
+                        <span className="flex items-center gap-1.5 font-black text-yellow-600 bg-yellow-50 px-2 py-1 rounded-md -ml-2 w-max shadow-sm border border-yellow-100">
+                          <Bitcoin size={16} className="text-yellow-500"/> {cleanText}
+                        </span>
+                      </li>
+                    );
+                  }
+
+                  // Renderização normal para as outras funcionalidades
+                  return (
+                    <li key={fIdx} className="flex items-start gap-3 text-sm font-bold text-slate-600">
+                      <CheckCircle2 size={18} className={`${plan.highlight ? 'text-blue-600' : 'text-green-500'} flex-shrink-0 mt-0.5`} />
+                      <span className="leading-snug">{feature}</span>
+                    </li>
+                  );
+                })}
               </ul>
               
               <button 

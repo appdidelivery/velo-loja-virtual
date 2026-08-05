@@ -55,28 +55,55 @@ export default function LandingPage() {
       name: 'Grátis',
       desc: 'O essencial para digitalizar seu negócio e atrair clientes.',
       price: '0,00',
-      features: ['Cadastro Simplificado no Google Meu Negócio', 'Até 50 Produtos no Catálogo', 'Recebimento de Pedidos no WhatsApp'],
+      features: [
+        'Cadastro Velo (Catálogo Básico)', 
+        'Integração Google Meu Negócio', 
+        'Até 50 produtos cadastrados',
+        'Recebimento de pedidos via WhatsApp',
+        'Layout otimizado para celular'
+      ],
       highlight: false
     },
     {
       name: 'Plano Pro',
       desc: 'O Start-up do Digital. Automação para quem quer vender mais.',
       price: '99,90',
-      features: ['Produtos Ilimitados', 'Pagamentos Online (Pix/Cartão)', 'Automação de WhatsApp (Bot)', 'IA Copywriter para Produtos'],
+      features: [
+        'Tudo do plano Grátis', 
+        'Integração com Mercado Pago (Pix/Cartão)', 
+        'Produtos ilimitados', 
+        'Importação de XML (Google Merchant)',
+        'Suporte via e-mail'
+      ],
       highlight: false
     },
     {
       name: 'Business',
       desc: 'Foco total em conversão e recuperação de vendas.',
       price: '199,90',
-      features: ['Tudo do Plano Pro', 'Layouts Inteligentes (Temas Especiais)', 'Integração Binance Pay (Cripto)', 'PDV Frente de Caixa Integrado'],
+      features: [
+        'Tudo do plano Pro', 
+        <span key="binance" className="flex items-center gap-1.5 font-black text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-md -ml-2"><Bitcoin size={16}/> Integração Binance Pay (Cripto)</span>,
+        'Atendimento Meta API (WhatsApp Oficial)', 
+        'Carrinho abandonado (Recuperação)',
+        'Múltiplos usuários e permissões',
+        'Suporte prioritário via WhatsApp',
+        'PDV (Modo Garçom)'
+      ],
       highlight: true
     },
     {
       name: 'Enterprise',
       desc: 'Crescimento escalonado. Deixe a burocracia com a gente.',
       price: '299,90',
-      features: ['Tudo do Plano Business', 'Emissão Fiscal (NFC-e Automática)', 'Gamificação, Roleta e Clube VIP', 'Integração Meta Ads / Google Ads', 'GA4 e Relatórios Analíticos (IA)'],
+      features: [
+        'Tudo do plano Business', 
+        'Emissão Fiscal (NF-e / NFC-e)', 
+        'Relatórios Avançados (Integração GA4)', 
+        'API Aberta para integrações externas', 
+        'Gerente de conta dedicado',
+        'SLA de 99.9% de uptime'
+      ],
       highlight: false
     }
   ];
