@@ -1223,17 +1223,11 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                       <button onClick={() => setLegalModal('privacy')} className="hover:text-slate-600 transition-colors cursor-pointer">Privacidade</button>
                       <button onClick={() => setLegalModal('terms')} className="hover:text-slate-600 transition-colors cursor-pointer">Termos</button>
                       
-                      {/* NOVO LINK PARA A PÁGINA DE SEO */}
-                      <a href={`/${tenantId}/avaliacoes`} className="hover:text-blue-500 transition-colors flex items-center gap-1">
+                      {/* LINK PARA A PÁGINA DE SEO (Corrigido) */}
+                      <a href={`/${initialData?.slug || tenantId}/avaliacoes`} className="hover:text-blue-500 transition-colors flex items-center gap-1">
                           <Star size={10} className="text-amber-400" fill="currentColor"/> Avaliações da Loja
                       </a>
                   </div>
-                  <a 
-                          href={`/${initialData?.slug || tenantId}/avaliacoes`} 
-                          className="hover:text-blue-500 transition-colors flex items-center gap-1"
-                      >
-                          <Star size={10} className="text-amber-400" fill="currentColor"/> Avaliações da Loja
-                      </a>
               </div>
 
             </main>

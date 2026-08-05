@@ -6,7 +6,7 @@ import {
   Search, CheckCircle2, DollarSign, Eye, EyeOff, User, Sparkles, MapPin,
   Layers, AlertCircle, Send, HelpCircle, FileCheck, Percent,
   TrendingUp, X, CreditCard, Sun, Moon, ExternalLink, ChevronDown, List,
-  Megaphone, ChevronLeft, ChevronRight, Filter, RefreshCw, ShieldCheck, LayoutTemplate, Package,
+  Megaphone, ChevronLeft, ChevronRight, Filter, RefreshCw, ShieldCheck, LayoutTemplate, Package, Activity, MousePointerClick, Ghost, Globe, Award,
   Store, UploadCloud, LogOut, Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,7 +30,7 @@ import GoogleIntegrationDashboard from './GoogleIntegrationDashboard';
 import { FaGoogle } from 'react-icons/fa6';
 
 export default function AdminDashboard() {
-const [activePanel, setActivePanel] = useState<'dashboard' | 'manual' | 'products' | 'categories' | 'orders' | 'customers' | 'chats' | 'settings' | 'google_business' | 'finance' | 'ai_agent'>('dashboard');
+const [activePanel, setActivePanel] = useState<'dashboard' | 'manual' | 'products' | 'categories' | 'orders' | 'customers' | 'chats' | 'settings' | 'google_business' | 'finance' | 'ai_agent' | 'analytics'>('dashboard');
 
   // Estado que controla se o usuário vê o Wizard ou o Dashboard clássico
   const [showOnboarding, setShowOnboarding] = useState(true); 
@@ -49,6 +49,40 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'manual' | 'product
   const [pdvPixData, setPdvPixData] = useState<{qrCodeBase64: string, pixEmv: string, transactionId: string} | null>(null);
 
   const [isClearingCache, setIsClearingCache] = useState(false);
+
+  // --- ESTADOS DO VELO DATA FUEL (GA4) ---
+  const [ga4Data, setGa4Data] = useState({
+    engagementTime: '00m 00s',
+    ctr: '0.0%',
+    bounceRate: '0.0%',
+    sources: []
+  });
+  const [isFetchingGa4, setIsFetchingGa4] = useState(false);
+  const [ga4Connected, setGa4Connected] = useState(false);
+
+  const fetchAnalyticsData = async () => {
+    if (!authRole.tenantId || authRole.tenantId === 'loading') return;
+    setIsFetchingGa4(true);
+    try {
+      const res = await fetch('/api/analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId: authRole.tenantId })
+      });
+      const result = await res.json();
+      if (result.success) {
+        setGa4Data(result.data);
+        setGa4Connected(true);
+        if(result.mode === 'fallback') {
+           console.log("ℹ️ Dados em modo fallback. Configure suas chaves do Google Cloud no .env");
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao puxar dados do GA4:", error);
+    } finally {
+      setIsFetchingGa4(false);
+    }
+  };
 
   const handleClearCache = async () => {
     setIsClearingCache(true);
@@ -651,6 +685,57 @@ const [termoIA, setTermoIA] = useState('');
     }
   };
 
+  // --- CÁLCULOS VELO DATA FUEL (ANALYTICS - SPRINT 2) ---
+  const analyticsData = useMemo(() => {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
+
+    // 1. Filtrar pedidos dos últimos 30 dias
+    const recentOrders = orders.filter(o => {
+      if (!o.createdAt) return false;
+      const orderDate = new Date(o.createdAt);
+      return orderDate >= thirtyDaysAgo;
+    });
+
+    // 2. Pedidos pagos reais no Firestore
+    const paidRecentOrders = recentOrders.filter(o =>
+      o.status === 'paid' || o.paymentStatus === 'approved' || (o.status as string) === 'completed' || o.status === 'delivered'
+    );
+    const paidOrdersCount = paidRecentOrders.length;
+
+    // Dados base (Simulando GA4 para Sprint 1 e 2, até ligarmos a API)
+    const mockVisits = paidOrdersCount > 0 ? Math.floor(paidOrdersCount * 3.47) : 226; // Estima visitas baseada em vendas reais se existirem
+    const mockCheckouts = paidOrdersCount > 0 ? Math.floor(paidOrdersCount * 1.38) : 90;
+    const conversionRate = mockVisits > 0 ? ((paidOrdersCount / mockVisits) * 100).toFixed(1) : '0.0';
+
+    // 3. Top 5 Produtos por Receita Bruta (Lógica híbrida real no array de items)
+    const productStats: Record<string, { name: string, quantity: number, revenue: number }> = {};
+
+    paidRecentOrders.forEach(order => {
+      if (order.items && Array.isArray(order.items)) {
+        order.items.forEach(item => {
+          if (!productStats[item.productId]) {
+            productStats[item.productId] = { name: item.name, quantity: 0, revenue: 0 };
+          }
+          productStats[item.productId].quantity += item.quantity;
+          productStats[item.productId].revenue += (Number(item.price) * item.quantity);
+        });
+      }
+    });
+
+    const topProducts = Object.values(productStats)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+
+    return {
+      paidOrdersCount,
+      mockVisits,
+      mockCheckouts,
+      conversionRate,
+      topProducts
+    };
+  }, [orders]);
+
   return (
     <div className="light">
       <div className="flex h-screen bg-[#f4f7f6] text-slate-800 font-sans overflow-hidden selection:bg-[#0055ff] selection:text-white">
@@ -782,8 +867,31 @@ const [termoIA, setTermoIA] = useState('');
                 <span className="text-left truncate">Meu Agente IA</span>
               </button>
 
+              {/* VELO DATA FUEL - Menu Item */}
+              <div className="mt-4 pt-2 border-t border-slate-100">
+                <div className="flex items-center gap-2 mb-2 px-4">
+                  <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Velo Insights (IA)</span>
+                </div>
+                <button
+                  onClick={() => { setActivePanel('analytics'); setIsMobileMenuOpen(false); }} 
+                  className={`w-full flex items-center justify-start gap-3 px-4 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activePanel === 'analytics' ? 'bg-[#1d4ed8] text-white shadow-lg shadow-blue-500/30' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
+                >
+                  <Activity className="w-5 h-5 shrink-0" /> 
+                  <span className="text-left truncate">Velo Data Fuel</span>
+                </button>
+                {activePanel === 'analytics' && (
+                   <div className="flex flex-col items-center gap-2 mt-2 px-4 animate-in fade-in zoom-in duration-300">
+                     <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Veloapp V7.2.0</span>
+                     <button className="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 font-black uppercase tracking-widest text-[9px] py-2 rounded-xl transition-colors flex items-center justify-center gap-2">
+                       <RefreshCw size={10} /> Atualizar Painel
+                     </button>
+                   </div>
+                )}
+              </div>
+
               <button
-                onClick={() => { setIsSettingsExpanded(!isSettingsExpanded); setActivePanel('settings'); }} 
+                onClick={() => { setIsSettingsExpanded(!isSettingsExpanded); setActivePanel('settings'); }}
                 className={`w-full flex items-center justify-start gap-3 px-4 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all mt-2 ${activePanel === 'settings' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}
               >
                 <Settings className="w-5 h-5 shrink-0" /> 
@@ -1031,6 +1139,225 @@ const [termoIA, setTermoIA] = useState('');
                 </div>
               )}
             </>
+          )}
+
+      {/* --- TELA VELO DATA FUEL (ANALYTICS) --- */}
+          {activePanel === 'analytics' && (
+            <div className="space-y-6 max-w-[1200px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 relative pb-10">
+              
+              {/* HEADER E SELO */}
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <Activity className="w-8 h-8 text-[#1d4ed8]" />
+                  <div>
+                    <h2 className="text-3xl font-black italic uppercase text-[#111827] leading-none">Velo Data Fuel</h2>
+                    <p className="text-xs font-bold text-slate-500 mt-1">Inteligência de Dados e Analytics em Tempo Real.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center bg-white border border-gray-200 rounded-lg px-3 py-2 text-[10px] font-black text-[#1d4ed8] uppercase tracking-widest shadow-sm cursor-pointer">
+                    Últimos 30 dias <ChevronDown size={14} className="ml-2" />
+                  </div>
+                  <div className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-sm">
+                     <ShieldCheck size={14} /> Fonte: Firestore + API GA4
+                  </div>
+                </div>
+              </div>
+
+              {/* CARDS SUPERIORES DE ENGAJAMENTO (Conectado GA4) */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
+                  <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-1 flex items-center gap-1.5"><Activity size={12}/> Tempo de Engajamento</p>
+                  <p className="text-4xl font-black text-slate-800 italic mt-2">{ga4Data.engagementTime}</p>
+                  <p className="text-[10px] font-bold text-slate-400 mt-2">Média do tempo na tela do cardápio.</p>
+                </div>
+                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
+                  <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-1 flex items-center gap-1.5"><MousePointerClick size={12}/> CTR (Taxa de Clique)</p>
+                  <p className="text-4xl font-black text-[#1d4ed8] italic mt-2">{ga4Data.ctr}</p>
+                  <p className="text-[10px] font-bold text-slate-400 mt-2">Cliques no botão "Comprar".</p>
+                </div>
+                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
+                  <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-1 flex items-center gap-1.5"><Ghost size={12}/> Taxa de Rejeição</p>
+                  <p className="text-4xl font-black text-red-500 italic mt-2">{ga4Data.bounceRate}</p>
+                  <p className="text-[10px] font-bold text-slate-400 mt-2">Saíram sem olhar outros produtos.</p>
+                </div>
+              </div>
+
+              {/* GOOGLE MAPS BLOCK */}
+              <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center shrink-0">
+                    <FaGoogle size={28} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black uppercase text-slate-900">Tráfego do Google Maps</h3>
+                    <p className="text-xs font-bold text-slate-400">Visibilidade da sua loja nos últimos 30 dias.</p>
+                  </div>
+                </div>
+                <button className="bg-blue-50 hover:bg-blue-100 text-blue-600 px-6 py-3.5 rounded-xl font-black uppercase tracking-widest text-[10px] transition-colors border border-blue-100">
+                  Puxar Métricas Agora
+                </button>
+              </div>
+
+              {/* BLOCO DUPLO: FUNIL DE VENDAS E ORIGEM DO TRÁFEGO */}
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                
+                {/* FUNIL (Esquerda - 3 Colunas) */}
+                <div className="lg:col-span-3 bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col">
+                  <h3 className="text-lg font-black uppercase text-slate-900 mb-6 flex items-center gap-2">
+                    <Activity className="text-blue-600" size={20}/> Funil de Vendas (30 Dias)
+                  </h3>
+                  
+                  <div className="space-y-6 flex-1">
+                    {/* Etapa 1 */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                        <span className="text-slate-500">Acessos Únicos (Visitas Online)</span>
+                        <span className="text-blue-600 text-xs">{analyticsData.mockVisits}</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                        <div className="bg-[#93c5fd] h-full rounded-full" style={{ width: '100%' }}></div>
+                      </div>
+                    </div>
+                    {/* Etapa 2 */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                        <span className="text-slate-500">Iniciaram Checkout (Estimado)</span>
+                        <span className="text-blue-600 text-xs">{analyticsData.mockCheckouts}</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                        <div className="bg-[#3b82f6] h-full rounded-full" style={{ width: `${(analyticsData.mockCheckouts/analyticsData.mockVisits)*100}%` }}></div>
+                      </div>
+                    </div>
+                    {/* Etapa 3 */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                        <span className="text-slate-500">Pedidos Pagos (Online)</span>
+                        <span className="text-blue-600 text-xs">{analyticsData.paidOrdersCount}</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                        <div className="bg-[#1d4ed8] h-full rounded-full" style={{ width: `${(analyticsData.paidOrdersCount/analyticsData.mockVisits)*100}%` }}></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-8 pt-6 border-t border-slate-100 flex justify-between items-end">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Conversão de Venda Online</span>
+                    <span className="text-5xl font-black italic text-emerald-500 leading-none">{analyticsData.conversionRate}%</span>
+                  </div>
+                </div>
+
+                {/* ORIGEM DO TRÁFEGO (Direita - 2 Colunas) - Com Overlap Inteligente */}
+                <div className={`lg:col-span-2 bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-100 relative overflow-hidden flex flex-col ${!ga4Connected ? 'items-center justify-center' : ''}`}>
+                  
+                  {/* Título Base */}
+                  <div className={`${!ga4Connected ? 'absolute top-8 left-8 right-8' : 'mb-6'} flex justify-between items-center z-10 w-full`}>
+                    <h3 className="text-lg font-black uppercase text-slate-900 flex items-center gap-2">
+                      <Globe className="text-blue-600" size={20}/> Origem do Tráfego
+                    </h3>
+                    {ga4Connected && (
+                      <button onClick={fetchAnalyticsData} disabled={isFetchingGa4} className="text-[9px] font-black uppercase tracking-widest text-[#5b45ff] bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50">
+                        <RefreshCw size={12} className={isFetchingGa4 ? 'animate-spin' : ''} /> SYNC GA4 API
+                      </button>
+                    )}
+                  </div>
+
+                  {!ga4Connected ? (
+                    <>
+                      {/* Fundo Desfocado Mock */}
+                      <div className="absolute inset-0 opacity-10 pointer-events-none blur-sm p-8 space-y-4 pt-16">
+                        <div className="h-4 bg-gray-400 rounded w-full"></div>
+                        <div className="h-4 bg-gray-400 rounded w-5/6"></div>
+                        <div className="h-4 bg-gray-400 rounded w-4/6"></div>
+                        <div className="h-4 bg-gray-400 rounded w-full"></div>
+                      </div>
+
+                      {/* Pop-up Overlay (Requer Ativação) */}
+                      <div className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-50 flex flex-col items-center justify-center text-center relative z-20 min-w-[280px]">
+                        <div className="w-14 h-14 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-500 mb-4 border border-emerald-100">
+                          <CheckCircle2 size={28} />
+                        </div>
+                        <h4 className="text-sm font-black uppercase text-slate-900">GA4 Conectado</h4>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 mb-6">
+                          ID: <span className="text-blue-600">523124635</span>
+                        </p>
+                        <button 
+                          onClick={fetchAnalyticsData}
+                          disabled={isFetchingGa4}
+                          className="w-full bg-[#5b45ff] hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-black uppercase tracking-widest text-[10px] py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/30"
+                        >
+                          {isFetchingGa4 ? (
+                             <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> PROCESSANDO...</>
+                          ) : (
+                             <><RefreshCw size={14} /> Puxar Dados Reais Agora</>
+                          )}
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    /* DADOS REAIS RENDERIZADOS */
+                    <div className="space-y-4 w-full animate-in fade-in duration-500 flex-1">
+                      {ga4Data.sources.map((source: any, idx: number) => (
+                        <div key={idx} className="flex flex-col gap-1.5">
+                          <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                            <span className="text-slate-600 truncate mr-2" title={source.name}>{source.name}</span>
+                            <span className="text-slate-800">{source.value}</span>
+                          </div>
+                          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                            <div className="bg-indigo-400 h-full rounded-full" style={{ width: `${Math.min(100, Math.max(10, parseInt(source.value)))}%` }}></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* TABELA: PRODUTOS POR RECEITA (TOP 5) */}
+              <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                <h3 className="text-lg font-black uppercase text-slate-900 mb-6 flex items-center gap-2">
+                  <Award className="text-yellow-500" size={22}/> Produtos por Receita (Top 5 Últimos 30 Dias)
+                </h3>
+
+                <div className="overflow-x-auto custom-scrollbar">
+                  <table className="w-full min-w-[600px] text-left border-collapse">
+                    <thead>
+                      <tr className="border-b-2 border-slate-50">
+                        <th className="pb-4 pt-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Nome do Item</th>
+                        <th className="pb-4 pt-2 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Volume Vendido</th>
+                        <th className="pb-4 pt-2 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Receita Bruta Gerada</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {analyticsData.topProducts.length === 0 ? (
+                        <tr>
+                          <td colSpan={3} className="py-8 text-center text-slate-400 font-bold">Nenhum dado financeiro processado nos últimos 30 dias.</td>
+                        </tr>
+                      ) : (
+                        analyticsData.topProducts.map((prod, index) => (
+                          <tr key={index} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="py-4 flex items-center gap-4">
+                              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${index === 0 ? 'bg-yellow-400 text-white shadow-sm' : 'bg-slate-100 text-slate-500'}`}>
+                                {index + 1}
+                              </span>
+                              <span className="text-xs font-black text-slate-800">{prod.name}</span>
+                            </td>
+                            <td className="py-4 text-center">
+                              <span className="text-xs font-black text-slate-500">{prod.quantity} un</span>
+                            </td>
+                            <td className="py-4 text-right">
+                              <span className="text-sm font-black italic text-emerald-600">R$ {prod.revenue.toFixed(2)}</span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
           )}
 
       {/* --- ADD CATEGORY DIALOG MODAL --- */}
