@@ -175,22 +175,36 @@ SE for apenas uma CONVERSA, retorne estritamente:
                     }
                 }
 
-                // DISPARO FINAL PARA O WHATSAPP
-                if (tenantData.metaApiToken && tenantData.metaPhoneId && replyText) {
-                    await fetch(`https://graph.facebook.com/v19.0/${tenantData.metaPhoneId}/messages`, {
-                        method: 'POST',
-                        headers: { 
-                            'Authorization': `Bearer ${tenantData.metaApiToken}`, 
-                            'Content-Type': 'application/json' 
-                        },
-                        body: JSON.stringify({
-                            messaging_product: 'whatsapp',
-                            recipient_type: 'individual',
-                            to: fromPhoneRaw, 
-                            type: 'text',
-                            text: { body: replyText }
-                        })
-                    });
+                // 10. DISPARO FINAL PARA O WHATSAPP (COM LOGS DETALHADOS)
+                if (!tenantData.metaApiToken || !tenantData.metaPhoneId) {
+                    console.error("🚨 ERRO META API: Faltam as credenciais (Token ou ID do Telefone) no painel da loja no Firebase.");
+                } else if (replyText) {
+                    try {
+                        const metaResponse = await fetch(`https://graph.facebook.com/v19.0/${tenantData.metaPhoneId}/messages`, {
+                            method: 'POST',
+                            headers: { 
+                                'Authorization': `Bearer ${tenantData.metaApiToken}`, 
+                                'Content-Type': 'application/json' 
+                            },
+                            body: JSON.stringify({
+                                messaging_product: 'whatsapp',
+                                recipient_type: 'individual',
+                                to: fromPhoneRaw, 
+                                type: 'text',
+                                text: { body: replyText }
+                            })
+                        });
+
+                        const metaData = await metaResponse.json();
+
+                        if (!metaResponse.ok) {
+                            console.error("🚨 REJEIÇÃO DA META API:", JSON.stringify(metaData));
+                        } else {
+                            console.log("✅ [SUCESSO] Mensagem entregue ao WhatsApp da Meta!");
+                        }
+                    } catch (err) {
+                        console.error("🚨 FALHA DE REDE AO CHAMAR META API:", err);
+                    }
                 }
             }
         }
