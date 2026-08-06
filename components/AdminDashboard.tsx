@@ -418,15 +418,85 @@ const handleLogout = async () => {
     throw new Error("Erro no upload da imagem/vídeo");
   };
 
-  // REMOVIDA A VARIÁVEL DUPLICADA AQUI. MANTÉM SÓ A FUNÇÃO:
+  // COMPRESSÃO NATIVA E SEO NAMING (Executado no navegador do Lojista)
+  const compressAndRenameImage = (file: File, productName: string): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      // 1. Gerador de Nome Focado em SEO
+      const rawName = productName && productName.trim() !== '' ? productName : 'produto-velo';
+      const slugifiedName = rawName
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Remove acentuações (ex: á, ç)
+        .replace(/[^a-z0-9]+/g, "-") // Troca espaços e símbolos não alfanuméricos por hífens
+        .replace(/^-+|-+$/g, ""); // Limpa hífens no começo e no fim
+
+      const finalFileName = `${slugifiedName}-${Math.floor(Math.random() * 9999)}.webp`;
+
+      // 2. Leitura da Imagem
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 800; // Define o teto máximo da resolução
+
+          // 3. Cálculos de proporção para redimensionamento perfeito (Evita esticar a imagem)
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round(height * (maxDim / width));
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round(width * (maxDim / height));
+              height = maxDim;
+            }
+          }
+
+          // 4. Desenha no Canvas na nova dimensão
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return reject(new Error("Erro ao instanciar o Canvas."));
+          
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // 5. Gera o blob convertido para WebP (Qualidade 85%)
+          canvas.toBlob((blob) => {
+            if (!blob) return reject(new Error("Falha ao gerar binário do WebP."));
+            
+            // Recria o File object pronto para FormData (Cloudinary)
+            const optimizedFile = new File([blob], finalFileName, {
+              type: 'image/webp',
+              lastModified: Date.now(),
+            });
+            
+            resolve(optimizedFile);
+          }, 'image/webp', 0.85); 
+        };
+        img.onerror = (error) => reject(error);
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) return alert("⚠️ Imagem muito pesada! Máximo de 2MB.");
     
+    // O TRAVA DE 2MB FOI DESTRUÍDO! O cliente agora pode subir qualquer tamanho de foto de celular
     setIsUploadingProductImage(true);
+    
     try {
-      const url = await uploadImageToCloudinary(file);
+      // Passa a imagem bruta e o nome atual do formulário para o compressor
+      const optimizedFile = await compressAndRenameImage(file, productForm.name);
+      
+      // Envia a imagem tratada, minificada (geralmente sob 200kb) e nomeada por SEO para o Cloudinary
+      const url = await uploadImageToCloudinary(optimizedFile);
       const newImages = [...(productForm.images || []), url];
       
       setProductForm({ 
@@ -435,7 +505,8 @@ const handleLogout = async () => {
         imageUrl: newImages[0] // A primeira imagem do array é sempre a Capa oficial
       });
     } catch (error) {
-      alert("Falha de conexão com a nuvem de imagens.");
+      console.error(error);
+      alert("Falha ao processar ou enviar a imagem. Verifique sua conexão e tente novamente.");
     } finally {
       setIsUploadingProductImage(false);
     }
