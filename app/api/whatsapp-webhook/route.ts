@@ -16,6 +16,7 @@ export async function POST(request: Request) {
     try {
         const body = await request.json();
 
+        // 1. Verificação do Webhook da Meta
         if (body.object !== 'whatsapp_business_account') {
             return new NextResponse('Not a WhatsApp event', { status: 404 });
         }
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
 
             if (fromPhoneRaw && messageText) {
                 
-                // 1. Busca a Loja e verifica se é Admin
+                // 2. Busca a Loja e verifica se o número é de um Admin
                 const last8Incoming = fromPhoneRaw.slice(-8);
                 const allTenantsSnap = await getDocs(collection(db, 'tenants'));
                 
@@ -45,16 +46,17 @@ export async function POST(request: Request) {
                     }
                 });
 
+                // SE NÃO FOR ADMIN, PARA AQUI (Por isso o seu "Oi" do número pessoal não dava erro)
                 if (!tenantId || !tenantData) return new NextResponse('OK', { status: 200 });
 
-                // 2. Personalidade
+                // 3. Injeção de Personalidade
                 const agentName = tenantData.agentName || 'Velo Bot';
                 let toneInstruction = "profissional e direto";
                 if (tenantData.agentTone === 'descontraido') toneInstruction = "descontraído, amigável e usar emojis 😎";
                 if (tenantData.agentTone === 'fofo') toneInstruction = "fofo, entusiasmado e usar emojis ✨💖";
                 if (tenantData.agentTone === 'agressivo') toneInstruction = "focado em vendas, persuasivo e usar emojis 🚀";
 
-                // 🔥 JSON PROMPTING (Bypassa bloqueios de Tools e funciona no Gemini 1.0)
+                // 4. O HACK: JSON PROMPTING (Força a resposta exata sem usar "Tools")
                 const prompt = `Você é o ${agentName}, assistente da loja.
 Sua personalidade: Você deve ser ${toneInstruction}.
 
@@ -77,10 +79,10 @@ SE for apenas uma CONVERSA, SAUDAÇÃO ou pergunta, retorne estritamente isso:
   "texto": "Sua resposta amigável formatada com a sua personalidade"
 }`;
 
-                // 🚀 A GRANDE MUDANÇA: Usando o gemini-pro (1.0). Esse NUNCA dá 404 na API Gratuita.
-                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
+                // 🚀 O MODELO CORRETO QUE A SUA CHAVE SUPORTA (gemini-1.5-flash)
+                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
-                // 3. Chamada ÚNICA
+                // 5. Chamada Única para o Google
                 const geminiResponse = await fetch(geminiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -94,16 +96,16 @@ SE for apenas uma CONVERSA, SAUDAÇÃO ou pergunta, retorne estritamente isso:
 
                 if (geminiData.error) {
                     console.error("🚨 ERRO GOOGLE API:", geminiData.error);
-                    replyText = "Houve uma falha na chave da Inteligência Artificial. Verifique a API Key no servidor.";
+                    replyText = "Houve uma falha na chave da Inteligência Artificial. Verifique os logs.";
                 } else {
                     try {
-                        // 4. Limpeza e Parse do JSON
+                        // 6. Limpa e processa a resposta da IA
                         let rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
                         rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
                         
                         const aiDecision = JSON.parse(rawText);
 
-                        // 5. A IA DECIDIU CADASTRAR?
+                        // 7. A IA DECIDIU CADASTRAR?
                         if (aiDecision.action === "cadastrar") {
                             
                             // Salva no Banco de Dados
@@ -128,17 +130,17 @@ SE for apenas uma CONVERSA, SAUDAÇÃO ou pergunta, retorne estritamente isso:
                             else replyText = `✅ Sucesso. O produto "${aiDecision.nome}" foi cadastrado no valor de R$ ${aiDecision.preco}.`;
                         
                         } else {
-                            // 6. A IA DECIDIU APENAS RESPONDER
+                            // 8. A IA DECIDIU APENAS RESPONDER
                             replyText = aiDecision.texto || "Olá! Como posso te ajudar hoje?";
                         }
 
                     } catch (e) {
-                        console.error("🚨 Erro ao interpretar JSON da IA ou gravar no Firebase:", e);
-                        replyText = "⚠️ Chefe, eu processei a requisição mas houve um erro ao interpretar a resposta da IA.";
+                        console.error("🚨 Erro JSON/Firebase:", e);
+                        replyText = "⚠️ Chefe, processei a requisição mas houve um erro ao gravar no banco.";
                     }
                 }
 
-                // 7. DISPARO FINAL PARA O WHATSAPP (META API)
+                // 9. DISPARO FINAL PARA O WHATSAPP (META API)
                 if (tenantData.metaApiToken && tenantData.metaPhoneId && replyText) {
                     await fetch(`https://graph.facebook.com/v19.0/${tenantData.metaPhoneId}/messages`, {
                         method: 'POST',
