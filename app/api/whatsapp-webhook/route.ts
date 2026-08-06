@@ -58,7 +58,10 @@ export async function POST(request: Request) {
                 if (agentTone === 'fofo') toneInstruction = "aja de forma fofa, muito entusiasmada e use emojis ✨💖.";
                 if (agentTone === 'agressivo') toneInstruction = "aja com foco extremo em vendas, direto ao ponto e persuasivo 🚀.";
 
-                const systemInstruction = `Você é o ${agentName}, assistente virtual da ${storeName}. Sua personalidade: ${toneInstruction}. Você recebe comandos do dono da loja e executa tarefas. Se ele pedir para cadastrar um produto ou serviço, acione a ferramenta cadastrar_produto. Se for apenas conversa (ex: Oi, Tudo bem), responda normalmente seguindo sua personalidade.`;
+                // 🔥 CORREÇÃO: Embutimos a instrução de sistema no próprio prompt do usuário para evitar o erro 404
+                const prompt = `Você é o ${agentName}, assistente virtual da ${storeName}. Sua personalidade: ${toneInstruction}
+O dono da loja enviou a seguinte mensagem: "${messageText}".
+Aja naturalmente seguindo sua personalidade. Se ele pediu para cadastrar um produto ou serviço, acione a ferramenta cadastrar_produto.`;
 
                 // 4. DECLARAÇÃO DA FERRAMENTA (FUNCTION CALLING - GEMINI)
                 const tools = [{
@@ -78,16 +81,14 @@ export async function POST(request: Request) {
                     }]
                 }];
 
-                // 🔥 CORREÇÃO DO NOME DO MODELO: Removido o "-latest" que estava causando o 404
                 const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
-                // 5. PRIMEIRA CHAMADA GEMINI (Verifica a intenção)
+                // 5. PRIMEIRA CHAMADA GEMINI (Usando o JSON que sabíamos que funcionava antes)
                 const geminiResponse = await fetch(geminiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        systemInstruction: { parts: [{ text: systemInstruction }] },
-                        contents: [{ role: "user", parts: [{ text: messageText }] }],
+                        contents: [{ role: "user", parts: [{ text: prompt }] }],
                         tools: tools
                     })
                 });
@@ -108,7 +109,7 @@ export async function POST(request: Request) {
 
                         if (functionName === "cadastrar_produto") {
                             try {
-                                // Execução cravada no Firebase (Com a injeção do TenantId correto)
+                                // Execução cravada no Firebase
                                 const docRef = await addDoc(collection(db, 'products'), {
                                     name: args.nome,
                                     price: Number(args.preco),
@@ -122,15 +123,13 @@ export async function POST(request: Request) {
                                     tenantId: tenantId 
                                 });
 
-                                // FECHANDO O LOOP: Retorno do Resultado da Tool para o Gemini
-                                // 🔥 JSON Limpo e cravado conforme a documentação oficial da v1beta
+                                // FECHANDO O LOOP: Usando a sua estrutura de resposta original que era validada pelo Google
                                 const funcResponse = await fetch(geminiUrl, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
-                                        systemInstruction: { parts: [{ text: systemInstruction }] },
                                         contents: [
-                                            { role: "user", parts: [{ text: messageText }] },
+                                            { role: "user", parts: [{ text: prompt }] },
                                             { role: "model", parts: [{ functionCall: firstPart.functionCall }] },
                                             { 
                                                 role: "function", 
@@ -138,8 +137,8 @@ export async function POST(request: Request) {
                                                     functionResponse: { 
                                                         name: "cadastrar_produto", 
                                                         response: { 
-                                                            status: "success", 
-                                                            productId: docRef.id 
+                                                            name: "cadastrar_produto", 
+                                                            content: { status: "success", productId: docRef.id } 
                                                         } 
                                                     } 
                                                 }] 
