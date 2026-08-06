@@ -69,27 +69,43 @@ export default function VeloLojaReviews() {
         const fetchAllData = async () => {
             if (!tenantId) return;
             try {
-                // 1. Busca os dados da loja
-                const storeRef = doc(db, 'tenants', tenantId);
-                const storeSnap = await getDoc(storeRef);
+                // 1. LÓGICA HÍBRIDA: Tenta achar a loja pelo ID do Firebase OU pelo Slug (Link Personalizado)
+                let storeSnap;
+                let realTenantId = tenantId; // Assume o da URL por padrão
+
+                // Tenta buscar direto pelo ID do Documento
+                const storeRefById = doc(db, 'tenants', tenantId);
+                const snapById = await getDoc(storeRefById);
+
+                if (snapById.exists()) {
+                    storeSnap = snapById;
+                } else {
+                    // Se falhar, busca na coleção onde o campo 'slug' seja igual ao da URL
+                    const qSlug = query(collection(db, 'tenants'), where('slug', '==', tenantId), limit(1));
+                    const snapBySlug = await getDocs(qSlug);
+                    if (!snapBySlug.empty) {
+                        storeSnap = snapBySlug.docs[0];
+                        realTenantId = storeSnap.id; // GUARDA O ID VERDADEIRO PARA BUSCAR PRODUTOS!
+                    }
+                }
                 
-                if (!storeSnap.exists()) {
+                if (!storeSnap) {
                     setLoading(false);
                     return;
                 }
                 
                 setStoreData(storeSnap.data());
 
-                // 2. Busca produtos DESTAQUES reais no banco
+                // 2. Busca produtos DESTAQUES usando o ID REAL (realTenantId)
                 try {
-                    const qProducts = query(collection(db, 'products'), where('tenantId', '==', tenantId), limit(4));
+                    const qProducts = query(collection(db, 'products'), where('tenantId', '==', realTenantId), limit(4));
                     const snapProducts = await getDocs(qProducts);
                     setTopProducts(snapProducts.docs.map(d => ({ id: d.id, ...d.data() })));
                 } catch(e) { console.warn("Erro produtos:", e); }
 
-                // 3. Busca REVIEWS reais no banco
+                // 3. Busca REVIEWS usando o ID REAL (realTenantId)
                 try {
-                    const qReviews = query(collection(db, 'reviews'), where('tenantId', '==', tenantId), limit(50));
+                    const qReviews = query(collection(db, 'reviews'), where('tenantId', '==', realTenantId), limit(50));
                     const snapReviews = await getDocs(qReviews);
                     
                     const reviewsList = snapReviews.docs.map(d => d.data());
