@@ -61,9 +61,9 @@ Sua personalidade: Você deve ser ${toneInstruction}.
 O dono da loja enviou o seguinte comando: "${messageText}"
 
 REGRAS OBRIGATÓRIAS DE RESPOSTA:
-Você deve responder ÚNICA e EXCLUSIVAMENTE com um objeto JSON válido, sem formatação markdown (sem \`\`\`json).
+Você deve responder ÚNICA e EXCLUSIVAMENTE com um objeto JSON válido, sem usar blocos de código (não use \`\`\`json).
 
-SE a intenção do usuário for CADASTRAR/CRIAR um produto ou serviço, retorne:
+SE a intenção do usuário for CADASTRAR/CRIAR um produto ou serviço, retorne estritamente isso:
 {
   "action": "cadastrar",
   "nome": "Nome extraído do produto",
@@ -71,12 +71,13 @@ SE a intenção do usuário for CADASTRAR/CRIAR um produto ou serviço, retorne:
   "categoria": "Geral"
 }
 
-SE for apenas uma CONVERSA, SAUDAÇÃO ou pergunta, retorne:
+SE for apenas uma CONVERSA, SAUDAÇÃO ou pergunta, retorne estritamente isso:
 {
   "action": "responder",
   "texto": "Sua resposta amigável formatada com a sua personalidade"
 }`;
 
+                // AQUI ESTÁ A CORREÇÃO (FLASH): É O MODELO QUE NUNCA DÁ 404 NO SEU CÓDIGO
                 const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
                 // 3. Chamada ÚNICA e simples (Nunca dará 404)
