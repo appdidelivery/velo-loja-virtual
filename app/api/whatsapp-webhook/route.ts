@@ -58,7 +58,7 @@ export async function POST(request: Request) {
                 if (agentTone === 'fofo') toneInstruction = "aja de forma fofa, muito entusiasmada e use emojis ✨💖.";
                 if (agentTone === 'agressivo') toneInstruction = "aja com foco extremo em vendas, direto ao ponto e persuasivo 🚀.";
 
-                const systemInstruction = `Você é o ${agentName}, assistente virtual da ${storeName}. Sua personalidade: ${toneInstruction}. Você recebe comandos do dono da loja e executa tarefas. Se ele pedir para cadastrar um produto ou serviço, acione a ferramenta cadastrar_produto. Se for apenas conversa (ex: Oi, Tudo bem), responda normalmente.`;
+                const systemInstruction = `Você é o ${agentName}, assistente virtual da ${storeName}. Sua personalidade: ${toneInstruction}. Você recebe comandos do dono da loja e executa tarefas. Se ele pedir para cadastrar um produto ou serviço, acione a ferramenta cadastrar_produto. Se for apenas conversa (ex: Oi, Tudo bem), responda normalmente seguindo sua personalidade.`;
 
                 // 4. DECLARAÇÃO DA FERRAMENTA (FUNCTION CALLING - GEMINI)
                 const tools = [{
@@ -78,8 +78,8 @@ export async function POST(request: Request) {
                     }]
                 }];
 
-                // 🔥 CORREÇÃO DO ERRO 404 DA VERCEL: Usando o endpoint 'latest' na v1beta
-                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
+                // 🔥 CORREÇÃO DO NOME DO MODELO: Removido o "-latest" que estava causando o 404
+                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
                 // 5. PRIMEIRA CHAMADA GEMINI (Verifica a intenção)
                 const geminiResponse = await fetch(geminiUrl, {
@@ -123,6 +123,7 @@ export async function POST(request: Request) {
                                 });
 
                                 // FECHANDO O LOOP: Retorno do Resultado da Tool para o Gemini
+                                // 🔥 JSON Limpo e cravado conforme a documentação oficial da v1beta
                                 const funcResponse = await fetch(geminiUrl, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -137,8 +138,8 @@ export async function POST(request: Request) {
                                                     functionResponse: { 
                                                         name: "cadastrar_produto", 
                                                         response: { 
-                                                            name: "cadastrar_produto", 
-                                                            content: { status: "success", productId: docRef.id } 
+                                                            status: "success", 
+                                                            productId: docRef.id 
                                                         } 
                                                     } 
                                                 }] 
