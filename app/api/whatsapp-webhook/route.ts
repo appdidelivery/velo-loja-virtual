@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     try {
         const body = await request.json();
 
-        // Verificação de Segurança (Evento do WhatsApp)
+        // 1. Verificação de Segurança (Evento do WhatsApp)
         if (body.object !== 'whatsapp_business_account') {
             return new NextResponse('Not a WhatsApp event', { status: 404 });
         }
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 
             if (fromPhoneRaw && messageText) {
                 
-                // Busca Lojista no Firebase
+                // 2. Busca Lojista no Firebase
                 const last8Incoming = fromPhoneRaw.slice(-8);
                 const allTenantsSnap = await getDocs(collection(db, 'tenants'));
                 
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 
                 if (!tenantId || !tenantData) return new NextResponse('OK', { status: 200 });
 
-                // INJEÇÃO DE PERSONALIDADE (TONE OF VOICE)
+                // 3. INJEÇÃO DE PERSONALIDADE (TONE OF VOICE)
                 const agentName = tenantData.agentName || 'Velo Bot';
                 const agentTone = tenantData.agentTone || 'profissional';
                 const storeName = tenantData.businessName || 'loja';
@@ -58,36 +58,36 @@ export async function POST(request: Request) {
                 if (agentTone === 'fofo') toneInstruction = "aja de forma fofa, muito entusiasmada e use emojis ✨💖.";
                 if (agentTone === 'agressivo') toneInstruction = "aja com foco extremo em vendas, direto ao ponto e persuasivo 🚀.";
 
-                // SPRINT 1: DECLARAÇÃO DA FERRAMENTA (FUNCTION CALLING) - Gemini Format
+                const systemInstruction = `Você é o ${agentName}, assistente virtual da ${storeName}. Sua personalidade: ${toneInstruction}. Você recebe comandos do dono da loja e executa tarefas. Se ele pedir para cadastrar um produto ou serviço, acione a ferramenta cadastrar_produto. Se for apenas conversa (ex: Oi, Tudo bem), responda normalmente.`;
+
+                // 4. DECLARAÇÃO DA FERRAMENTA (FUNCTION CALLING - GEMINI)
                 const tools = [{
                     functionDeclarations: [{
                         name: "cadastrar_produto",
-                        description: "Cadastra um novo produto ou serviço no banco de dados da loja. Use esta função apenas quando o usuário dono da loja solicitar a criação/adição de um item.",
+                        description: "Cadastra um novo produto ou serviço no banco de dados da loja.",
                         parameters: {
                             type: "OBJECT",
                             properties: {
                                 nome: { type: "STRING", description: "Nome completo do produto" },
-                                preco: { type: "NUMBER", description: "Preço do produto em formato numérico. Ex: 50.00" },
-                                categoria: { type: "STRING", description: "Categoria do produto (Ex: Eletrônicos, Roupas, Estética, Geral)" },
-                                descricao: { type: "STRING", description: "Descrição opcional do produto ou serviço" }
+                                preco: { type: "NUMBER", description: "Preço numérico. Ex: 50.00" },
+                                categoria: { type: "STRING", description: "Categoria do produto" },
+                                descricao: { type: "STRING", description: "Descrição opcional" }
                             },
                             required: ["nome", "preco"]
                         }
                     }]
                 }];
 
-                const prompt = `Você é o ${agentName}, assistente virtual da ${storeName}. Sua personalidade: ${toneInstruction}
-O dono da loja enviou a seguinte mensagem: "${messageText}".
-Se ele pediu para cadastrar ou criar um produto/serviço, acione a ferramenta cadastrar_produto. Se for apenas conversa, responda normalmente confirmando que você é o assistente dele.`;
+                // 🔥 CORREÇÃO DO ERRO 404 DA VERCEL: Usando o endpoint 'latest' na v1beta
+                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
-                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
-
-                // PRIMEIRA CHAMADA GEMINI (Verifica a intenção)
+                // 5. PRIMEIRA CHAMADA GEMINI (Verifica a intenção)
                 const geminiResponse = await fetch(geminiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        contents: [{ role: "user", parts: [{ text: prompt }] }],
+                        systemInstruction: { parts: [{ text: systemInstruction }] },
+                        contents: [{ role: "user", parts: [{ text: messageText }] }],
                         tools: tools
                     })
                 });
@@ -101,7 +101,7 @@ Se ele pediu para cadastrar ou criar um produto/serviço, acione a ferramenta ca
                 } else {
                     const firstPart = geminiData.candidates?.[0]?.content?.parts?.[0];
                     
-                    // SPRINT 2: INTERCEPTAÇÃO DA CHAMADA E EXECUÇÃO NO FIREBASE
+                    // 6. INTERCEPTAÇÃO DA CHAMADA E EXECUÇÃO NO FIREBASE
                     if (firstPart && firstPart.functionCall) {
                         const functionName = firstPart.functionCall.name;
                         const args = firstPart.functionCall.args;
@@ -116,20 +116,20 @@ Se ele pediu para cadastrar ou criar um produto/serviço, acione a ferramenta ca
                                     category: args.categoria || 'Geral',
                                     description: args.descricao || 'Cadastrado via IA pelo WhatsApp',
                                     imageUrl: 'https://cdn-icons-png.flaticon.com/512/8636/8636813.png',
-                                    stock: 999, // Estoque padrão infinito
+                                    stock: 999,
                                     sku: `IA-${Date.now()}`,
                                     isActive: true,
                                     tenantId: tenantId 
                                 });
 
                                 // FECHANDO O LOOP: Retorno do Resultado da Tool para o Gemini
-                                // Correção crítica na estrutura do JSON de "functionResponse"
                                 const funcResponse = await fetch(geminiUrl, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
+                                        systemInstruction: { parts: [{ text: systemInstruction }] },
                                         contents: [
-                                            { role: "user", parts: [{ text: prompt }] },
+                                            { role: "user", parts: [{ text: messageText }] },
                                             { role: "model", parts: [{ functionCall: firstPart.functionCall }] },
                                             { 
                                                 role: "function", 
@@ -137,9 +137,8 @@ Se ele pediu para cadastrar ou criar um produto/serviço, acione a ferramenta ca
                                                     functionResponse: { 
                                                         name: "cadastrar_produto", 
                                                         response: { 
-                                                            status: "success", 
-                                                            productId: docRef.id, 
-                                                            message: "Produto salvo com sucesso no Firebase." 
+                                                            name: "cadastrar_produto", 
+                                                            content: { status: "success", productId: docRef.id } 
                                                         } 
                                                     } 
                                                 }] 
@@ -149,20 +148,20 @@ Se ele pediu para cadastrar ou criar um produto/serviço, acione a ferramenta ca
                                 });
 
                                 const funcData = await funcResponse.json();
-                                replyText = funcData.candidates?.[0]?.content?.parts?.[0]?.text || `Operação realizada! "${args.nome}" foi cadastrado no sistema.`;
+                                replyText = funcData.candidates?.[0]?.content?.parts?.[0]?.text || `Operação realizada! "${args.nome}" foi cadastrado com sucesso.`;
 
                             } catch (e) {
                                 console.error("🚨 Erro Firebase IA:", e);
-                                replyText = "Houve um problema técnico ao tentar gravar o produto no banco de dados. Tente novamente mais tarde.";
+                                replyText = "Houve um problema técnico ao gravar o produto no banco de dados.";
                             }
                         }
                     } else {
-                        // Resposta natural de chat (Se o lojista der apenas "Bom dia")
+                        // Resposta natural de chat
                         replyText = firstPart?.text || "Não consegui formular uma resposta, desculpe.";
                     }
                 }
 
-                // SPRINT 3: DISPARO DA RESPOSTA (META API)
+                // 7. DISPARO DA RESPOSTA (META API)
                 if (tenantData.metaApiToken && tenantData.metaPhoneId) {
                     const metaRequest = await fetch(`https://graph.facebook.com/v19.0/${tenantData.metaPhoneId}/messages`, {
                         method: 'POST',
@@ -173,17 +172,14 @@ Se ele pediu para cadastrar ou criar um produto/serviço, acione a ferramenta ca
                         body: JSON.stringify({
                             messaging_product: 'whatsapp',
                             recipient_type: 'individual',
-                            to: fromPhoneRaw, // Devolve para o exato número do lojista
+                            to: fromPhoneRaw, 
                             type: 'text',
                             text: { body: replyText }
                         })
                     });
                     
                     const metaResponseData = await metaRequest.json();
-                    
-                    if (!metaRequest.ok) {
-                        console.error("🚨 ERRO REJEIÇÃO META API:", metaResponseData);
-                    }
+                    if (!metaRequest.ok) console.error("🚨 ERRO REJEIÇÃO META API:", metaResponseData);
                 }
             }
         }
