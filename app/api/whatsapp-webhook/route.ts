@@ -16,7 +16,6 @@ export async function POST(request: Request) {
     try {
         const body = await request.json();
 
-        // 1. Validação do Webhook da Meta
         if (body.object !== 'whatsapp_business_account') {
             return new NextResponse('Not a WhatsApp event', { status: 404 });
         }
@@ -30,7 +29,7 @@ export async function POST(request: Request) {
 
             if (fromPhoneRaw && messageText) {
                 
-                // 2. Trava de Segurança: Verifica se o número é de um Lojista Admin
+                // 1. Busca a Loja e verifica se é Admin
                 const last8Incoming = fromPhoneRaw.slice(-8);
                 const allTenantsSnap = await getDocs(collection(db, 'tenants'));
                 
@@ -46,116 +45,101 @@ export async function POST(request: Request) {
                     }
                 });
 
-                // Se não for o dono da loja, ignoramos silenciosamente (Por isso seu número pessoal não dá erro)
-                if (!tenantId || !tenantData) {
-                    console.log(`Número ${fromPhoneRaw} ignorado. Não é administrador.`);
-                    return new NextResponse('OK', { status: 200 });
-                }
+                if (!tenantId || !tenantData) return new NextResponse('OK', { status: 200 });
 
-                // 3. Verifica a Chave da API
-                if (!process.env.GEMINI_API_KEY) {
-                    console.error("ERRO: GEMINI_API_KEY não encontrada no painel da Vercel.");
-                    // Continua o código para a Meta enviar a mensagem de erro para o WhatsApp
-                }
-
-                // 4. Monta a Personalidade e o Prompt
+                // 2. Personalidade
                 const agentName = tenantData.agentName || 'Velo Bot';
-                let toneInstruction = "Aja de forma profissional e direta.";
-                if (tenantData.agentTone === 'descontraido') toneInstruction = "Aja de forma descontraída, amigável e use emojis 😎.";
-                if (tenantData.agentTone === 'fofo') toneInstruction = "Aja de forma fofa, entusiasmada e use emojis ✨💖.";
+                let toneInstruction = "profissional e direto";
+                if (tenantData.agentTone === 'descontraido') toneInstruction = "descontraído, amigável e usar emojis 😎";
+                if (tenantData.agentTone === 'fofo') toneInstruction = "fofo, entusiasmado e usar emojis ✨💖";
+                if (tenantData.agentTone === 'agressivo') toneInstruction = "focado em vendas, persuasivo e usar emojis 🚀";
 
-                const prompt = `Você é o ${agentName}, assistente da loja. ${toneInstruction}
-Mensagem do dono da loja: "${messageText}".
-Aja naturalmente. Se ele pediu para cadastrar ou criar um produto/serviço, USE A FERRAMENTA 'cadastrar_produto'. Se for uma saudação, responda normalmente.`;
+                // 🔥 O HACK: JSON PROMPTING (Bypassa o bloqueio de Tools do Google)
+                const prompt = `Você é o ${agentName}, assistente da loja.
+Sua personalidade: Você deve ser ${toneInstruction}.
 
-                // 5. Configuração da Ferramenta de Cadastro
-                const tools = [{
-                    functionDeclarations: [{
-                        name: "cadastrar_produto",
-                        description: "Cadastra um novo produto no banco de dados da loja.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                nome: { type: "STRING", description: "Nome do produto/serviço" },
-                                preco: { type: "NUMBER", description: "Preço em formato numérico. Ex: 50.00" },
-                                categoria: { type: "STRING", description: "Categoria do item" },
-                                descricao: { type: "STRING", description: "Descrição opcional" }
-                            },
-                            required: ["nome", "preco"]
-                        }
-                    }]
-                }];
+O dono da loja enviou o seguinte comando: "${messageText}"
 
-                // 🔄 MUDANÇA ESTRATÉGICA: Usando o modelo PRO que garante suporte a ferramentas
-                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
+REGRAS OBRIGATÓRIAS DE RESPOSTA:
+Você deve responder ÚNICA e EXCLUSIVAMENTE com um objeto JSON válido, sem formatação markdown (sem \`\`\`json).
 
-                let replyText = "Desculpe, ocorreu um erro inesperado.";
+SE a intenção do usuário for CADASTRAR/CRIAR um produto ou serviço, retorne:
+{
+  "action": "cadastrar",
+  "nome": "Nome extraído do produto",
+  "preco": 150.00,
+  "categoria": "Geral"
+}
 
-                // 6. Chamada para a Inteligência Artificial
-                try {
-                    const geminiResponse = await fetch(geminiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            contents: [{ role: "user", parts: [{ text: prompt }] }],
-                            tools: tools
-                        })
-                    });
+SE for apenas uma CONVERSA, SAUDAÇÃO ou pergunta, retorne:
+{
+  "action": "responder",
+  "texto": "Sua resposta amigável formatada com a sua personalidade"
+}`;
 
-                    const geminiData = await geminiResponse.json();
+                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
-                    if (geminiData.error) {
-                        console.error("🚨 ERRO GOOGLE API:", geminiData.error);
-                        replyText = `⚠️ Chefe, o Google bloqueou minha resposta. Verifique a GEMINI_API_KEY na Vercel. Erro: ${geminiData.error.message}`;
-                    } else {
-                        const firstPart = geminiData.candidates?.[0]?.content?.parts?.[0];
+                // 3. Chamada ÚNICA e simples (Nunca dará 404)
+                const geminiResponse = await fetch(geminiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        contents: [{ role: "user", parts: [{ text: prompt }] }]
+                    })
+                });
+
+                const geminiData = await geminiResponse.json();
+                let replyText = "";
+
+                if (geminiData.error) {
+                    console.error("🚨 ERRO GOOGLE API:", geminiData.error);
+                    replyText = "Houve uma falha na chave da Inteligência Artificial.";
+                } else {
+                    try {
+                        // Extrai e limpa a resposta para garantir que é um JSON válido
+                        let rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+                        rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
                         
-                        // 7. A IA escolheu usar a Ferramenta?
-                        if (firstPart && firstPart.functionCall) {
-                            const functionName = firstPart.functionCall.name;
-                            const args = firstPart.functionCall.args;
+                        const aiDecision = JSON.parse(rawText);
 
-                            if (functionName === "cadastrar_produto") {
-                                try {
-                                    // Executa a injeção no Firebase
-                                    await addDoc(collection(db, 'products'), {
-                                        name: args.nome,
-                                        price: Number(args.preco),
-                                        promotionalPrice: 0,
-                                        category: args.categoria || 'Geral',
-                                        description: args.descricao || 'Criado via IA pelo WhatsApp',
-                                        imageUrl: 'https://cdn-icons-png.flaticon.com/512/8636/8636813.png',
-                                        stock: 999,
-                                        sku: `IA-${Date.now()}`,
-                                        isActive: true,
-                                        tenantId: tenantId,
-                                        createdAt: serverTimestamp()
-                                    });
+                        // 4. A IA DECIDIU CADASTRAR?
+                        if (aiDecision.action === "cadastrar") {
+                            
+                            // Salva no Banco de Dados
+                            await addDoc(collection(db, 'products'), {
+                                name: aiDecision.nome,
+                                price: Number(aiDecision.preco),
+                                promotionalPrice: 0,
+                                category: aiDecision.categoria || 'Geral',
+                                description: 'Cadastrado pelo WhatsApp',
+                                imageUrl: 'https://cdn-icons-png.flaticon.com/512/8636/8636813.png',
+                                stock: 999,
+                                sku: `IA-${Date.now()}`,
+                                isActive: true,
+                                tenantId: tenantId,
+                                createdAt: serverTimestamp()
+                            });
 
-                                    // Gera a resposta formatada sem chamar o Google de novo
-                                    if (tenantData.agentTone === 'descontraido') replyText = `Prontinho, chefe! 😎 O item "${args.nome}" foi cadastrado no valor de R$ ${args.preco}.`;
-                                    else if (tenantData.agentTone === 'fofo') replyText = `Feito!! ✨💖 Cadastrei "${args.nome}" para você! Se precisar de mais algo é só chamar!`;
-                                    else replyText = `✅ Operação concluída. O produto "${args.nome}" foi salvo no sistema.`;
-
-                                } catch (e) {
-                                    console.error("🚨 Erro Firebase:", e);
-                                    replyText = "⚠️ Chefe, a IA funcionou, mas o banco de dados do Firebase bloqueou a gravação do produto.";
-                                }
-                            }
+                            // Prepara a resposta de sucesso baseada na personalidade
+                            if (tenantData.agentTone === 'descontraido') replyText = `Prontinho, chefe! 😎 Cadastrei "${aiDecision.nome}" por R$ ${aiDecision.preco}. Quer lançar mais algum?`;
+                            else if (tenantData.agentTone === 'fofo') replyText = `Feito!! ✨💖 O item "${aiDecision.nome}" (R$ ${aiDecision.preco}) já está na loja!`;
+                            else if (tenantData.agentTone === 'agressivo') replyText = `Tudo certo! 🚀 "${aiDecision.nome}" cadastrado por R$ ${aiDecision.preco}. Vamos vender!`;
+                            else replyText = `✅ Sucesso. O produto "${aiDecision.nome}" foi cadastrado no valor de R$ ${aiDecision.preco}.`;
+                        
                         } else {
-                            // Se for apenas uma conversa ("Oi"), repassa o texto da IA
-                            replyText = firstPart?.text || "Não consegui formular uma resposta.";
+                            // 5. A IA DECIDIU APENAS RESPONDER
+                            replyText = aiDecision.texto || "Olá! Como posso te ajudar hoje?";
                         }
+
+                    } catch (e) {
+                        console.error("🚨 Erro ao interpretar JSON da IA ou gravar no Firebase:", e);
+                        replyText = "⚠️ Chefe, eu processei a requisição mas houve um erro ao comunicar com o banco de dados.";
                     }
-                } catch (e) {
-                    console.error("🚨 Erro de Rede com o Google:", e);
-                    replyText = "⚠️ Falha de comunicação com os servidores do Google Gemini.";
                 }
 
-                // 8. DISPARO PARA O WHATSAPP (META API)
-                // A Blindagem Mestra: Garantimos que o replyText NUNCA estará vazio
+                // 6. DISPARO FINAL PARA O WHATSAPP (META API)
                 if (tenantData.metaApiToken && tenantData.metaPhoneId && replyText) {
-                    const metaRequest = await fetch(`https://graph.facebook.com/v19.0/${tenantData.metaPhoneId}/messages`, {
+                    await fetch(`https://graph.facebook.com/v19.0/${tenantData.metaPhoneId}/messages`, {
                         method: 'POST',
                         headers: { 
                             'Authorization': `Bearer ${tenantData.metaApiToken}`, 
@@ -169,11 +153,6 @@ Aja naturalmente. Se ele pediu para cadastrar ou criar um produto/serviço, USE 
                             text: { body: replyText }
                         })
                     });
-                    
-                    if (!metaRequest.ok) {
-                        const metaError = await metaRequest.json();
-                        console.error("🚨 ERRO META API:", metaError);
-                    }
                 }
             }
         }
