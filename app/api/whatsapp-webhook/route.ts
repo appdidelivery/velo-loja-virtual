@@ -54,7 +54,7 @@ export async function POST(request: Request) {
                 if (tenantData.agentTone === 'fofo') toneInstruction = "fofo, entusiasmado e usar emojis ✨💖";
                 if (tenantData.agentTone === 'agressivo') toneInstruction = "focado em vendas, persuasivo e usar emojis 🚀";
 
-                // 🔥 O HACK: JSON PROMPTING (Bypassa o bloqueio de Tools do Google)
+                // 🔥 JSON PROMPTING (Bypassa bloqueios de Tools e funciona no Gemini 1.0)
                 const prompt = `Você é o ${agentName}, assistente da loja.
 Sua personalidade: Você deve ser ${toneInstruction}.
 
@@ -77,10 +77,10 @@ SE for apenas uma CONVERSA, SAUDAÇÃO ou pergunta, retorne estritamente isso:
   "texto": "Sua resposta amigável formatada com a sua personalidade"
 }`;
 
-                // AQUI ESTÁ A CORREÇÃO (FLASH): É O MODELO QUE NUNCA DÁ 404 NO SEU CÓDIGO
-                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+                // 🚀 A GRANDE MUDANÇA: Usando o gemini-pro (1.0). Esse NUNCA dá 404 na API Gratuita.
+                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
-                // 3. Chamada ÚNICA e simples (Nunca dará 404)
+                // 3. Chamada ÚNICA
                 const geminiResponse = await fetch(geminiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -94,16 +94,16 @@ SE for apenas uma CONVERSA, SAUDAÇÃO ou pergunta, retorne estritamente isso:
 
                 if (geminiData.error) {
                     console.error("🚨 ERRO GOOGLE API:", geminiData.error);
-                    replyText = "Houve uma falha na chave da Inteligência Artificial.";
+                    replyText = "Houve uma falha na chave da Inteligência Artificial. Verifique a API Key no servidor.";
                 } else {
                     try {
-                        // Extrai e limpa a resposta para garantir que é um JSON válido
+                        // 4. Limpeza e Parse do JSON
                         let rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-                        rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+                        rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
                         
                         const aiDecision = JSON.parse(rawText);
 
-                        // 4. A IA DECIDIU CADASTRAR?
+                        // 5. A IA DECIDIU CADASTRAR?
                         if (aiDecision.action === "cadastrar") {
                             
                             // Salva no Banco de Dados
@@ -128,17 +128,17 @@ SE for apenas uma CONVERSA, SAUDAÇÃO ou pergunta, retorne estritamente isso:
                             else replyText = `✅ Sucesso. O produto "${aiDecision.nome}" foi cadastrado no valor de R$ ${aiDecision.preco}.`;
                         
                         } else {
-                            // 5. A IA DECIDIU APENAS RESPONDER
+                            // 6. A IA DECIDIU APENAS RESPONDER
                             replyText = aiDecision.texto || "Olá! Como posso te ajudar hoje?";
                         }
 
                     } catch (e) {
                         console.error("🚨 Erro ao interpretar JSON da IA ou gravar no Firebase:", e);
-                        replyText = "⚠️ Chefe, eu processei a requisição mas houve um erro ao comunicar com o banco de dados.";
+                        replyText = "⚠️ Chefe, eu processei a requisição mas houve um erro ao interpretar a resposta da IA.";
                     }
                 }
 
-                // 6. DISPARO FINAL PARA O WHATSAPP (META API)
+                // 7. DISPARO FINAL PARA O WHATSAPP (META API)
                 if (tenantData.metaApiToken && tenantData.metaPhoneId && replyText) {
                     await fetch(`https://graph.facebook.com/v19.0/${tenantData.metaPhoneId}/messages`, {
                         method: 'POST',
