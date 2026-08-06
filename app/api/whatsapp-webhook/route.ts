@@ -16,6 +16,7 @@ export async function POST(request: Request) {
     try {
         const body = await request.json();
 
+        // Verificação de Segurança (Evento do WhatsApp)
         if (body.object !== 'whatsapp_business_account') {
             return new NextResponse('Not a WhatsApp event', { status: 404 });
         }
@@ -24,11 +25,12 @@ export async function POST(request: Request) {
 
         if (messages && messages.length > 0) {
             const message = messages[0];
-            const fromPhoneRaw = message.from; // Pega o número exato que a Meta usou
+            const fromPhoneRaw = message.from; 
             const messageText = message.text?.body;
 
             if (fromPhoneRaw && messageText) {
                 
+                // Busca Lojista no Firebase
                 const last8Incoming = fromPhoneRaw.slice(-8);
                 const allTenantsSnap = await getDocs(collection(db, 'tenants'));
                 
@@ -46,11 +48,21 @@ export async function POST(request: Request) {
 
                 if (!tenantId || !tenantData) return new NextResponse('OK', { status: 200 });
 
-               // 1. DECLARAÇÃO DA FERRAMENTA (FUNCTION CALLING)
+                // INJEÇÃO DE PERSONALIDADE (TONE OF VOICE)
+                const agentName = tenantData.agentName || 'Velo Bot';
+                const agentTone = tenantData.agentTone || 'profissional';
+                const storeName = tenantData.businessName || 'loja';
+
+                let toneInstruction = "aja de forma profissional e prestativa.";
+                if (agentTone === 'descontraido') toneInstruction = "aja de forma descontraída, bem amigável e use emojis 😎.";
+                if (agentTone === 'fofo') toneInstruction = "aja de forma fofa, muito entusiasmada e use emojis ✨💖.";
+                if (agentTone === 'agressivo') toneInstruction = "aja com foco extremo em vendas, direto ao ponto e persuasivo 🚀.";
+
+                // SPRINT 1: DECLARAÇÃO DA FERRAMENTA (FUNCTION CALLING) - Gemini Format
                 const tools = [{
                     functionDeclarations: [{
                         name: "cadastrar_produto",
-                        description: "Cadastra um novo produto no banco de dados da loja. Use esta função apenas quando o usuário solicitar a criação/adição de um produto ou serviço.",
+                        description: "Cadastra um novo produto ou serviço no banco de dados da loja. Use esta função apenas quando o usuário dono da loja solicitar a criação/adição de um item.",
                         parameters: {
                             type: "OBJECT",
                             properties: {
@@ -64,14 +76,13 @@ export async function POST(request: Request) {
                     }]
                 }];
 
-                const prompt = `Você é o assistente virtual da loja. O usuário enviou: "${messageText}".
-Aja naturalmente. Se ele pediu para cadastrar ou criar um produto, acione a ferramenta cadastrar_produto.
-Se for apenas conversa, responda de forma prestativa.`;
+                const prompt = `Você é o ${agentName}, assistente virtual da ${storeName}. Sua personalidade: ${toneInstruction}
+O dono da loja enviou a seguinte mensagem: "${messageText}".
+Se ele pediu para cadastrar ou criar um produto/serviço, acione a ferramenta cadastrar_produto. Se for apenas conversa, responda normalmente confirmando que você é o assistente dele.`;
 
-                // ATUALIZADO: Usando o gemini-1.5-flash OBRIGATÓRIO
-const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
-                // 2. PRIMEIRA CHAMADA (ENVIANDO O CONTEXTO E A FERRAMENTA)
+                // PRIMEIRA CHAMADA GEMINI (Verifica a intenção)
                 const geminiResponse = await fetch(geminiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -90,27 +101,29 @@ const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemin
                 } else {
                     const firstPart = geminiData.candidates?.[0]?.content?.parts?.[0];
                     
-                    // 3. INTERCEPTAÇÃO DA CHAMADA (A IA DECIDIU USAR A FERRAMENTA?)
+                    // SPRINT 2: INTERCEPTAÇÃO DA CHAMADA E EXECUÇÃO NO FIREBASE
                     if (firstPart && firstPart.functionCall) {
                         const functionName = firstPart.functionCall.name;
                         const args = firstPart.functionCall.args;
 
                         if (functionName === "cadastrar_produto") {
                             try {
-                                // 4. EXECUÇÃO NO FIREBASE
+                                // Execução cravada no Firebase (Com a injeção do TenantId correto)
                                 const docRef = await addDoc(collection(db, 'products'), {
                                     name: args.nome,
                                     price: Number(args.preco),
+                                    promotionalPrice: 0,
                                     category: args.categoria || 'Geral',
                                     description: args.descricao || 'Cadastrado via IA pelo WhatsApp',
-                                    imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600',
-                                    stock: 99,
+                                    imageUrl: 'https://cdn-icons-png.flaticon.com/512/8636/8636813.png',
+                                    stock: 999, // Estoque padrão infinito
                                     sku: `IA-${Date.now()}`,
                                     isActive: true,
-                                    tenantId: tenantId // Vinculando à loja correta
+                                    tenantId: tenantId 
                                 });
 
-                                // 5. RETORNO PARA A IA (FECHANDO O LOOP)
+                                // FECHANDO O LOOP: Retorno do Resultado da Tool para o Gemini
+                                // Correção crítica na estrutura do JSON de "functionResponse"
                                 const funcResponse = await fetch(geminiUrl, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -123,7 +136,11 @@ const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemin
                                                 parts: [{ 
                                                     functionResponse: { 
                                                         name: "cadastrar_produto", 
-                                                        response: { name: "cadastrar_produto", content: { status: "success", productId: docRef.id, message: "Produto salvo com sucesso." } } 
+                                                        response: { 
+                                                            status: "success", 
+                                                            productId: docRef.id, 
+                                                            message: "Produto salvo com sucesso no Firebase." 
+                                                        } 
                                                     } 
                                                 }] 
                                             }
@@ -132,28 +149,31 @@ const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemin
                                 });
 
                                 const funcData = await funcResponse.json();
-                                replyText = funcData.candidates?.[0]?.content?.parts?.[0]?.text || `✅ Sucesso! "${args.nome}" (R$ ${args.preco}) foi cadastrado!`;
+                                replyText = funcData.candidates?.[0]?.content?.parts?.[0]?.text || `Operação realizada! "${args.nome}" foi cadastrado no sistema.`;
 
                             } catch (e) {
                                 console.error("🚨 Erro Firebase IA:", e);
-                                replyText = "Houve um problema técnico ao tentar gravar o produto no banco de dados.";
+                                replyText = "Houve um problema técnico ao tentar gravar o produto no banco de dados. Tente novamente mais tarde.";
                             }
                         }
                     } else {
-                        // Resposta normal de chat
+                        // Resposta natural de chat (Se o lojista der apenas "Bom dia")
                         replyText = firstPart?.text || "Não consegui formular uma resposta, desculpe.";
                     }
                 }
 
-                // 6. ENVIO PARA O WHATSAPP (CORRIGIDO)
+                // SPRINT 3: DISPARO DA RESPOSTA (META API)
                 if (tenantData.metaApiToken && tenantData.metaPhoneId) {
                     const metaRequest = await fetch(`https://graph.facebook.com/v19.0/${tenantData.metaPhoneId}/messages`, {
                         method: 'POST',
-                        headers: { 'Authorization': `Bearer ${tenantData.metaApiToken}`, 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Authorization': `Bearer ${tenantData.metaApiToken}`, 
+                            'Content-Type': 'application/json' 
+                        },
                         body: JSON.stringify({
                             messaging_product: 'whatsapp',
                             recipient_type: 'individual',
-                            to: fromPhoneRaw, // ATENÇÃO: Agora devolve EXATAMENTE para o número de onde a mensagem veio
+                            to: fromPhoneRaw, // Devolve para o exato número do lojista
                             type: 'text',
                             text: { body: replyText }
                         })
