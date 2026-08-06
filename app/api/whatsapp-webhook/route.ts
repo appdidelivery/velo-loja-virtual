@@ -12,13 +12,14 @@ export async function GET(request: Request) {
     return new NextResponse('OK', { status: 200 });
 }
 
-// 🧠 MOTOR AUTO-CURÁVEL: Testa os modelos até achar o que a sua Chave de API aceita
+// 🧠 MOTOR AUTO-CURÁVEL ATUALIZADO: Usando exclusivamente os modelos que a sua chave permite
 async function fetchGeminiWithFallback(prompt: string, apiKey: string) {
+    // Lista atualizada com base nos logs exatos do seu servidor
     const models = [
-        'gemini-1.5-flash', 
-        'gemini-1.5-pro', 
-        'gemini-pro', 
-        'gemini-1.0-pro-latest'
+        'gemini-2.5-flash', 
+        'gemini-flash-latest', 
+        'gemini-2.5-pro',
+        'gemini-pro-latest'
     ];
     
     for (const model of models) {
@@ -34,26 +35,16 @@ async function fetchGeminiWithFallback(prompt: string, apiKey: string) {
             
             const data = await res.json();
             
-            // Se o Google respondeu com sucesso, retornamos os dados imediatamente!
             if (res.ok && !data.error) {
                 console.log(`✅ [SUCESSO] O modelo que funcionou na sua chave foi: ${model}`);
                 return data; 
             } else {
-                console.warn(`⚠️ [FALHA] Modelo ${model} rejeitado pelo Google:`, data.error?.message);
+                console.warn(`⚠️ [FALHA] Modelo ${model} rejeitado:`, data.error?.message);
             }
         } catch (e) {
             console.warn(`⚠️ [REDE] Erro ao testar o modelo ${model}`);
         }
     }
-    
-    // Se chegou aqui, a chave do Google está completamente bloqueada.
-    // Vamos perguntar pro Google quais modelos sua chave tem direito e jogar no log!
-    try {
-        const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-        const listData = await listRes.json();
-        console.error("🚨 NENHUM MODELO FUNCIONOU. Sua chave só tem acesso aos modelos:", JSON.stringify(listData.models?.map((m: any) => m.name)));
-    } catch(e) {}
-
     return null;
 }
 
@@ -108,7 +99,7 @@ export async function POST(request: Request) {
                 if (tenantData.agentTone === 'fofo') toneInstruction = "fofo, muito entusiasmado e usar emojis ✨💖";
                 if (tenantData.agentTone === 'agressivo') toneInstruction = "focado em vendas, persuasivo e usar emojis 🚀";
 
-                // 5. O HACK DE JSON (Substitui o Tools que o Google estava bloqueando)
+                // 5. O HACK DE JSON PROMPTING
                 const prompt = `Você é o ${agentName}, assistente da loja.
 Sua personalidade: Você deve ser ${toneInstruction}.
 
@@ -133,11 +124,11 @@ SE for apenas uma CONVERSA (ex: "oi", "tudo bem?", "teste"), retorne estritament
 
                 let replyText = "Desculpe, ocorreu um erro de comunicação com o servidor.";
 
-                // 6. Roda a Inteligência Artificial (com Motor Auto-Curável)
+                // 6. Roda a Inteligência Artificial
                 const geminiData = await fetchGeminiWithFallback(prompt, apiKey);
 
                 if (!geminiData) {
-                    replyText = "⚠️ Chefe, a sua Chave do Google bloqueou o acesso a todos os modelos de IA. Olhe os logs da Vercel para ver quais modelos a sua chave tem direito.";
+                    replyText = "⚠️ Chefe, a sua Chave do Google bloqueou o acesso aos modelos disponíveis.";
                 } else {
                     try {
                         // 7. Limpa e processa o JSON gerado pela IA
@@ -171,13 +162,13 @@ SE for apenas uma CONVERSA (ex: "oi", "tudo bem?", "teste"), retorne estritament
                             else replyText = `✅ Sucesso. O produto "${aiDecision.nome}" foi cadastrado no valor de R$ ${aiDecision.preco}.`;
                         
                         } else {
-                            // 9. A IA DECIDIU APENAS RESPONDER (Ex: Quando você manda "oi teste")
+                            // 9. A IA DECIDIU APENAS RESPONDER
                             replyText = aiDecision.texto || "Olá! Como posso ajudar nas vendas hoje?";
                         }
 
                     } catch (e) {
                         console.error("🚨 Erro ao ler JSON da IA:", e);
-                        replyText = "⚠️ Chefe, o Google processou a mensagem, mas devolveu um texto inválido.";
+                        replyText = "⚠️ Chefe, o Google processou a mensagem, mas devolveu um formato inválido.";
                     }
                 }
 
