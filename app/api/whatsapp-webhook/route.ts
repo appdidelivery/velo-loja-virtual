@@ -48,31 +48,30 @@ export async function POST(request: Request) {
 
                 if (!tenantId || !tenantData) return new NextResponse('OK', { status: 200 });
 
-                // 3. INJEÇÃO DE PERSONALIDADE (TONE OF VOICE)
+                // 3. INJEÇÃO DE PERSONALIDADE (Sem usar SystemInstruction para não bugar o Google)
                 const agentName = tenantData.agentName || 'Velo Bot';
                 const agentTone = tenantData.agentTone || 'profissional';
-                const storeName = tenantData.businessName || 'loja';
 
                 let toneInstruction = "aja de forma profissional e prestativa.";
                 if (agentTone === 'descontraido') toneInstruction = "aja de forma descontraída, bem amigável e use emojis 😎.";
                 if (agentTone === 'fofo') toneInstruction = "aja de forma fofa, muito entusiasmada e use emojis ✨💖.";
                 if (agentTone === 'agressivo') toneInstruction = "aja com foco extremo em vendas, direto ao ponto e persuasivo 🚀.";
 
-                // 🔥 CORREÇÃO: Embutimos a instrução de sistema no próprio prompt do usuário para evitar o erro 404
-                const prompt = `Você é o ${agentName}, assistente virtual da ${storeName}. Sua personalidade: ${toneInstruction}
-O dono da loja enviou a seguinte mensagem: "${messageText}".
-Aja naturalmente seguindo sua personalidade. Se ele pediu para cadastrar um produto ou serviço, acione a ferramenta cadastrar_produto.`;
+                // O Prompt embute a personalidade no papel do usuário
+                const prompt = `Você é o ${agentName}, assistente virtual da loja. Sua personalidade: ${toneInstruction}
+O dono da loja enviou: "${messageText}".
+Aja naturalmente. Se ele pediu para cadastrar ou criar um produto, acione a ferramenta cadastrar_produto. Se for só conversa, responda amigavelmente.`;
 
-                // 4. DECLARAÇÃO DA FERRAMENTA (FUNCTION CALLING - GEMINI)
+                // 4. DECLARAÇÃO DA FERRAMENTA (FUNCTION CALLING)
                 const tools = [{
                     functionDeclarations: [{
                         name: "cadastrar_produto",
-                        description: "Cadastra um novo produto ou serviço no banco de dados da loja.",
+                        description: "Cadastra um novo produto no banco de dados da loja.",
                         parameters: {
                             type: "OBJECT",
                             properties: {
                                 nome: { type: "STRING", description: "Nome completo do produto" },
-                                preco: { type: "NUMBER", description: "Preço numérico. Ex: 50.00" },
+                                preco: { type: "NUMBER", description: "Preço do produto em formato numérico. Ex: 50.00" },
                                 categoria: { type: "STRING", description: "Categoria do produto" },
                                 descricao: { type: "STRING", description: "Descrição opcional" }
                             },
@@ -83,7 +82,7 @@ Aja naturalmente seguindo sua personalidade. Se ele pediu para cadastrar um prod
 
                 const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
-                // 5. PRIMEIRA CHAMADA GEMINI (Usando o JSON que sabíamos que funcionava antes)
+                // 5. PRIMEIRA CHAMADA GEMINI
                 const geminiResponse = await fetch(geminiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -97,19 +96,19 @@ Aja naturalmente seguindo sua personalidade. Se ele pediu para cadastrar um prod
                 let replyText = "";
 
                 if (geminiData.error) {
-                    console.error("🚨 ERRO GOOGLE API:", geminiData.error);
+                    console.error("🚨 ERRO GOOGLE API PRIMEIRA CHAMADA:", geminiData.error);
                     replyText = `Erro na IA: ${geminiData.error.message}`;
                 } else {
                     const firstPart = geminiData.candidates?.[0]?.content?.parts?.[0];
                     
-                    // 6. INTERCEPTAÇÃO DA CHAMADA E EXECUÇÃO NO FIREBASE
+                    // 6. INTERCEPTAÇÃO DA FERRAMENTA (IA DECIDIU CADASTRAR)
                     if (firstPart && firstPart.functionCall) {
                         const functionName = firstPart.functionCall.name;
                         const args = firstPart.functionCall.args;
 
                         if (functionName === "cadastrar_produto") {
                             try {
-                                // Execução cravada no Firebase
+                                // GRAVA NO FIREBASE
                                 const docRef = await addDoc(collection(db, 'products'), {
                                     name: args.nome,
                                     price: Number(args.preco),
@@ -123,7 +122,8 @@ Aja naturalmente seguindo sua personalidade. Se ele pediu para cadastrar um prod
                                     tenantId: tenantId 
                                 });
 
-                                // FECHANDO O LOOP: Usando a sua estrutura de resposta original que era validada pelo Google
+                                // 7. SEGUNDA CHAMADA (RETORNO PARA A IA)
+                                // Usando EXATAMENTE a estrutura de resposta que você usava antes e que o Google aceita!
                                 const funcResponse = await fetch(geminiUrl, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -138,7 +138,7 @@ Aja naturalmente seguindo sua personalidade. Se ele pediu para cadastrar um prod
                                                         name: "cadastrar_produto", 
                                                         response: { 
                                                             name: "cadastrar_produto", 
-                                                            content: { status: "success", productId: docRef.id } 
+                                                            content: { status: "success", productId: docRef.id, message: "Produto salvo com sucesso." } 
                                                         } 
                                                     } 
                                                 }] 
@@ -148,7 +148,13 @@ Aja naturalmente seguindo sua personalidade. Se ele pediu para cadastrar um prod
                                 });
 
                                 const funcData = await funcResponse.json();
-                                replyText = funcData.candidates?.[0]?.content?.parts?.[0]?.text || `Operação realizada! "${args.nome}" foi cadastrado com sucesso.`;
+                                
+                                if (funcData.error) {
+                                    console.error("🚨 ERRO GOOGLE API SEGUNDA CHAMADA:", funcData.error);
+                                    replyText = `Operação realizada no banco, mas a IA falhou ao gerar a resposta. Produto: ${args.nome}`;
+                                } else {
+                                    replyText = funcData.candidates?.[0]?.content?.parts?.[0]?.text || `✅ Sucesso! "${args.nome}" foi cadastrado!`;
+                                }
 
                             } catch (e) {
                                 console.error("🚨 Erro Firebase IA:", e);
@@ -156,19 +162,16 @@ Aja naturalmente seguindo sua personalidade. Se ele pediu para cadastrar um prod
                             }
                         }
                     } else {
-                        // Resposta natural de chat
+                        // Resposta normal de chat (Ex: "Oi", "Tudo bem?")
                         replyText = firstPart?.text || "Não consegui formular uma resposta, desculpe.";
                     }
                 }
 
-                // 7. DISPARO DA RESPOSTA (META API)
+                // 8. DISPARO DA RESPOSTA (META API)
                 if (tenantData.metaApiToken && tenantData.metaPhoneId) {
                     const metaRequest = await fetch(`https://graph.facebook.com/v19.0/${tenantData.metaPhoneId}/messages`, {
                         method: 'POST',
-                        headers: { 
-                            'Authorization': `Bearer ${tenantData.metaApiToken}`, 
-                            'Content-Type': 'application/json' 
-                        },
+                        headers: { 'Authorization': `Bearer ${tenantData.metaApiToken}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             messaging_product: 'whatsapp',
                             recipient_type: 'individual',
@@ -178,8 +181,10 @@ Aja naturalmente seguindo sua personalidade. Se ele pediu para cadastrar um prod
                         })
                     });
                     
-                    const metaResponseData = await metaRequest.json();
-                    if (!metaRequest.ok) console.error("🚨 ERRO REJEIÇÃO META API:", metaResponseData);
+                    if (!metaRequest.ok) {
+                        const metaResponseData = await metaRequest.json();
+                        console.error("🚨 ERRO REJEIÇÃO META API:", metaResponseData);
+                    }
                 }
             }
         }
