@@ -12,38 +12,52 @@ export async function GET(request: Request) {
     return new NextResponse('OK', { status: 200 });
 }
 
-// 🧠 MOTOR AUTO-CURÁVEL ATUALIZADO: Usando exclusivamente os modelos que a sua chave permite
-async function fetchGeminiWithFallback(prompt: string, apiKey: string) {
-    // Lista atualizada com base nos logs exatos do seu servidor
-    const models = [
-        'gemini-2.5-flash', 
-        'gemini-flash-latest', 
-        'gemini-2.5-pro',
-        'gemini-pro-latest'
-    ];
-    
-    for (const model of models) {
-        try {
+// 🧠 MOTOR DINÂMICO SUPREMO: Pergunta pro Google qual modelo usar, sem adivinhação.
+async function fetchGeminiDynamic(prompt: string, apiKey: string) {
+    try {
+        // 1. Pede a lista real e atualizada de modelos para esta chave exata
+        const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+        const listData = await listRes.json();
+
+        if (!listData.models) {
+            console.error("🚨 Erro ao buscar lista de modelos permitidos:", listData);
+            return null;
+        }
+
+        // 2. Filtra os modelos que suportam geração de texto
+        const validModels = listData.models
+            .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+            .map((m: any) => m.name.replace('models/', '')); // Tira o prefixo
+
+        // Priorizamos os alias globais (latest) que você listou antes
+        const preferred = ['gemini-flash-latest', 'gemini-3.5-flash', 'gemini-pro-latest'];
+        const sortedModels = [
+            ...preferred.filter(p => validModels.includes(p)),
+            ...validModels.filter((m: string) => !preferred.includes(m))
+        ];
+
+        // 3. Testa os modelos até um dar sucesso 200 OK
+        for (const model of sortedModels) {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
             const res = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     contents: [{ role: "user", parts: [{ text: prompt }] }]
                 })
             });
-            
+
             const data = await res.json();
             
             if (res.ok && !data.error) {
-                console.log(`✅ [SUCESSO] O modelo que funcionou na sua chave foi: ${model}`);
-                return data; 
+                console.log(`✅ [MÁGICA] Conectado com sucesso ao modelo: ${model}`);
+                return data; // Devolve os dados e sai do loop
             } else {
-                console.warn(`⚠️ [FALHA] Modelo ${model} rejeitado:`, data.error?.message);
+                console.warn(`⏳ Pulando o modelo ${model} (Erro do Google: ${data.error?.message})`);
             }
-        } catch (e) {
-            console.warn(`⚠️ [REDE] Erro ao testar o modelo ${model}`);
         }
+    } catch (e) {
+        console.error("🚨 Erro crítico no Motor Dinâmico:", e);
     }
     return null;
 }
@@ -52,7 +66,6 @@ export async function POST(request: Request) {
     try {
         const body = await request.json();
 
-        // 1. Verificação do Webhook da Meta
         if (body.object !== 'whatsapp_business_account') {
             return new NextResponse('Not a WhatsApp event', { status: 404 });
         }
@@ -66,7 +79,7 @@ export async function POST(request: Request) {
 
             if (fromPhoneRaw && messageText) {
                 
-                // 2. Busca a Loja e verifica se o número é de um Admin
+                // Busca a Loja e verifica se o número é de um Admin
                 const last8Incoming = fromPhoneRaw.slice(-8);
                 const allTenantsSnap = await getDocs(collection(db, 'tenants'));
                 
@@ -82,33 +95,30 @@ export async function POST(request: Request) {
                     }
                 });
 
-                // Se não for Admin, para aqui.
                 if (!tenantId || !tenantData) return new NextResponse('OK', { status: 200 });
 
-                // 3. Trava de Segurança da Chave API
                 const apiKey = process.env.GEMINI_API_KEY;
                 if (!apiKey) {
                     console.error("🚨 ERRO: GEMINI_API_KEY não configurada na Vercel.");
                     return new NextResponse('OK', { status: 200 });
                 }
 
-                // 4. Personalidade
                 const agentName = tenantData.agentName || 'Velo Bot';
                 let toneInstruction = "profissional e direto";
                 if (tenantData.agentTone === 'descontraido') toneInstruction = "descontraído, amigável e usar emojis 😎";
                 if (tenantData.agentTone === 'fofo') toneInstruction = "fofo, muito entusiasmado e usar emojis ✨💖";
                 if (tenantData.agentTone === 'agressivo') toneInstruction = "focado em vendas, persuasivo e usar emojis 🚀";
 
-                // 5. O HACK DE JSON PROMPTING
+                // O HACK DE JSON PROMPTING (Blindado)
                 const prompt = `Você é o ${agentName}, assistente da loja.
 Sua personalidade: Você deve ser ${toneInstruction}.
 
 Comando do dono da loja: "${messageText}"
 
 REGRAS OBRIGATÓRIAS DE RESPOSTA:
-Você deve responder ÚNICA e EXCLUSIVAMENTE com um objeto JSON válido, sem usar blocos de código markdown.
+Você deve responder ÚNICA e EXCLUSIVAMENTE com um objeto JSON válido, sem markdown.
 
-SE a intenção do usuário for CADASTRAR ou CRIAR um produto/serviço, retorne estritamente isso:
+SE a intenção do usuário for CADASTRAR/CRIAR um produto/serviço, retorne estritamente:
 {
   "action": "cadastrar",
   "nome": "Nome do produto",
@@ -116,31 +126,27 @@ SE a intenção do usuário for CADASTRAR ou CRIAR um produto/serviço, retorne 
   "categoria": "Geral"
 }
 
-SE for apenas uma CONVERSA (ex: "oi", "tudo bem?", "teste"), retorne estritamente isso:
+SE for apenas uma CONVERSA, retorne estritamente:
 {
   "action": "responder",
-  "texto": "Sua resposta amigável de acordo com sua personalidade."
+  "texto": "Sua resposta amigável"
 }`;
 
-                let replyText = "Desculpe, ocorreu um erro de comunicação com o servidor.";
+                let replyText = "Desculpe, ocorreu um erro no servidor.";
 
-                // 6. Roda a Inteligência Artificial
-                const geminiData = await fetchGeminiWithFallback(prompt, apiKey);
+                // RODA A IA COM O MOTOR QUE NUNCA FALHA
+                const geminiData = await fetchGeminiDynamic(prompt, apiKey);
 
                 if (!geminiData) {
-                    replyText = "⚠️ Chefe, a sua Chave do Google bloqueou o acesso aos modelos disponíveis.";
+                    replyText = "⚠️ Chefe, o Google bloqueou a geração de texto para a sua Chave de API. Revise a conta no Google Cloud.";
                 } else {
                     try {
-                        // 7. Limpa e processa o JSON gerado pela IA
                         let rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
                         rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
                         
                         const aiDecision = JSON.parse(rawText);
 
-                        // 8. A IA DECIDIU CADASTRAR?
                         if (aiDecision.action === "cadastrar") {
-                            
-                            // Grava no Firebase
                             await addDoc(collection(db, 'products'), {
                                 name: aiDecision.nome,
                                 price: Number(aiDecision.preco),
@@ -155,24 +161,21 @@ SE for apenas uma CONVERSA (ex: "oi", "tudo bem?", "teste"), retorne estritament
                                 createdAt: serverTimestamp()
                             });
 
-                            // Resposta de sucesso baseada na personalidade
                             if (tenantData.agentTone === 'descontraido') replyText = `Prontinho, chefe! 😎 Cadastrei "${aiDecision.nome}" por R$ ${aiDecision.preco}.`;
                             else if (tenantData.agentTone === 'fofo') replyText = `Feito!! ✨💖 O item "${aiDecision.nome}" (R$ ${aiDecision.preco}) já está na loja!`;
                             else if (tenantData.agentTone === 'agressivo') replyText = `Tudo certo! 🚀 "${aiDecision.nome}" cadastrado por R$ ${aiDecision.preco}.`;
                             else replyText = `✅ Sucesso. O produto "${aiDecision.nome}" foi cadastrado no valor de R$ ${aiDecision.preco}.`;
                         
                         } else {
-                            // 9. A IA DECIDIU APENAS RESPONDER
-                            replyText = aiDecision.texto || "Olá! Como posso ajudar nas vendas hoje?";
+                            replyText = aiDecision.texto || "Olá! Como posso ajudar hoje?";
                         }
-
                     } catch (e) {
                         console.error("🚨 Erro ao ler JSON da IA:", e);
-                        replyText = "⚠️ Chefe, o Google processou a mensagem, mas devolveu um formato inválido.";
+                        replyText = "⚠️ Chefe, a IA gerou a resposta, mas o formato veio inválido.";
                     }
                 }
 
-                // 10. DISPARO FINAL PARA O WHATSAPP (META API)
+                // DISPARO FINAL PARA O WHATSAPP
                 if (tenantData.metaApiToken && tenantData.metaPhoneId && replyText) {
                     await fetch(`https://graph.facebook.com/v19.0/${tenantData.metaPhoneId}/messages`, {
                         method: 'POST',
