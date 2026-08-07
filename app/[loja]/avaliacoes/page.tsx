@@ -98,7 +98,12 @@ export default function VeloLojaReviews() {
 
                 // 2. Busca produtos DESTAQUES usando o ID REAL (realTenantId)
                 try {
-                    const qProducts = query(collection(db, 'products'), where('tenantId', '==', realTenantId), limit(4));
+                    const qProducts = query(
+                        collection(db, 'products'), 
+                        where('tenantId', '==', realTenantId), 
+                        where('isActive', '==', true),
+                        limit(4)
+                    );
                     const snapProducts = await getDocs(qProducts);
                     setTopProducts(snapProducts.docs.map(d => ({ id: d.id, ...d.data() })));
                 } catch(e) { console.warn("Erro produtos:", e); }
@@ -142,13 +147,8 @@ export default function VeloLojaReviews() {
     // =========================================================================
     const safeStoreName = storeData.businessName || "Loja Virtual";
     
-    // Se não achou produtos, cria 4 destaques fictícios para o layout e SEO
-    const displayProducts = topProducts.length > 0 ? topProducts : [
-        { name: "Produto Destaque 1", price: 49.90, imageUrl: "" },
-        { name: "Produto Destaque 2", price: 89.00, imageUrl: "" },
-        { name: "Produto Exclusivo 3", price: 29.99, imageUrl: "" },
-        { name: "Produto Premium 4", price: 119.90, imageUrl: "" }
-    ];
+    // Usa estritamente os produtos reais ativos trazidos do Firestore
+    const displayProducts = topProducts;
 
     // Se não achou reviews, cria 3 perfeitos para o layout e SEO
     const displayReviews = latestReviews.length > 0 ? latestReviews : [
@@ -273,31 +273,33 @@ export default function VeloLojaReviews() {
             </div>
 
             {/* SEÇÃO SEO: MAIS PEDIDOS (DESTAQUES DA LOJA) */}
-            <div className="w-full max-w-md mb-8 text-left relative z-10">
-                <div className="flex items-center justify-between mb-4 px-2">
-                    <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest">Destaques da Loja</h2>
-                    <a href={storeRealUrl} className="text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:underline flex items-center gap-1" style={{ color: storeData.primaryColor || '#2563eb' }}>Ver Todos</a>
+            {displayProducts.length > 0 && (
+                <div className="w-full max-w-md mb-8 text-left relative z-10">
+                    <div className="flex items-center justify-between mb-4 px-2">
+                        <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest">Destaques da Loja</h2>
+                        <a href={storeRealUrl} className="text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:underline flex items-center gap-1" style={{ color: storeData.primaryColor || '#2563eb' }}>Ver Todos</a>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        {displayProducts.map((p, i) => (
+                            <a 
+                                key={i} 
+                                href={storeRealUrl}
+                                className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center text-center hover:shadow-md transition-all active:scale-95 group"
+                            >
+                                {p.imageUrl ? (
+                                    <img src={p.imageUrl} alt={p.name} className="w-16 h-16 object-contain mb-3 rounded-lg group-hover:scale-110 transition-transform" />
+                                ) : (
+                                    <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-center text-slate-300 mb-3">
+                                        <ShoppingBag size={24} />
+                                    </div>
+                                )}
+                                <span className="text-[11px] font-bold text-slate-800 line-clamp-2 leading-tight mb-2 h-7">{p.name}</span>
+                                <span className="text-xs font-black mt-auto" style={{ color: storeData.primaryColor || '#2563eb' }}>R$ {Number(p.promotionalPrice || p.price).toFixed(2)}</span>
+                            </a>
+                        ))}
+                    </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                    {displayProducts.map((p, i) => (
-                        <a 
-                            key={i} 
-                            href={storeRealUrl}
-                            className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center text-center hover:shadow-md transition-all active:scale-95 group"
-                        >
-                            {p.imageUrl ? (
-                                <img src={p.imageUrl} alt={p.name} className="w-16 h-16 object-contain mb-3 rounded-lg group-hover:scale-110 transition-transform" />
-                            ) : (
-                                <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-center text-slate-300 mb-3">
-                                    <ShoppingBag size={24} />
-                                </div>
-                            )}
-                            <span className="text-[11px] font-bold text-slate-800 line-clamp-2 leading-tight mb-2 h-7">{p.name}</span>
-                            <span className="text-xs font-black mt-auto" style={{ color: storeData.primaryColor || '#2563eb' }}>R$ {Number(p.promotionalPrice || p.price).toFixed(2)}</span>
-                        </a>
-                    ))}
-                </div>
-            </div>
+            )}
 
             {/* SEÇÃO SEO: ÚLTIMAS AVALIAÇÕES HUMANIZADAS PELA IA */}
             <div className="w-full max-w-md text-left mb-6 relative z-10">
