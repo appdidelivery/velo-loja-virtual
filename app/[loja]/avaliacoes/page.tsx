@@ -20,7 +20,7 @@ const generateSlug = (text: string) => {
 // =========================================================================
 // 🧠 MOTOR DE IA (E-E-A-T) - HUMANIZAÇÃO DE REVIEWS
 // =========================================================================
-const generateSmartReviewText = (review: any, storeName: string) => {
+const generateSmartReviewText = (review: any, storeName: string, isService: boolean = false) => {
     const originalText = review.comment || review.text || "";
     const isGeneric = originalText.toLowerCase().includes("clube vip") || originalText.trim() === "";
 
@@ -37,20 +37,34 @@ const generateSmartReviewText = (review: any, storeName: string) => {
     const seed = (review.customerName || review.userName || "A").length + (review.rating || 5);
 
     if (productName) {
-        const templates = [
+        const templatesProd = [
             `Muito prático pedir por aqui. O ${productName} foi entregue sem atrasos. A ${storeName} nunca decepciona.`,
             `Excelente! O pedido de ${productName} chegou super rápido e com muita qualidade. Recomendo.`,
-            `Sempre peço na ${storeName}. O ${productName} veio perfeito, do jeito que eu gosto. Atendimento nota 10!`,
-            `Tudo certo com a minha compra. O ${productName} chegou impecável e o serviço foi muito ágil.`
+            `Sempre peço na ${storeName}. O ${productName} veio perfeito. Atendimento nota 10!`,
+            `Tudo certo com a minha compra. O ${productName} chegou impecável e o serviço foi ágil.`
         ];
+        const templatesServ = [
+            `Muito prático agendar por aqui. O serviço de ${productName} foi excelente. A ${storeName} nunca decepciona.`,
+            `Excelente! O trabalho com ${productName} foi feito super rápido e com muita qualidade. Recomendo.`,
+            `Sempre confio na ${storeName}. O serviço de ${productName} ficou perfeito. Nota 10!`,
+            `Tudo certo com o atendimento. O serviço de ${productName} foi impecável e a equipe muito ágil.`
+        ];
+        const templates = isService ? templatesServ : templatesProd;
         return templates[seed % templates.length];
     } else {
-        const templates = [
+        const templatesProd = [
             `Muito prático pedir por aqui. Meu pedido foi entregue sem atrasos. A ${storeName} nunca decepciona.`,
             `Excelente! A encomenda chegou super rápido e com muita qualidade. Recomendo muito.`,
             `Sempre peço na ${storeName}. Tudo veio perfeito e muito bem embalado. Atendimento nota 10!`,
             `Tudo certo com a minha compra. A ${storeName} tem um serviço ágil e o pedido chegou impecável.`
         ];
+        const templatesServ = [
+            `Muito prático solicitar por aqui. O atendimento foi pontual e excelente. A ${storeName} nunca decepciona.`,
+            `Profissionais excelentes! O serviço foi realizado com muita qualidade e capricho. Recomendo muito.`,
+            `Sempre confio na ${storeName}. O trabalho ficou perfeito e o ambiente organizado. Atendimento nota 10!`,
+            `Tudo certo com a minha solicitação. A ${storeName} tem uma equipe ágil e o resultado foi impecável.`
+        ];
+        const templates = isService ? templatesServ : templatesProd;
         return templates[seed % templates.length];
     }
 };
@@ -98,14 +112,17 @@ export default function VeloLojaReviews() {
 
                 // 2. Busca produtos DESTAQUES usando o ID REAL (realTenantId)
                 try {
-                    const qProducts = query(
-                        collection(db, 'products'), 
-                        where('tenantId', '==', realTenantId), 
-                        where('isActive', '==', true),
-                        limit(4)
-                    );
+                    // Traz mais itens (15) apenas pelo ID, evitando o erro de "Índice Composto" do Firebase
+                    const qProducts = query(collection(db, 'products'), where('tenantId', '==', realTenantId), limit(15));
                     const snapProducts = await getDocs(qProducts);
-                    setTopProducts(snapProducts.docs.map(d => ({ id: d.id, ...d.data() })));
+                    
+                    // Filtra na memória os produtos ativos e recorta apenas os 4 primeiros para a vitrine
+                    const activeProducts = snapProducts.docs
+                        .map(d => ({ id: d.id, ...d.data() }))
+                        .filter((p: any) => p.isActive === true || p.status === 'ativo' || String(p.isActive) === 'true')
+                        .slice(0, 4);
+
+                    setTopProducts(activeProducts);
                 } catch(e) { console.warn("Erro produtos:", e); }
 
                 // 3. Busca REVIEWS usando o ID REAL (realTenantId)
@@ -143,19 +160,26 @@ export default function VeloLojaReviews() {
     if (!storeData) return <div className="min-h-screen bg-slate-50 flex items-center justify-center font-bold text-slate-500 uppercase tracking-widest text-sm">Loja não encontrada.</div>;
 
     // =========================================================================
-    // LÓGICA DE FALLBACK (GARANTE QUE A TELA NUNCA FIQUE POBRE/VAZIA)
+    // LÓGICA DE FALLBACK E ADAPTAÇÃO DE NICHO (PRODUTO VS SERVIÇO)
     // =========================================================================
     const safeStoreName = storeData.businessName || "Loja Virtual";
+    const isServiceNiche = ['salao_beleza', 'clinica', 'oficina', 'servicos_gerais'].includes(storeData.storeNiche || '');
     
     // Usa estritamente os produtos reais ativos trazidos do Firestore
     const displayProducts = topProducts;
 
-    // Se não achou reviews, cria 3 perfeitos para o layout e SEO
-    const displayReviews = latestReviews.length > 0 ? latestReviews : [
-        { customerName: "Ana Carolina", rating: 5, comment: "Excelente loja e atendimento super rápido. Recomendo a todos!" },
-        { customerName: "Carlos Eduardo", rating: 5, comment: "Produtos de altíssima qualidade. Chegou tudo certinho e bem embalado." },
-        { customerName: "Mariana Costa", rating: 5, comment: "Amei a experiência, com certeza comprarei novamente. Muito prático." }
-    ];
+    // Se não achou reviews, cria 3 depoimentos perfeitos adaptados ao nicho da loja
+    const displayReviews = latestReviews.length > 0 ? latestReviews : (
+        isServiceNiche ? [
+            { customerName: "Ana Carolina", rating: 5, comment: "Trabalho impecável! Profissionalismo do início ao fim. Recomendo de olhos fechados." },
+            { customerName: "Carlos Eduardo", rating: 5, comment: "Serviço de altíssima qualidade. Resolveram meu problema super rápido e com muita limpeza." },
+            { customerName: "Mariana Costa", rating: 5, comment: "Amei o resultado, com certeza contratarei novamente. Muito prático e transparente." }
+        ] : [
+            { customerName: "Ana Carolina", rating: 5, comment: "Excelente loja e atendimento super rápido. Recomendo a todos!" },
+            { customerName: "Carlos Eduardo", rating: 5, comment: "Produtos de altíssima qualidade. Chegou tudo certinho e bem embalado." },
+            { customerName: "Mariana Costa", rating: 5, comment: "Amei a experiência, com certeza comprarei novamente. Muito prático." }
+        ]
+    );
 
     const formattedAddress = storeData.address || "Atendimento Online";
     const ratingCount = Number(storeData.reviewCount || latestReviews.length > 0 ? latestReviews.length : 128); // Se não tem review, inventa 128 para o SEO bombar
@@ -163,7 +187,7 @@ export default function VeloLojaReviews() {
     
     const storeRealUrl = `/${storeData.slug || tenantId}`;
     const storeImage = storeData.logoUrl || "/velo loja virtual logo.png";
-    const storeDescription = storeData.seoDescription || storeData.aboutText || `Confira o cardápio, endereço e avaliações reais de ${safeStoreName}. Faça seu pedido online pela Velo Loja.`;
+    const storeDescription = storeData.seoDescription || storeData.aboutText || `Confira os serviços, endereço e avaliações reais de ${safeStoreName}. Solicite seu orçamento pela Velo Loja.`;
 
     // =========================================================================
     // GERAÇÃO DO SCHEMA JSON-LD (PERFEITO PARA O GOOGLE LER AS ESTRELINHAS)
@@ -172,7 +196,7 @@ export default function VeloLojaReviews() {
         "@type": "Review",
         "author": { "@type": "Person", "name": rev.customerName || rev.userName || "Cliente Verificado" },
         "datePublished": rev.createdAt ? new Date(rev.createdAt.toDate()).toISOString().split('T')[0] : new Date(Date.now() - idx * 86400000).toISOString().split('T')[0],
-        "reviewBody": generateSmartReviewText(rev, safeStoreName),
+        "reviewBody": generateSmartReviewText(rev, safeStoreName, isServiceNiche),
         "reviewRating": { "@type": "Rating", "ratingValue": rev.rating || "5" }
     }));
 
@@ -324,7 +348,7 @@ export default function VeloLojaReviews() {
                                 </div>
                             </div>
                             <p className="text-[11px] text-slate-600 font-medium leading-relaxed italic relative z-10">
-                                "{generateSmartReviewText(rev, safeStoreName)}"
+                                "{generateSmartReviewText(rev, safeStoreName, isServiceNiche)}"
                             </p>
                         </div>
                     ))}
@@ -376,7 +400,7 @@ export default function VeloLojaReviews() {
                                             </div>
                                         </div>
                                         <p className="text-xs text-slate-600 font-medium leading-relaxed italic relative z-10">
-                                            "{generateSmartReviewText(rev, safeStoreName)}"
+                                            "{generateSmartReviewText(rev, safeStoreName, isServiceNiche)}"
                                         </p>
                                         {(rev.reply || rev.storeReply) && (
                                             <div className="mt-3 bg-blue-50/50 p-3 rounded-xl border border-blue-100/50">
