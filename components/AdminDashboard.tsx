@@ -7,7 +7,7 @@ import {
   Layers, AlertCircle, Send, HelpCircle, FileCheck, Percent,
   TrendingUp, X, CreditCard, Sun, Moon, ExternalLink, ChevronDown, List,
   Megaphone, ChevronLeft, ChevronRight, Filter, RefreshCw, ShieldCheck, LayoutTemplate, Package, Activity, MousePointerClick, Ghost, Globe, Award,
-  Store, UploadCloud, LogOut, Calendar
+  Store, UploadCloud, LogOut, Calendar, Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -59,6 +59,10 @@ const [activePanel, setActivePanel] = useState<'dashboard' | 'manual' | 'product
   });
   const [isFetchingGa4, setIsFetchingGa4] = useState(false);
   const [ga4Connected, setGa4Connected] = useState(false);
+
+  // --- CONTROLE DOS BANNERS EDUCACIONAIS (ESCOLA VELO) ---
+  const [showEduBanner, setShowEduBanner] = useState(true);
+  const [currentEduBanner, setCurrentEduBanner] = useState(0);
 
   const fetchAnalyticsData = async () => {
     if (!authRole.tenantId || authRole.tenantId === 'loading') return;
@@ -1097,27 +1101,122 @@ const [termoIA, setTermoIA] = useState('');
                     </div>
                   </div>
 
-                  {/* BANNER IA / SEO (ESCOLA VELO) */}
-                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-[2.5rem] p-6 sm:p-10 shadow-sm relative overflow-hidden flex flex-col md:flex-row gap-6 items-center justify-between">
-                    <button className="absolute top-4 right-4 p-2 text-yellow-600/50 hover:bg-yellow-100 rounded-full transition-colors"><X size={16}/></button>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-yellow-800 mb-3 bg-white w-max px-3 py-1 rounded-full shadow-sm border border-yellow-100">
-                        <Sparkles className="w-3.5 h-3.5 text-yellow-500" /> SEO Local & Vendas
-                      </div>
-                      <h3 className="text-2xl sm:text-3xl font-black text-yellow-950 uppercase leading-tight mb-3">Crie um combo e apareça em destaque no Google</h3>
-                      <p className="text-sm text-yellow-800/80 font-medium leading-relaxed max-w-2xl">
-                        Clientes adoram ofertas combinadas! Deixe nossa Inteligência Artificial sugerir combos baseados no seu segmento. Em um clique, nós o criamos no seu catálogo e o enviamos direto para a vitrine do seu negócio.
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-3 w-full md:w-64 shrink-0 z-10">
-                      <button className="w-full bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-600 hover:to-orange-500 text-white font-black uppercase tracking-wider text-xs py-4 rounded-xl shadow-lg shadow-orange-500/30 flex items-center justify-center gap-2 transition-transform hover:scale-[0.98]">
-                        <Sparkles className="w-4 h-4" /> Ver Sugestões Mágicas
-                      </button>
-                      <button className="w-full bg-white/60 border-2 border-yellow-200 hover:bg-white hover:border-yellow-300 text-yellow-900 font-black uppercase tracking-wider text-xs py-3.5 rounded-xl transition-all">
-                        Ver Próxima Aula
-                      </button>
-                    </div>
-                  </div>
+                  {/* ========================================================= */}
+                  {/* --- BANNER EDUCACIONAL (ESCOLA VELO LOJA - SERVIÇOS E VAREJO) --- */}
+                  {/* ========================================================= */}
+                  {showEduBanner && (() => {
+                      const educationalBanners = [
+                          {
+                              icon: <Star size={32} className="text-amber-500" />,
+                              badge: "SEO Local & Google",
+                              title: "O Segredo para o Topo das Buscas",
+                              text: "Empresas de serviços e negócios locais dependem da confiança. Compartilhe o link da sua Página de Avaliações com seus clientes. Quanto mais estrelas e depoimentos humanizados pela nossa IA, mais orçamentos orgânicos você recebe!",
+                              ctaText: "Configurar Link do Google",
+                              bgColor: "bg-amber-50",
+                              borderColor: "border-amber-200",
+                              titleColor: "text-amber-900",
+                              btnColor: "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-200",
+                              action: () => {
+                                  setActivePanel('settings');
+                                  setTimeout(() => alert("💡 Dica: Role a página de Configurações até encontrar 'Google Maps & Avaliações' e certifique-se de colar o link do seu perfil!"), 500);
+                              }
+                          },
+                          {
+                              icon: <Sparkles size={32} className="text-purple-600" />,
+                              badge: "Catálogo Magnético",
+                              title: "Serviços genéricos não vendem sozinhos",
+                              text: "Não cadastre apenas 'Limpeza de Sofá' ou 'Manutenção'. Use a nossa Assistente Velo IA (✨) para criar descrições comerciais persuasivas que explicam os benefícios, a garantia e geram desejo imediato no seu cliente.",
+                              ctaText: "Otimizar Meu Catálogo",
+                              bgColor: "bg-purple-50",
+                              borderColor: "border-purple-200",
+                              titleColor: "text-purple-900",
+                              btnColor: "bg-purple-600 hover:bg-purple-700 text-white",
+                              action: () => {
+                                  setActivePanel('products');
+                                  setTimeout(() => alert("🎯 Passo a Passo:\n\n1. Clique em 'Novo Item' ou Editar um produto.\n2. Digite o nome do seu serviço/produto.\n3. Clique em 'Gerar c/ IA' no botão roxo e deixe a mágica acontecer!"), 500);
+                              }
+                          },
+                          {
+                              icon: <MessageSquare size={32} className="text-green-600" />,
+                              badge: "Automação e Tempo",
+                              title: "Pare de responder as mesmas perguntas",
+                              text: "Seu tempo executando serviços vale muito. Preencha o FAQ dinâmico da loja com as dúvidas mais comuns (Ex: Como funciona o orçamento? Tem garantia?). Nossa IA estrutura isso para o Google ler e seus clientes pararem de perguntar o básico.",
+                              ctaText: "Criar FAQ Inteligente",
+                              bgColor: "bg-green-50",
+                              borderColor: "border-green-200",
+                              titleColor: "text-green-900",
+                              btnColor: "bg-green-600 hover:bg-green-700 text-white",
+                              action: () => {
+                                  setActivePanel('settings');
+                                  setTimeout(() => alert("💡 Dica: Na aba 'Dados da Loja', role até a seção '💬 FAQ e SEO (Perguntas)'. Você pode usar o botão 'Gerar com IA' para criar perguntas baseadas no seu nicho automaticamente!"), 500);
+                              }
+                          },
+                          {
+                              icon: <ShoppingBag size={32} className="text-rose-600" />,
+                              badge: "Recuperação de Vendas",
+                              title: "Orçamentos que não fecharam?",
+                              text: "Muitos clientes iniciam um carrinho para consultar preços e abandonam. Use a aba de 'Clientes (CRM)' para ver quem tentou comprar e não finalizou. Chame-os no WhatsApp oferecendo um desconto no serviço para fechar negócio hoje.",
+                              ctaText: "Ver Clientes e Orçamentos",
+                              bgColor: "bg-rose-50",
+                              borderColor: "border-rose-200",
+                              titleColor: "text-rose-900",
+                              btnColor: "bg-rose-600 hover:bg-rose-700 text-white",
+                              action: () => {
+                                  setActivePanel('customers');
+                              }
+                          }
+                      ];
+
+                      return (
+                          <div className="mb-8 animate-in fade-in slide-in-from-top-4 relative z-10">
+                              <div className={`relative ${educationalBanners[currentEduBanner].bgColor} border-2 ${educationalBanners[currentEduBanner].borderColor} p-6 md:p-8 rounded-[2.5rem] shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6 hover:shadow-md transition-all`}>
+                                  
+                                  {/* Botão de Fechar */}
+                                  <button 
+                                      onClick={() => setShowEduBanner(false)} 
+                                      className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-2 bg-white/50 rounded-full transition-colors"
+                                      title="Ocultar Dica"
+                                  >
+                                      <X size={16} />
+                                  </button>
+
+                                  <div className="flex items-start gap-5 pr-8 w-full md:w-auto flex-1">
+                                      <div className="bg-white p-4 rounded-2xl shadow-sm flex-shrink-0 mt-1 border border-white/50">
+                                          {educationalBanners[currentEduBanner].icon}
+                                      </div>
+                                      <div>
+                                          <span className="inline-block px-3 py-1 bg-white/80 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-600 mb-3 border border-black/5 shadow-sm">
+                                              Velo Dicas | {educationalBanners[currentEduBanner].badge}
+                                          </span>
+                                          <h3 className={`text-xl md:text-2xl font-black uppercase tracking-tighter leading-none mb-2 ${educationalBanners[currentEduBanner].titleColor}`}>
+                                              {educationalBanners[currentEduBanner].title}
+                                          </h3>
+                                          <p className="text-sm font-medium text-slate-600 max-w-2xl leading-relaxed">
+                                              {educationalBanners[currentEduBanner].text}
+                                          </p>
+                                      </div>
+                                  </div>
+
+                                  <div className="w-full md:w-auto flex-shrink-0 flex flex-col gap-2">
+                                      <button 
+                                          onClick={educationalBanners[currentEduBanner].action}
+                                          className={`w-full ${educationalBanners[currentEduBanner].btnColor} px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2`}
+                                      >
+                                          <Sparkles size={16}/> {educationalBanners[currentEduBanner].ctaText}
+                                      </button>
+                                      
+                                      <button 
+                                          onClick={() => setCurrentEduBanner((prev) => (prev + 1) % educationalBanners.length)}
+                                          className="text-[10px] font-bold text-slate-500 uppercase hover:text-slate-800 text-center flex items-center justify-center gap-1 mt-2 bg-white/50 py-2 rounded-xl border border-slate-200/50 transition-colors"
+                                      >
+                                          <RefreshCw size={10}/> Ver Próxima Dica
+                                      </button>
+                                  </div>
+                              </div>
+                          </div>
+                      );
+                  })()}
+                  {/* ========================================================= */}
 
                   {/* ALERTA DE ESTOQUE CRÍTICO */}
                   {criticalProducts.length > 0 && (
