@@ -13,7 +13,8 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isResettingPassword, setIsResettingPassword] = useState(false); // NOVO: Controle do Esqueci a senha
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [resetCooldown, setResetCooldown] = useState(0); // NOVO: Blindagem anti-spam
   const router = useRouter();
 
   // --- MOTOR SAAS: VERIFICA OU CRIA A LOJA AUTOMATICAMENTE ---
@@ -45,10 +46,18 @@ export default function LoginPage() {
     }
   };
 
-  // NOVO: Fluxo de Recuperação de Senha
+  // NOVO: Fluxo de Recuperação de Senha Blindado
   const handlePasswordReset = async () => {
-    if (!email) {
-      alert('Por favor, digite seu e-mail no campo acima para recuperar a senha.');
+    // 1. Blindagem Básica: E-mail vazio ou mal formatado
+    const emailFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailFormat.test(email)) {
+      setError('Por favor, digite um e-mail válido no campo acima para recuperar a senha.');
+      return;
+    }
+
+    // 2. Blindagem Anti-Spam: Verifica se está no cooldown
+    if (resetCooldown > 0) {
+      setError(`Aguarde ${resetCooldown} segundos para solicitar outro e-mail.`);
       return;
     }
 
@@ -57,15 +66,28 @@ export default function LoginPage() {
 
     try {
       await sendPasswordResetEmail(auth, email);
-      alert('✨ E-mail de recuperação enviado! Verifique sua caixa de entrada (e também o spam).');
+      alert('✨ E-mail de recuperação enviado! Verifique sua caixa de entrada e também o SPAM.');
+      
+      // 3. Ativa o Cooldown de 60 segundos
+      setResetCooldown(60);
+      const timer = setInterval(() => {
+        setResetCooldown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
     } catch (err: any) {
       console.error(err);
       if (err.code === 'auth/user-not-found') {
-        setError('Nenhuma loja encontrada com este e-mail.');
-      } else if (err.code === 'auth/invalid-email') {
-        setError('O formato do e-mail digitado é inválido.');
+        setError('Nenhuma conta encontrada com este e-mail.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Muitas tentativas. Bloqueio de segurança ativado. Tente mais tarde.'); // Blindagem do próprio Firebase
       } else {
-        setError('Erro ao enviar e-mail de recuperação. Tente novamente mais tarde.');
+        setError('Erro ao enviar e-mail. Tente novamente mais tarde.');
       }
     } finally {
       setIsResettingPassword(false);

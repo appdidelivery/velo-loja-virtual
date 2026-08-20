@@ -381,6 +381,8 @@ const handleLogout = async () => {
           agentTone: dbData.agentTone || 'profissional',
           agentSkills: dbData.agentSkills || ['cadastrar_produtos']
         }));
+                setTeamMembers(dbData.teamMembers || []);
+
       }
     });
 
@@ -651,11 +653,54 @@ const [termoIA, setTermoIA] = useState('');
   const [newTeamEmail, setNewTeamEmail] = useState('');
   const [newTeamRole, setNewTeamRole] = useState('Vendedor / Atendente');
 
-  const handleAddTeamMember = (e: React.FormEvent) => {
+  const handleAddTeamMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTeamEmail.trim()) return;
-    setTeamMembers([...teamMembers, { id: Date.now().toString(), email: newTeamEmail, role: newTeamRole, status: 'Aguardando Login' }]);
+
+    // 1. Gera uma senha provisória (ex: velo@1234)
+    const tempPassword = Math.random().toString(36).slice(-6) + "@Velo";
+
+    const newMember = { 
+      id: Date.now().toString(), 
+      email: newTeamEmail.toLowerCase().trim(), 
+      role: newTeamRole, 
+      status: 'Aguardando Login',
+      tempPassword: tempPassword // Salva a senha provisória para o admin copiar
+    };
+
+    const updatedTeam = [...teamMembers, newMember];
+    
+    // 2. Atualiza a tela (React)
+    setTeamMembers(updatedTeam);
     setNewTeamEmail('');
+
+    // 3. Salva no Banco de Dados (Firestore)
+    try {
+      await setDoc(doc(db, 'tenants', authRole.tenantId), { 
+        teamMembers: updatedTeam 
+      }, { merge: true });
+      
+      alert(`✅ Usuário autorizado com sucesso!\n\nEnvie este acesso para ele:\nE-mail: ${newMember.email}\nSenha Provisória: ${tempPassword}\n\nEle deve usar a opção "Crie sua loja" ou "Esqueci a senha" para redefinir depois.`);
+    } catch (error) {
+      console.error(error);
+      alert("❌ Erro ao salvar usuário no banco de dados.");
+    }
+  };
+
+  // NOVO: Função para remover o membro e atualizar o banco
+  const handleRemoveTeamMember = async (memberId: string) => {
+    if (!window.confirm("Deseja realmente remover o acesso deste usuário?")) return;
+    
+    const updatedTeam = teamMembers.filter(m => m.id !== memberId);
+    setTeamMembers(updatedTeam);
+    
+    try {
+      await setDoc(doc(db, 'tenants', authRole.tenantId), { 
+        teamMembers: updatedTeam 
+      }, { merge: true });
+    } catch (error) {
+      alert("Erro ao remover usuário do banco.");
+    }
   };
 
   const handleImportXML = async () => {
