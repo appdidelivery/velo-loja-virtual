@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/services/firebase';
 import { useRouter } from 'next/navigation';
@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isResettingPassword, setIsResettingPassword] = useState(false); // NOVO: Controle do Esqueci a senha
   const router = useRouter();
 
   // --- MOTOR SAAS: VERIFICA OU CRIA A LOJA AUTOMATICAMENTE ---
@@ -41,6 +42,33 @@ export default function LoginPage() {
       console.log("🏪 Nova loja criada com sucesso para:", user.email);
     } else {
       console.log("🏪 Loja existente carregada para:", user.email);
+    }
+  };
+
+  // NOVO: Fluxo de Recuperação de Senha
+  const handlePasswordReset = async () => {
+    if (!email) {
+      alert('Por favor, digite seu e-mail no campo acima para recuperar a senha.');
+      return;
+    }
+
+    setIsResettingPassword(true);
+    setError('');
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      alert('✨ E-mail de recuperação enviado! Verifique sua caixa de entrada (e também o spam).');
+    } catch (err: any) {
+      console.error(err);
+      if (err.code === 'auth/user-not-found') {
+        setError('Nenhuma loja encontrada com este e-mail.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('O formato do e-mail digitado é inválido.');
+      } else {
+        setError('Erro ao enviar e-mail de recuperação. Tente novamente mais tarde.');
+      }
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -146,6 +174,21 @@ export default function LoginPage() {
               className="w-full bg-gray-50 border-2 border-gray-100 text-sm font-bold text-slate-800 py-4 pl-12 pr-4 rounded-2xl outline-none focus:border-[#111827] transition-all"
             />
           </div>
+
+          {/* NOVO: Botão Esqueci minha senha (Exibido apenas no modo de login) */}
+          {!isRegistering && (
+            <div className="flex justify-end -mt-2">
+              <button
+                type="button"
+                onClick={handlePasswordReset}
+                disabled={isResettingPassword || isLoading}
+                className="text-xs font-bold text-slate-500 hover:text-[#0055ff] hover:underline underline-offset-4 transition-colors disabled:opacity-50"
+              >
+                {isResettingPassword ? 'Enviando link...' : 'Esqueci minha senha?'}
+              </button>
+            </div>
+          )}
+
           <button 
             type="submit" 
             disabled={isLoading}
