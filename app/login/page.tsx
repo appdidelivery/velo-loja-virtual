@@ -203,10 +203,14 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={handlePasswordReset}
-                disabled={isResettingPassword || isLoading}
+                disabled={isResettingPassword || isLoading || resetCooldown > 0}
                 className="text-xs font-bold text-slate-500 hover:text-[#0055ff] hover:underline underline-offset-4 transition-colors disabled:opacity-50"
               >
-                {isResettingPassword ? 'Enviando link...' : 'Esqueci minha senha?'}
+                {isResettingPassword 
+                  ? 'Enviando link...' 
+                  : resetCooldown > 0 
+                    ? `Aguarde ${resetCooldown}s para reenviar` 
+                    : 'Esqueci minha senha?'}
               </button>
             </div>
           )}
