@@ -817,7 +817,7 @@ const [termoIA, setTermoIA] = useState('');
       return orderDate >= thirtyDaysAgo;
     });
 
-    // 2. Pedidos pagos reais no Firestore
+    // 2. Pedidos pagos  reais no Firestore
     const paidRecentOrders = recentOrders.filter(o =>
       o.status === 'paid' || o.paymentStatus === 'approved' || (o.status as string) === 'completed' || o.status === 'delivered'
     );
