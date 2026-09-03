@@ -823,7 +823,7 @@ const [termoIA, setTermoIA] = useState('');
     );
     const paidOrdersCount = paidRecentOrders.length;
 
-    // Dados base (Simulando GA4 para Sprint 1 e 2, até ligarmos a API)
+    //   Dados base (Simulando GA4 para Sprint 1 e 2, até ligarmos a API)
     const mockVisits = paidOrdersCount > 0 ? Math.floor(paidOrdersCount * 3.47) : 226; // Estima visitas baseada em vendas reais se existirem
     const mockCheckouts = paidOrdersCount > 0 ? Math.floor(paidOrdersCount * 1.38) : 90;
     const conversionRate = mockVisits > 0 ? ((paidOrdersCount / mockVisits) * 100).toFixed(1) : '0.0';
