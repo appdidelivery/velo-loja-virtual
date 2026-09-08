@@ -368,6 +368,8 @@ const handleLogout = async () => {
           templateId: dbData.templateId || 'nativo_app',
           banners: dbData.banners || [], 
           storeMode: dbData.storeMode || 'ecommerce',
+          desktopLayout: dbData.desktopLayout || 'responsive',
+          cartBehavior: dbData.cartBehavior || 'silent',
           slug: dbData.slug || '',
           address: dbData.address || '',
           aboutText: dbData.aboutText || '',
@@ -600,6 +602,8 @@ const [termoIA, setTermoIA] = useState('');
     localStorage.setItem('velo_store_maintenance', settingsForm.maintenanceMode ? 'true' : 'false');
     localStorage.setItem('velo_store_layout', settingsForm.productLayout || 'list');
     localStorage.setItem('velo_store_templateId', settingsForm.templateId); 
+    localStorage.setItem('velo_store_desktopLayout', settingsForm.desktopLayout || 'responsive'); 
+    localStorage.setItem('velo_store_cartBehavior', settingsForm.cartBehavior || 'silent'); 
     
     try {
       await setDoc(doc(db, 'tenants', authRole.tenantId), {
@@ -612,6 +616,8 @@ const [termoIA, setTermoIA] = useState('');
         storeMode: settingsForm.storeMode,
         maintenanceMode: settingsForm.maintenanceMode,
         productLayout: settingsForm.productLayout,
+        desktopLayout: settingsForm.desktopLayout || 'responsive',
+        cartBehavior: settingsForm.cartBehavior || 'silent',
         paymentMethods: settingsForm.paymentMethods || ['Pix', 'Cartão de Crédito', 'Dinheiro no local', 'Boleto a prazo'],
         templateId: settingsForm.templateId,
         banners: settingsForm.banners || [], // <-- SALVA OS BANNERS
@@ -2877,22 +2883,48 @@ className="absolute top-1 right-1 bg-red-500 text-white p-2 lg:p-1.5 rounded-lg 
                         )}
                       </div>
 
-                      {/* Acordeon Layout Vitrine */}
+                      {/* Acordeon Layout Vitrine e Comportamento */}
                       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden transition-all">
                         <button onClick={() => setOpenVisualAccordion(openVisualAccordion === 'layout' ? null : 'layout')} className="w-full p-4 flex items-center justify-between text-xs font-bold text-slate-700 hover:text-[#0055ff] transition-colors outline-none">
-                          Layout dos Produtos <ChevronDown className={`w-4 h-4 transition-transform ${openVisualAccordion === 'layout' ? 'rotate-180 text-[#0055ff]' : ''}`} />
+                          Layout e Comportamento <ChevronDown className={`w-4 h-4 transition-transform ${openVisualAccordion === 'layout' ? 'rotate-180 text-[#0055ff]' : ''}`} />
                         </button>
                         {openVisualAccordion === 'layout' && (
-                          <div className="p-4 pt-0 border-t border-gray-100 bg-gray-50/50 space-y-3">
-                            <label className="text-[10px] font-black uppercase text-slate-500">Exibição no Celular</label>
-                            <select 
-                              value={settingsForm.productLayout || 'list'}
-                              onChange={(e) => setSettingsForm({...settingsForm, productLayout: e.target.value})}
-                              className="w-full bg-white border border-gray-200 text-xs font-bold text-slate-700 p-2.5 rounded-lg outline-none focus:border-[#0055ff]"
-                            >
-                              <option value="list">Em Lista (1 por linha, imagem à esquerda)</option>
-                              <option value="grid">Em Grade (2 por linha, lado a lado)</option>
-                            </select>
+                          <div className="p-4 pt-0 border-t border-gray-100 bg-gray-50/50 space-y-4">
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-500 mb-1.5 block">Exibição de Produtos (Celular)</label>
+                                <select 
+                                  value={settingsForm.productLayout || 'list'}
+                                  onChange={(e) => setSettingsForm({...settingsForm, productLayout: e.target.value})}
+                                  className="w-full bg-white border border-gray-200 text-xs font-bold text-slate-700 p-2.5 rounded-lg outline-none focus:border-[#0055ff]"
+                                >
+                                  <option value="list">Em Lista (1 por linha, imagem à esquerda)</option>
+                                  <option value="grid">Em Grade (2 por linha, lado a lado)</option>
+                                </select>
+                            </div>
+
+                            <div className="pt-3 border-t border-gray-200">
+                                <label className="text-[10px] font-black uppercase text-slate-500 mb-1.5 block">Layout no Computador (Desktop)</label>
+                                <select 
+                                  value={settingsForm.desktopLayout || 'responsive'}
+                                  onChange={(e) => setSettingsForm({...settingsForm, desktopLayout: e.target.value})}
+                                  className="w-full bg-white border border-gray-200 text-xs font-bold text-slate-700 p-2.5 rounded-lg outline-none focus:border-[#0055ff]"
+                                >
+                                  <option value="responsive">Responsivo (Catálogo de um lado, Carrinho do outro)</option>
+                                  <option value="webview">Apenas Mobile (Centralizado no fundo preto)</option>
+                                </select>
+                            </div>
+
+                            <div className="pt-3 border-t border-gray-200">
+                                <label className="text-[10px] font-black uppercase text-slate-500 mb-1.5 block">Ação ao Adicionar ao Carrinho</label>
+                                <select 
+                                  value={settingsForm.cartBehavior || 'silent'}
+                                  onChange={(e) => setSettingsForm({...settingsForm, cartBehavior: e.target.value})}
+                                  className="w-full bg-white border border-gray-200 text-xs font-bold text-slate-700 p-2.5 rounded-lg outline-none focus:border-[#0055ff]"
+                                >
+                                  <option value="silent">Adição Silenciosa (Apenas atualiza o contador, não trava a tela)</option>
+                                  <option value="open">Abertura Automática (Abre o carrinho toda vez que adicionar)</option>
+                                </select>
+                            </div>
                           </div>
                         )}
                       </div>

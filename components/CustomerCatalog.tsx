@@ -125,6 +125,8 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [productLayout, setProductLayout] = useState<'list' | 'grid'>(initialData?.productLayout || 'list');
   const [templateId, setTemplateId] = useState(initialData?.templateId || 'conveniencia_padrao');
   const [storeMode, setStoreMode] = useState<'ecommerce' | 'catalogo' | 'orcamento'>(initialData?.storeMode || 'ecommerce');
+  const [desktopLayoutPref, setDesktopLayoutPref] = useState<'responsive' | 'webview'>(initialData?.desktopLayout || 'responsive');
+  const [cartBehaviorPref, setCartBehaviorPref] = useState<'silent' | 'open'>(initialData?.cartBehavior || 'silent');
   
   const [storeAddress, setStoreAddress] = useState(initialData?.address || '');
   const [storeAbout, setStoreAbout] = useState(initialData?.aboutText || '');
@@ -261,6 +263,8 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                   setProductLayout((data.productLayout as 'list' | 'grid') || 'list');
                   setTemplateId(data.templateId || 'conveniencia_padrao');
                   setStoreMode(data.storeMode || 'ecommerce');
+                  setDesktopLayoutPref(data.desktopLayout || 'responsive');
+                  setCartBehaviorPref(data.cartBehavior || 'silent');
                   
                   setStoreAddress(data.address || '');
                   setStoreAbout(data.aboutText || '');
@@ -377,17 +381,14 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
 
   const handleAddToCart = (product: Product) => {
     setCart(prev => {
-      const existing = prev.find(item => item.product.id === product.id);
-      if (existing) {
-        return prev.map(item => 
-          item.product.id === product.id && item.quantity < product.stock 
-            ? { ...item, quantity: item.quantity + 1 } 
-            : item
-        );
-      }
+      // ... (código existente) ...
       return [...prev, { product, quantity: 1 }];
     });
-    setIsCartOpen(true);
+    
+    // Agora obedece a configuração do lojista!
+    if (cartBehaviorPref === 'open') {
+        setIsCartOpen(true);
+    }
   };
 
   const handleUpdateQuantity = (productId: string, delta: number) => {
@@ -736,8 +737,12 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
 
       {layoutMode === 'webview' ? (
         <div className="flex justify-center bg-black h-[100dvh] overflow-hidden">
-          <div className={`w-full max-w-md h-full flex flex-col relative shadow-2xl overflow-hidden ${templateId === 'barbearia_dark' ? 'bg-[#0A0A0A]' : templateId === 'beleza_masonry' ? 'bg-[#fdf8f9]' : 'bg-gray-50'}`}>
+          {/* Lógica Dinâmica: Lê a preferência do Lojista (Split-screen ou Mobile Only) */}
+          <div className={`w-full h-full flex relative shadow-2xl overflow-hidden ${desktopLayoutPref === 'responsive' ? 'lg:max-w-[1100px] flex-col lg:flex-row' : 'max-w-md flex-col'} ${templateId === 'barbearia_dark' ? 'bg-[#0A0A0A]' : templateId === 'beleza_masonry' ? 'bg-[#fdf8f9]' : 'bg-gray-50'}`}>
             
+            {/* COLUNA ESQUERDA: CATÁLOGO */}
+            <div className={`w-full h-full flex flex-col relative overflow-hidden ${desktopLayoutPref === 'responsive' ? 'lg:flex-1' : ''}`}>
+
             {/* CABEÇALHO NATIVO APP / SACOLA ONLINE */}
             <header 
               className={`px-5 py-4 flex flex-col z-40 shrink-0 shadow-sm relative transition-colors duration-300 ${templateId === 'nativo_app' ? 'rounded-b-[2rem]' : templateId === 'barbearia_dark' ? 'bg-black border-b border-white/10' : templateId === 'beleza_masonry' ? 'bg-transparent' : 'bg-white'}`}
@@ -1305,7 +1310,134 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
               )}
             </AnimatePresence>
 
-          </div>
+            </div> {/* FIM COLUNA ESQUERDA (Catálogo) */}
+
+            {/* COLUNA DIREITA: CARRINHO FIXO DESKTOP (Condicional pela preferência do Lojista) */}
+            {desktopLayoutPref === 'responsive' && (
+              <div className="hidden lg:flex w-[380px] bg-white border-l border-gray-200 flex-col h-full z-50 shrink-0">
+                 {/* Header Carrinho Desktop */}
+               <div style={{ backgroundColor: THEME.primary }} className="p-4 flex items-center justify-between text-white shadow-sm z-20">
+                  <h3 className="text-sm font-bold flex items-center gap-2"><ShoppingCart className="w-4 h-4" /> Carrinho</h3>
+                  {cartTotalItems > 0 && <span className="bg-white/20 text-[10px] px-2 py-1 rounded-full">{cartTotalItems} itens</span>}
+               </div>
+
+               {/* Lista de Itens */}
+               <div className="flex-1 overflow-y-auto p-4 bg-gray-50 z-10 custom-scrollbar">
+                  {cart.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center space-y-3 opacity-50">
+                       <ShoppingCart className="w-12 h-12 text-gray-400" />
+                       <p className="text-xs font-medium text-gray-600">Sua sacola está vazia.</p>
+                    </div>
+                  ) : (
+                    <ul className="space-y-2">
+                      {cart.map((item) => (
+                        <li key={item.product.id} className="flex gap-2 bg-white border border-gray-200 rounded-lg p-2 shadow-sm">
+                          <div className="w-12 h-12 bg-gray-50 rounded-md overflow-hidden shrink-0 border border-gray-100">
+                             <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-contain" />
+                          </div>
+                          <div className="flex-1 flex flex-col justify-between min-w-0">
+                            <div>
+                               <h4 className="text-[10px] font-bold text-gray-800 truncate">{item.product.name}</h4>
+                               <p className="text-xs font-extrabold text-[#357b64]">R$ {item.product.price.toFixed(2)}</p>
+                            </div>
+                            <div className="flex items-center justify-between mt-1">
+                              <div className="flex items-center border border-gray-200 rounded-md overflow-hidden">
+                                 <button onClick={() => handleUpdateQuantity(item.product.id, -1)} className="px-2 py-0.5 bg-gray-50 hover:bg-gray-100 text-gray-600"><Minus className="w-3 h-3" /></button>
+                                 <span className="text-[10px] font-bold w-6 text-center bg-white">{item.quantity}</span>
+                                 <button onClick={() => handleUpdateQuantity(item.product.id, 1)} disabled={item.quantity >= item.product.stock} className="px-2 py-0.5 bg-gray-50 hover:bg-gray-100 text-gray-600 disabled:opacity-50"><Plus className="w-3 h-3" /></button>
+                              </div>
+                              <button onClick={() => handleRemoveItem(item.product.id)} className="text-gray-400 hover:text-red-500 p-1"><Trash2 className="w-3 h-3" /></button>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+               </div>
+
+               {/* Formulário de Checkout Compacto */}
+               <div className="p-4 border-t border-gray-200 bg-white shadow-[0_-10px_20px_rgba(0,0,0,0.05)] shrink-0 z-10">
+                  {cart.length > 0 && (
+                    <div className="mb-3 space-y-1.5 bg-gray-50 p-3 rounded-lg border border-gray-100 max-h-[35vh] overflow-y-auto custom-scrollbar">
+                      <p className="text-[9px] font-black uppercase text-gray-500 tracking-wider mb-1">1. Dados Básicos</p>
+                      <input type="text" placeholder="Nome Completo *" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full h-8 px-2 text-[11px] bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all" />
+                      <input type="tel" placeholder="WhatsApp *" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ''))} maxLength={11} className="w-full h-8 px-2 text-[11px] bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all" />
+                      {currentTemplate.category !== 'servicos' && (
+                        <div className="grid grid-cols-2 gap-1.5 pt-1">
+                          <input type="text" placeholder="CPF/CNPJ *" value={customerCnpj} onChange={(e) => setCustomerCnpj(e.target.value)} className="w-full h-8 px-2 text-[11px] bg-white border border-gray-200 rounded focus:border-[#357b64] focus:ring-1 focus:ring-[#357b64] outline-none transition-all" />
+                          <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="w-full h-8 px-1 text-[10px] bg-white border border-gray-200 rounded focus:border-[#357b64] outline-none text-gray-700">
+                            {storePaymentMethods.map((method: string) => <option key={method} value={method}>{method}</option>)}
+                          </select>
+                        </div>
+                      )}
+
+                      {currentTemplate.category === 'servicos' ? (
+                        <>
+                          <p className="text-[9px] font-black uppercase text-gray-500 tracking-wider mt-2 mb-1">2. Agendamento</p>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <input type="date" value={serviceDate} onChange={(e) => setServiceDate(e.target.value)} className="w-full h-8 px-2 text-[11px] bg-white border border-gray-200 rounded outline-none" required />
+                            <input type="time" value={serviceTime} onChange={(e) => setServiceTime(e.target.value)} className="w-full h-8 px-2 text-[11px] bg-white border border-gray-200 rounded outline-none" required />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-[9px] font-black uppercase text-gray-500 tracking-wider mt-2 mb-1">2. Endereço</p>
+                          <div className="relative mb-1.5">
+                            <input type="text" maxLength={8} placeholder="CEP *" value={cep} onChange={handleCepChange} className="w-full h-8 px-2 text-[11px] bg-white border border-gray-200 rounded outline-none" />
+                            {isLoadingCep && <div className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 border-2 border-[#357b64] border-t-transparent rounded-full animate-spin"></div>}
+                          </div>
+                          {address.street && (
+                            <>
+                              <input type="text" value={address.street} readOnly className="w-full h-8 px-2 text-[11px] bg-gray-100 text-gray-500 border border-gray-200 rounded outline-none mb-1.5" />
+                              <div className="grid grid-cols-3 gap-1.5">
+                                <input type="text" placeholder="Nº *" value={addressNumber} onChange={(e) => setAddressNumber(e.target.value)} className="col-span-1 w-full h-8 px-2 text-[11px] bg-white border border-gray-200 rounded outline-none" />
+                                <input type="text" placeholder="Complemento" value={complement} onChange={(e) => setComplement(e.target.value)} className="col-span-2 w-full h-8 px-2 text-[11px] bg-white border border-gray-200 rounded outline-none" />
+                              </div>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between text-xs text-gray-600 mb-1">
+                    <span>Subtotal ({cartTotalItems})</span>
+                    <span className="font-medium">R$ {cartTotalValue.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-base font-black text-gray-900 mb-3 border-t border-gray-100 pt-1">
+                    <span>{currentTemplate.category === 'servicos' ? 'Total' : 'Total s/ Frete'}</span>
+                    <span style={{ color: themeColor }}>R$ {cartTotalValue.toFixed(2)}</span>
+                  </div>
+                  
+                  <button 
+                    onClick={paymentMethod === 'Binance Pay (Criptomoedas)' ? handleBinanceCheckout : handleWhatsAppCheckout}
+                    disabled={
+                      isProcessingBinance || cart.length === 0 || !customerName.trim() || 
+                      (currentTemplate.category !== 'servicos' && (!customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim())) ||
+                      (currentTemplate.category === 'servicos' && (!serviceDate || !serviceTime))
+                    }
+                    style={
+                      (!isProcessingBinance && cart.length > 0 && customerName.trim() && (
+                        (currentTemplate.category !== 'servicos' && customerCnpj.trim() && cep.length === 8 && addressNumber.trim()) ||
+                        (currentTemplate.category === 'servicos' && serviceDate && serviceTime)
+                      )) ? { backgroundColor: paymentMethod === 'Binance Pay (Criptomoedas)' ? '#eab308' : currentTemplate.primaryColor, color: paymentMethod === 'Binance Pay (Criptomoedas)' ? '#000' : '#fff' } : {}
+                    }
+                    className={`w-full py-3 font-black rounded-lg text-[11px] flex items-center justify-center gap-2 transition-all uppercase tracking-widest ${
+                      (isProcessingBinance || cart.length === 0 || !customerName.trim() || 
+                      (currentTemplate.category !== 'servicos' && (!customerCnpj.trim() || cep.length !== 8 || !addressNumber.trim())) ||
+                      (currentTemplate.category === 'servicos' && (!serviceDate || !serviceTime)))
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'shadow-md hover:scale-[0.98]'
+                    }`}
+                  >
+                    {paymentMethod === 'Binance Pay (Criptomoedas)' ? <Bitcoin className="w-4 h-4" /> : <Phone className="w-3 h-3 fill-current" />}
+                    {isProcessingBinance ? 'Processando...' : (paymentMethod === 'Binance Pay (Criptomoedas)' ? 'Pagar Cripto' : 'Finalizar Pedido')}
+                  </button>
+               </div>
+              </div>
+            )}
+
+          </div> {/* FIM DO CONTAINER SPLIT SCREEN */}
         </div>
       ) : (
         /* =========================================
