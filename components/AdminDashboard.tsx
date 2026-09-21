@@ -741,7 +741,12 @@ const [termoIA, setTermoIA] = useState('');
 
         const description = getText("g:description", "description");
         const imageLink = getText("g:image_link", "image_link") || getText("g:link", "link");
-        const category = getText("g:product_type", "category") || 'Importados';
+        
+        // CÓDIGO NOVO: Agora o robô lê 3 tipos de tags de categoria diferentes!
+        let category = getText("g:product_category", "product_category");
+        if (!category) category = getText("g:product_type", "category");
+        if (!category) category = 'Importados';
+        
         const sku = getText("g:id", "id") || `XML-${Date.now()}-${i}`;
 
         // Tratamento do preço (vem como "12.99 BRL" ou "12,99")
