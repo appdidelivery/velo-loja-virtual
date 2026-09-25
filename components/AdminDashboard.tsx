@@ -24,7 +24,8 @@ import VeloSupportWidget from './VeloSupportWidget';
 import AdminChat from './AdminChat';
 import { useProducts } from '../hooks/useProducts';
 import { useOrders } from '../hooks/useOrders';
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, getDocs, setDoc, onSnapshot, writeBatch } from 'firebase/firestore';
+import mamedesEconomy from '../data/mamedesEconomy.json';
 import { db } from '../services/firebase';
 import GoogleIntegrationDashboard from './GoogleIntegrationDashboard';
 import { FaGoogle } from 'react-icons/fa6';
@@ -201,6 +202,7 @@ const handleLogout = async () => {
   const [settingsSubPanel, setSettingsSubPanel] = useState('visual');
     
   const [isXmlModalOpen, setIsXmlModalOpen] = useState(false);
+  const [isSyncingEconomy, setIsSyncingEconomy] = useState(false);
   const [xmlUrl, setXmlUrl] = useState(''); 
   const [isImporting, setIsImporting] = useState(false);
   const [isAutoSync, setIsAutoSync] = useState(true); 
@@ -706,6 +708,55 @@ const [termoIA, setTermoIA] = useState('');
       }, { merge: true });
     } catch (error) {
       alert("Erro ao remover usuário do banco.");
+    }
+  };
+
+  const handleSyncMamedesEconomy = async () => {
+    if (authRole.tenantId !== 'mamedes' || isSyncingEconomy) return;
+    setIsSyncingEconomy(true);
+    try {
+      const productsRef = collection(db, 'tenants', 'mamedes', 'products');
+      const snapshot = await getDocs(productsRef);
+      const batch = writeBatch(db);
+      let created = 0;
+      let updated = 0;
+      for (const source of mamedesEconomy.products) {
+        const matches = snapshot.docs.filter(item => item.data().sku === source.sku);
+        const descriptiveData = {
+          name: source.name,
+          description: source.description,
+          imageUrl: source.imageUrl,
+          category: source.category,
+          ean: source.ean,
+          sku: source.sku,
+          tenantId: 'mamedes',
+        };
+        if (matches.length) {
+          // Keep each existing document ID and its commercial settings.
+          for (const match of matches) {
+            batch.update(match.ref, descriptiveData);
+            updated++;
+          }
+        } else {
+          // Stable IDs make subsequent imports update the same product.
+          const ref = doc(productsRef, `mamedes_${source.sku}`);
+          batch.set(ref, {
+            ...descriptiveData,
+            id: ref.id,
+            price: 0,
+            stock: 999,
+            isActive: source.availability === 'in stock',
+          });
+          created++;
+        }
+      }
+      await batch.commit();
+      alert(`Linha Econômica atualizada: ${updated} cadastros atualizados e ${created} criados. Preços e estoques existentes foram preservados; novos itens ficam sob consulta.`);
+    } catch (error) {
+      console.error('Erro ao atualizar Linha Econômica:', error);
+      alert('Não foi possível atualizar a Linha Econômica. Nenhuma alteração deste lote foi salva.');
+    } finally {
+      setIsSyncingEconomy(false);
     }
   };
 
@@ -1974,6 +2025,17 @@ className="absolute top-1 right-1 bg-red-500 text-white p-2 lg:p-1.5 rounded-lg 
                   <div className="h-8 w-px bg-gray-200 mx-1 hidden lg:block"></div>
                   
                   <div className="flex items-center gap-2">
+                    {authRole.tenantId === 'mamedes' && (
+                      <button
+                        onClick={handleSyncMamedesEconomy}
+                        disabled={isSyncingEconomy}
+                        title="Atualiza os nove SKUs com os dados do feed de 25/09/2026, preservando preços e estoque existentes."
+                        className="px-5 py-2.5 bg-emerald-50 border-2 border-emerald-200 text-emerald-800 font-black rounded-full text-[10px] flex items-center gap-2 disabled:opacity-50"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isSyncingEconomy ? 'animate-spin' : ''}`} />
+                        {isSyncingEconomy ? 'Atualizando...' : 'Atualizar Linha Econômica'}
+                      </button>
+                    )}
                     <button onClick={() => setIsXmlModalOpen(true)} className="px-5 py-2.5 bg-white border-2 border-gray-200 hover:border-[#111827] text-[#111827] transition-all font-black uppercase tracking-wider rounded-full text-[10px] flex items-center gap-2">
                       <Layers className="w-3.5 h-3.5" /> Importar XML
                     </button>

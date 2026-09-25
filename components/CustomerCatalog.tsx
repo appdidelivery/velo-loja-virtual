@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 
 import { Product, TenantSettings } from '../types';
+import { categorizeMamedesProduct } from '../data/mamedesCatalog';
 import Reviews from '../components/Reviews';
 import { INITIAL_SETTINGS } from '../data/mokedData';
 import { useProducts } from '../hooks/useProducts';
@@ -82,7 +83,7 @@ export default function CustomerCatalog({
   const { products, loading } = useProducts(tenantId);
   const { addOrder } = useOrders(tenantId);
   
-  const activeProducts = useMemo(() => products.filter(p => p.isActive), [products]);
+  const activeProducts = useMemo(() => products.filter(p => p.isActive).map(p => categorizeMamedesProduct(p, tenantId)), [products, tenantId]);
   const categories = useMemo(() => Array.from(new Set(activeProducts.map(p => p.category))), [activeProducts]);
 
   const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([]);
