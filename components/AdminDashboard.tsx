@@ -2402,6 +2402,12 @@ className="absolute top-1 right-1 bg-red-500 text-white p-2 lg:p-1.5 rounded-lg 
                         <div className="text-xs text-slate-500 font-medium bg-gray-50 p-3 rounded-xl border border-gray-100 line-clamp-2">
                            <strong>Itens:</strong> {ord.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}
                         </div>
+                        {ord.items.filter(item => item.notes).map((item, index) => (
+                          <div key={`${item.productId}-${index}`} className="text-xs text-slate-700 bg-amber-50 border border-amber-100 p-3 rounded-xl whitespace-pre-wrap break-words">
+                            <strong>{item.quantity}x {item.name}</strong>
+                            <p>Tamanho / observações: {item.notes}</p>
+                          </div>
+                        ))}
                       </div>
 
                       <div className="flex flex-col sm:flex-row items-center gap-4 shrink-0">

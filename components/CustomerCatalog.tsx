@@ -11,7 +11,9 @@ import {
 } from 'lucide-react';
 
 import { Product, TenantSettings } from '../types';
-import { categorizeMamedesProduct } from '../data/mamedesCatalog';
+import { categorizeMamedesProduct, supportsMamedesSizeNote, mamedesSizeNote } from '../data/mamedesCatalog';
+import QuantitySelector from './QuantitySelector';
+import { quantityLimit, setProductQuantity } from '../utils/cartQuantity';
 import Reviews from '../components/Reviews';
 import { INITIAL_SETTINGS } from '../data/mokedData';
 import { useProducts } from '../hooks/useProducts';
@@ -87,6 +89,7 @@ export default function CustomerCatalog({
   const categories = useMemo(() => Array.from(new Set(activeProducts.map(p => p.category))), [activeProducts]);
 
   const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([]);
+  const [productNotes, setProductNotes] = useState<Record<string, string>>({});
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -382,6 +385,10 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
 
   const handleAddToCart = (product: Product) => {
     setCart(prev => {
+      if (tenantId === 'mamedes') {
+        const current = prev.filter(item => item.product.id === product.id).reduce((sum, item) => sum + item.quantity, 0);
+        return setProductQuantity(prev, product, current + 1);
+      }
       // ... (código existente) ...
       return [...prev, { product, quantity: 1 }];
     });
@@ -403,6 +410,30 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
       return item;
     }).filter(item => item.quantity > 0));
   };
+
+  const renderMamedesQuantity = (product: Product) => (
+    <QuantitySelector
+      productName={product.name}
+      quantity={cart.filter(item => item.product.id === product.id).reduce((sum, item) => sum + item.quantity, 0)}
+      max={quantityLimit(product)}
+      onChange={quantity => setCart(previous => setProductQuantity(previous, product, quantity))}
+    />
+  );
+
+  const renderSizeNote = (product: Product) => supportsMamedesSizeNote(product, tenantId) && (
+    <label className="mt-3 flex flex-col gap-1 text-left" onClick={event => event.stopPropagation()}>
+      <span className="text-xs font-bold text-slate-600">Tamanho / observações (opcional)</span>
+      <textarea
+        aria-label={`Tamanho / observações de ${product.name}`}
+        value={productNotes[product.sku] || ''}
+        onChange={event => setProductNotes(previous => ({ ...previous, [product.sku]: event.target.value }))}
+        maxLength={500}
+        rows={2}
+        placeholder="Ex.: 80 × 80 cm. Informe a medida e a unidade desejadas."
+        className="w-full min-w-0 resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-normal text-slate-800 outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500"
+      />
+    </label>
+  );
 
   const handleRemoveItem = (productId: string) => {
     setCart(prev => prev.filter(item => item.product.id !== productId));
@@ -437,7 +468,8 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
           productId: item.product.id,
           name: item.product.name,
           price: item.product.price,
-          quantity: item.quantity
+          quantity: item.quantity,
+          ...mamedesSizeNote(item.product, tenantId, productNotes[item.product.sku])
         })),
         total: cartTotalValue,
         status: 'pending',
@@ -505,6 +537,8 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
       message += `${index + 1}. *${item.product.name}*\n`;
       if (item.product.sku) message += `   SKU: ${item.product.sku}\n`;
       message += `   Qtd: ${item.quantity} un\n`;
+      const sizeNote = mamedesSizeNote(item.product, tenantId, productNotes[item.product.sku]).notes;
+      if (sizeNote) message += `   Tamanho / observações: ${sizeNote}\n`;
       message += `   Subtotal: R$ ${(item.quantity * item.product.price).toFixed(2)}\n\n`;
     });
 
@@ -530,7 +564,8 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
         productId: item.product.id,
         name: item.product.name,
         price: item.product.price,
-        quantity: item.quantity
+        quantity: item.quantity,
+        ...mamedesSizeNote(item.product, tenantId, productNotes[item.product.sku])
       })),
       total: cartTotalValue,
       status: 'pending',
@@ -544,6 +579,7 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
     window.open(`https://wa.me/${rawPhone}?text=${encodedMessage}`, '_blank');
     
     setCart([]);
+    setProductNotes({});
     setIsCartOpen(false);
     // Dispara a Inteligência de Avaliação
     setReviewText(`Excelente! O pedido pelo catálogo foi muito prático e o atendimento da ${storeName} é nota 10.`);
@@ -1030,7 +1066,7 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                                   )}
                                 </p>
 
-                                <div className="flex items-center justify-between mt-auto">
+                                <div className={`flex items-center justify-between mt-auto ${tenantId === 'mamedes' ? 'flex-wrap gap-3' : ''}`}>
                                   <div className="flex flex-col">
                                       {(product as any).promotionalPrice > 0 ? (
                                           <>
@@ -1046,7 +1082,7 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                                       )}
                                   </div>
                                   
-                                  {currentTemplate.category === 'servicos' ? (
+                                  {tenantId === 'mamedes' ? renderMamedesQuantity(product) : currentTemplate.category === 'servicos' ? (
                                     <button 
                                       onClick={(e) => { e.stopPropagation(); hasStock && handleAddToCart(product); }} 
                                       disabled={!hasStock}
@@ -1066,6 +1102,7 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                                     </button>
                                   )}
                                 </div>
+                                {renderSizeNote(product)}
                               </div>
                             </div>
                           )}
@@ -1341,12 +1378,13 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                                <h4 className="text-[10px] font-bold text-gray-800 truncate">{item.product.name}</h4>
                                <p className="text-xs font-extrabold text-[#357b64]">R$ {item.product.price.toFixed(2)}</p>
                             </div>
+                            {renderSizeNote(item.product)}
                             <div className="flex items-center justify-between mt-1">
-                              <div className="flex items-center border border-gray-200 rounded-md overflow-hidden">
+                              {tenantId === 'mamedes' ? renderMamedesQuantity(item.product) : <div className="flex items-center border border-gray-200 rounded-md overflow-hidden">
                                  <button onClick={() => handleUpdateQuantity(item.product.id, -1)} className="px-2 py-0.5 bg-gray-50 hover:bg-gray-100 text-gray-600"><Minus className="w-3 h-3" /></button>
                                  <span className="text-[10px] font-bold w-6 text-center bg-white">{item.quantity}</span>
                                  <button onClick={() => handleUpdateQuantity(item.product.id, 1)} disabled={item.quantity >= item.product.stock} className="px-2 py-0.5 bg-gray-50 hover:bg-gray-100 text-gray-600 disabled:opacity-50"><Plus className="w-3 h-3" /></button>
-                              </div>
+                              </div>}
                               <button onClick={() => handleRemoveItem(item.product.id)} className="text-gray-400 hover:text-red-500 p-1"><Trash2 className="w-3 h-3" /></button>
                             </div>
                           </div>
@@ -1516,12 +1554,13 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                         </div>
 
                         <div className="p-4 flex flex-col flex-1 text-center">
+                          {renderSizeNote(product)}
                           <div className="mt-auto">
                             {storeMode !== 'catalogo' && (
                               <>
                                 <div className="flex items-end justify-center gap-2 mb-2"><span className="text-xs text-gray-400 line-through font-medium">R$ {(product.price * 1.1).toFixed(2)}</span><span className="text-xl font-extrabold text-[#357b64]">R$ {product.price.toFixed(2)}</span></div>
                                 <div className="bg-[#f2fcf8] border border-[#c4e4d8] rounded py-2 px-1 flex flex-col items-center justify-center mb-4"><span className="text-sm font-bold text-[#357b64] flex items-center gap-1">R$ {pixPrice.toFixed(2)} <span className="text-[10px] font-normal text-gray-600">no pix</span></span></div>
-                                <button onClick={(e) => { e.stopPropagation(); handleAddToCart(product); }} className="w-full bg-[#357b64] hover:bg-[#2c6b56] text-white font-bold text-sm py-3 rounded mb-2">Comprar</button>
+                                {tenantId === 'mamedes' ? <div className="flex justify-center mb-2">{renderMamedesQuantity(product)}</div> : <button onClick={(e) => { e.stopPropagation(); handleAddToCart(product); }} className="w-full bg-[#357b64] hover:bg-[#2c6b56] text-white font-bold text-sm py-3 rounded mb-2">Comprar</button>}
                                 <button onClick={(e) => { e.stopPropagation(); handleAddToCart(product); setIsCartOpen(true); }} className="w-full bg-white border border-[#357b64] text-[#357b64] hover:bg-gray-50 font-bold text-xs py-2 rounded flex items-center justify-center gap-1.5">Orçamento Fácil <Phone className="w-3.5 h-3.5" /></button>
                               </>
                             )}
@@ -1704,6 +1743,8 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                   </p>
                 </div>
 
+                {renderSizeNote(selectedProduct)}
+
                 {/* INÍCIO: UI DE VARIAÇÕES (Ex: 500, 1000, 3000) */}
                 {/* @ts-ignore */}
                 {(selectedProduct as any).variations && (selectedProduct as any).variations.length > 0 && (
@@ -1821,8 +1862,9 @@ const [isLoadingCep, setIsLoadingCep] = useState(false);
                         <div className="w-16 h-16 bg-gray-50 rounded-lg overflow-hidden shrink-0 border border-gray-100"><img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-contain" /></div>
                         <div className="flex-1 flex flex-col justify-between min-w-0">
                           <div><h4 className="text-xs font-bold text-gray-800 truncate">{item.product.name}</h4><p className="text-sm font-extrabold text-[#357b64] mt-0.5">R$ {item.product.price.toFixed(2)}</p></div>
+                          {renderSizeNote(item.product)}
                           <div className="flex items-center justify-between mt-2">
-                            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden"><button onClick={() => handleUpdateQuantity(item.product.id, -1)} className="px-3 py-1 bg-gray-50 hover:bg-gray-100 text-gray-600"><Minus className="w-3 h-3" /></button><span className="text-xs font-bold w-8 text-center bg-white">{item.quantity}</span><button onClick={() => handleUpdateQuantity(item.product.id, 1)} disabled={item.quantity >= item.product.stock} className="px-3 py-1 bg-gray-50 hover:bg-gray-100 text-gray-600 disabled:opacity-50"><Plus className="w-3 h-3" /></button></div>
+                            {tenantId === 'mamedes' ? renderMamedesQuantity(item.product) : <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden"><button onClick={() => handleUpdateQuantity(item.product.id, -1)} className="px-3 py-1 bg-gray-50 hover:bg-gray-100 text-gray-600"><Minus className="w-3 h-3" /></button><span className="text-xs font-bold w-8 text-center bg-white">{item.quantity}</span><button onClick={() => handleUpdateQuantity(item.product.id, 1)} disabled={item.quantity >= item.product.stock} className="px-3 py-1 bg-gray-50 hover:bg-gray-100 text-gray-600 disabled:opacity-50"><Plus className="w-3 h-3" /></button></div>}
                             <button onClick={() => handleRemoveItem(item.product.id)} className="text-gray-400 hover:text-red-500 p-1"><Trash2 className="w-4 h-4" /></button>
                           </div>
                         </div>

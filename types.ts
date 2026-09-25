@@ -25,7 +25,7 @@ export interface Order {
   id: string;
   customerName: string;
   customerPhone: string;
-  items: { productId: string; name: string; price: number; quantity: number }[];
+  items: { productId: string; name: string; price: number; quantity: number; notes?: string }[];
   total: number;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
